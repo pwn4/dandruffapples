@@ -1,0 +1,7 @@
+message TimestepUpdate {
+  required fixed32 timesteps = 1;
+}
+ 
+message TimestepDone {
+  required bool done = 1; // always 1. One option required
+}
