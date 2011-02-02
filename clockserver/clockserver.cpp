@@ -9,6 +9,30 @@
 // AAA.BBB.CCC.DDD:EEEEE\n\0
 #define ADDR_LEN (3 + 1 + 3 + 1 + 3 + 1 + 3 + 1 + 5 + 2)
 
+char *parse_port(char *input) {
+  size_t input_len = strlen(input);
+  char *port;
+  
+  for(port = input; *port != ':' && (port - input) < input_len; ++port);
+  
+  if((port - input) == input_len) {
+    return NULL;
+  } else {
+    // Split the string
+    *port = '\0';
+    ++port;
+    // Strip newline
+    char *end;
+    for(end = port; *end != '\n'; ++end);
+    if(end == port) {
+      return NULL;
+    } else {
+      *end = '\0';
+      return port;
+    }
+  }
+}
+
 int main(int argc, char **argv) {
   size_t input_size = ADDR_LEN;
   char *input = (char*)malloc(ADDR_LEN);
@@ -19,27 +43,13 @@ int main(int argc, char **argv) {
       printf("\nGot EOF.  Shutting down.\n");
       return 0;
     }
-    size_t input_len = strlen(input);
 
-    char *port;
-    for(port = input; *port != ':' && (port - input) < input_len; ++port);
-    if((port - input) == input_len) {
-      fprintf(stderr, "A port must be specified!\n");
-    } else {
-      // Split the string
-      *port = '\0';
-      ++port;
-      // Strip newline
-      char *end;
-      for(end = port; *end != '\n'; ++end);
-      if(end == port) {
-        fprintf(stderr, "Invalid port.\n");
-      } else {
-        *end = '\0';
-      
-        printf("Got address %s, port %s\n", input, port);
-      }
+    char *port = parse_port(input);
+    if(!port) {
+      fprintf(stderr, "Address must be in the format of IP:port\n");
+      continue;
     }
+    printf("Got address %s, port %s\n", input, port);
   } 
 
   free(input);
