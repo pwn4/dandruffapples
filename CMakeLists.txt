@@ -7,3 +7,4 @@ add_definitions(-Wall -Wextra)
 add_subdirectory(common)
 
 add_subdirectory(regionserver)
+add_subdirectory(clockserver)
