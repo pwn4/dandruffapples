@@ -7,6 +7,9 @@ This program communications with clients, controllers, PNGviewers, other regions
 #include <string>
 #include <string.h>
 #include <stdlib.h>
+
+#include "net.h"
+
 using namespace std;
 
 /////////////////Variables and Declarations/////////////////
@@ -84,6 +87,8 @@ int main(int argc, char* argv[])
 	////////////////////////////////////////////////////
 	
 	printf("Server Running!\n");
+
+  net::run();
 	
 	printf("Server Shutting Down ...\n");
 	
