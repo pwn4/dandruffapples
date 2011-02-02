@@ -1,0 +1,8 @@
+message PuckStack {
+  required fixed64 x = 1;
+  required fixed64 y = 2;
+  required fixed32 stackSize = 3;
+  repeated bool viewLostId = 4; // robot specified by seenById can no 
+                                // longer see this puckStack
+  repeated fixed32 seenById = 5; // list of robots viewing
+}

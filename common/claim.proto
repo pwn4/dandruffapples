@@ -1,0 +1,3 @@
+message Claim {
+   required fixed32 id = 1;
+}

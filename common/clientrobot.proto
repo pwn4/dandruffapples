@@ -1,0 +1,7 @@
+message ClientRobot {
+  required fixed32 id = 1;
+  required float velocity = 2;
+  required float angle = 3;     // in radians
+  optional bool puckPickup = 4; // true - try to get a puck,
+                                // false - try to drop a puck
+}
