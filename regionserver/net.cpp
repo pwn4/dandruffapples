@@ -17,37 +17,37 @@ using namespace std;
 
 namespace net {
   void run() {
-    int timingsock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
-    if(0 > timingsock) {
-      perror("Failed to create timing socket");
+    int clocksock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
+    if(0 > clocksock) {
+      perror("Failed to create clock socket");
       return;
     }
 
-    struct sockaddr_in timingaddr;
-    memset(&timingaddr, 0, sizeof(struct sockaddr_in));
-    timingaddr.sin_family = AF_INET;
-    timingaddr.sin_port = htons(TIMING_PORT);
-    timingaddr.sin_addr.s_addr = INADDR_ANY;
+    struct sockaddr_in clockaddr;
+    memset(&clockaddr, 0, sizeof(struct sockaddr_in));
+    clockaddr.sin_family = AF_INET;
+    clockaddr.sin_port = htons(CLOCK_PORT);
+    clockaddr.sin_addr.s_addr = INADDR_ANY;
 
-    if(0 > bind(timingsock, (struct sockaddr *)&timingaddr, sizeof(struct sockaddr_in))) {
-      perror("Failed to bind timing socket");
-      close(timingsock);
+    if(0 > bind(clocksock, (struct sockaddr *)&clockaddr, sizeof(struct sockaddr_in))) {
+      perror("Failed to bind clock socket");
+      close(clocksock);
       return;
     }
 
-    if(0 > listen(timingsock, 0)) {
-      perror("Failed to listen on timing socket");
-      close(timingsock);
+    if(0 > listen(clocksock, 0)) {
+      perror("Failed to listen on clock socket");
+      close(clocksock);
       return;
     }
     
-    cout << "Waiting for timing server..." << flush;
+    cout << "Waiting for clock server..." << flush;
 
-    int timingfd = accept(timingsock, NULL, NULL);
+    int clockfd = accept(clocksock, NULL, NULL);
 
-    if(0 > timingfd) {
-      perror("Failed to accept connection from timing server");
-      close(timingsock);
+    if(0 > clockfd) {
+      perror("Failed to accept connection from clock server");
+      close(clocksock);
       return;
     }
     cout << " got connection!" << endl;
@@ -56,16 +56,16 @@ namespace net {
     TimestepDone tsdone;
     bool done = false;
     while(!done) {
-      done = done && timestep.ParseFromFileDescriptor(timingfd);
+      done = done && timestep.ParseFromFileDescriptor(clockfd);
       cout << "Got timestep " << timestep.timestep() << endl;
-      done = done && tsdone.SerializeToFileDescriptor(timingfd);
+      done = done && tsdone.SerializeToFileDescriptor(clockfd);
       cout << "Replied." << endl;
     }
 
-    cout << "Connection to timing server lost." << endl;
+    cout << "Connection to clock server lost." << endl;
 
     // Clean up
-    shutdown(timingfd, SHUT_RDWR);
-    close(timingsock);
+    shutdown(clockfd, SHUT_RDWR);
+    close(clocksock);
   }
 }
