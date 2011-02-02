@@ -56,16 +56,11 @@ void loadConfigFile()
 			token = strtok(readBuffer, " ");
 			
 			//if it's a REGION WIDTH definition...
-			if(strcmp(token, "REGIONW") == 0){
+			if(strcmp(token, "CLOCKIP") == 0){
 				token = strtok(NULL, " ");
 				regionWidth = atof(token);
 			}
 			
-			//if it's a REGION HEIGHT definition...
-			if(strcmp(token, "REGIONH") == 0){
-				token = strtok(NULL, " ");
-				regionHeight = atof(token);
-			}
 		}
 		
 		fclose (fileHandle);
