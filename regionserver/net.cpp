@@ -54,12 +54,16 @@ namespace net {
 
     TimestepUpdate timestep;
     TimestepDone tsdone;
-    bool done = false;
-    while(!done) {
-      done = done && timestep.ParseFromFileDescriptor(clockfd);
+    tsdone.set_done(true);
+    
+    bool error = false;
+    while(!error) {
+      error = !timestep.ParseFromFileDescriptor(clockfd);
       cout << "Got timestep " << timestep.timestep() << endl;
-      done = done && tsdone.SerializeToFileDescriptor(clockfd);
-      cout << "Replied." << endl;
+      if(!error) {
+        error = !tsdone.SerializeToFileDescriptor(clockfd);
+        cout << "Replied." << endl;
+      }
     }
 
     cout << "Connection to clock server lost." << endl;
