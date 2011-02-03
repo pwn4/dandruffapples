@@ -78,8 +78,8 @@ int main(int argc, char **argv) {
   for(unsigned i = 0; i < 10; ++i) {
     cout << "Sending timestep " << i << endl;
     update.set_timestep(i);
-    for(unsigned i = 0; i < server_count; ++i) {
-      update.SerializeToFileDescriptor(servers[i]);
+    for(unsigned j = 0; j < server_count; ++j) {
+      update.SerializeToFileDescriptor(servers[j]);
     }
   }
 
