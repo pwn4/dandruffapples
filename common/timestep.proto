@@ -1,5 +1,5 @@
 message TimestepUpdate {
-  required uint64 timestep = 1;
+  required fixed64 timestep = 1;
 }
  
 message TimestepDone {

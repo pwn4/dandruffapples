@@ -11,6 +11,7 @@
 #include <arpa/inet.h>
 
 #include "../common/timestep.pb.h"
+#include "../common/ports.h"
 
 // AAA.BBB.CCC.DDD:EEEEE\n\0
 #define ADDR_LEN (3 + 1 + 3 + 1 + 3 + 1 + 3 + 1 + 5 + 2)
@@ -41,81 +42,75 @@ char *parse_port(char *input) {
   }
 }
 
-int do_connect(char *address, char *port) {
-  int fd = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
-  if(0 > fd) {
-    return fd;
-  }
-
-  // Set non-blocking
-  int flags;
-  if(-1 == (flags = fcntl(fd, F_GETFL, 0)))
-    flags = 0;
-  if(0 > fcntl(fd, F_SETFL, flags | O_NONBLOCK)) {
-    int tmp = errno;
-    close(fd);
-    errno = tmp;
-    return -1;
-  }
-
-  // Configure address and port
-  struct sockaddr_in sockaddr;
-  memset(&sockaddr, 0, sizeof(struct sockaddr_in));
-  sockaddr.sin_family = AF_INET;
-  sockaddr.sin_port = htons(atoi(port));
-  if(0 == inet_pton(AF_INET, address, &sockaddr.sin_addr)) {
-    close(fd);
-    return 0;
-  }
-
-  // Initiate connection
-  if(0 > connect(fd, (struct sockaddr *)&sockaddr, sizeof(struct sockaddr_in))) {
-    if(errno != EINPROGRESS) {
-      int tmp = errno;
-      close(fd);
-      errno = tmp;
-      return -1;
-    }
-  }
-
-  return fd;
-}
-
 int main(int argc, char **argv) {
-  size_t input_size = ADDR_LEN;
-  char *input = (char*)malloc(ADDR_LEN);
+  unsigned server_count = argc > 1 ? atoi(argv[1]) : 1;
+  int *servers = new int[server_count];
 
-  TimestepUpdate timestep;
-  timestep.set_timestep(0);
+  int sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
+  if(0 > sock) {
+    perror("Failed to create socket");
+    return 1;
+  }
 
-  while(true) {
-    cout << "Enter a region server address: " << flush;
-    if(0 > getline(&input, &input_size, stdin)) {
-      cout << endl << "Got EOF, shutting down." << endl;
-      return 0;
+  {
+    int yes = 1;
+    if(setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1) {
+      perror("Failed to reuse existing socket");
+      return 1;
     }
+  }
 
-    char *port = parse_port(input);
-    if(!port) {
-      cerr <<  "Address must be in the format of IP:port" << endl;
+  struct sockaddr_in clockaddr;
+  memset(&clockaddr, 0, sizeof(struct sockaddr_in));
+  clockaddr.sin_family = AF_INET;
+  clockaddr.sin_port = htons(CLOCK_PORT);
+  clockaddr.sin_addr.s_addr = INADDR_ANY;
+
+  if(0 > bind(sock, (struct sockaddr *)&clockaddr, sizeof(struct sockaddr_in))) {
+    perror("Failed to bind socket");
+    close(sock);
+    return 1;
+  }
+
+  if(0 > listen(sock, 0)) {
+    perror("Failed to listen on socket");
+    close(sock);
+    return 1;
+  }
+    
+  cout << "Waiting for region server connections" << flush;
+
+  for(unsigned i = 0; i < server_count;) {
+    do {
+      servers[i] = accept(sock, NULL, NULL);
+    } while(servers[i] < 0 && errno == EINTR);
+    
+    if(0 > servers[i]) {
+      perror("Failed to accept connection");
       continue;
     }
-    cout << "Got address " << input << ", port " << port << endl;
 
-    int fd = do_connect(input, port);
-    if(fd < 0) {
-      perror("Failed to connect");
-      continue;
-    } else if(fd == 0) {
-      cerr << "Invalid address and/or port." << endl;
-      continue;
+    cout << "." << flush;
+    ++i;
+  }
+
+  cout << " All region servers connected!" << endl;
+
+  // Do stepping
+  TimestepUpdate update;
+  TimestepDone done;
+  for(unsigned i = 0; i < 10; ++i) {
+    cout << "Sending timestep " << i << endl;
+    update.set_timestep(i);
+    for(unsigned i = 0; i < server_count; ++i) {
+      update.SerializeToFileDescriptor(servers[i]);
     }
-    timestep.SerializeToFileDescriptor(fd);
-    cout << "Sent timestep " << timestep.timestep() << endl;
-    timestep.set_timestep(timestep.timestep() + 1);
-    close(fd);
-  } 
+  }
 
-  free(input);
+  for(unsigned i = 0; i < server_count; ++i) {
+    shutdown(servers[i], SHUT_RDWR);
+    close(servers[i]);
+  }
+  delete[] servers;
   return 0;
 }

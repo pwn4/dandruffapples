@@ -3,6 +3,7 @@
 #include <iostream>
 #include <cstdio>
 #include <cstring>
+#include <cerrno>
 
 #include <unistd.h>
 #include <sys/socket.h>
@@ -16,41 +17,54 @@
 using namespace std;
 
 namespace net {
-  void run() {
-    int clocksock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
-    if(0 > clocksock) {
-      perror("Failed to create clock socket");
-      return;
+  int do_connect(const char *address, int port) {
+    int fd = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
+    if(0 > fd) {
+      return fd;
     }
 
-    struct sockaddr_in clockaddr;
-    memset(&clockaddr, 0, sizeof(struct sockaddr_in));
-    clockaddr.sin_family = AF_INET;
-    clockaddr.sin_port = htons(CLOCK_PORT);
-    clockaddr.sin_addr.s_addr = INADDR_ANY;
+    // Set non-blocking
+    // int flags;
+    // if(-1 == (flags = fcntl(fd, F_GETFL, 0)))
+    //   flags = 0;
+    // if(0 > fcntl(fd, F_SETFL, flags | O_NONBLOCK)) {
+    //   int tmp = errno;
+    //   close(fd);
+    //   errno = tmp;
+    //   return -1;
+    // }
 
-    if(0 > bind(clocksock, (struct sockaddr *)&clockaddr, sizeof(struct sockaddr_in))) {
-      perror("Failed to bind clock socket");
-      close(clocksock);
-      return;
+    // Configure address and port
+    struct sockaddr_in sockaddr;
+    memset(&sockaddr, 0, sizeof(struct sockaddr_in));
+    sockaddr.sin_family = AF_INET;
+    sockaddr.sin_port = htons(port);
+    if(0 == inet_pton(AF_INET, address, &sockaddr.sin_addr)) {
+      close(fd);
+      return 0;
     }
 
-    if(0 > listen(clocksock, 0)) {
-      perror("Failed to listen on clock socket");
-      close(clocksock);
-      return;
+    // Initiate connection
+    if(0 > connect(fd, (struct sockaddr *)&sockaddr, sizeof(struct sockaddr_in))) {
+      if(errno != EINPROGRESS) {
+        int tmp = errno;
+        close(fd);
+        errno = tmp;
+        return -1;
+      }
     }
-    
-    cout << "Waiting for clock server..." << flush;
 
-    int clockfd = accept(clocksock, NULL, NULL);
-
+    return fd;
+  }
+  
+  void run(const char *clockaddr) {
+    int clockfd = do_connect(clockaddr, CLOCK_PORT);
     if(0 > clockfd) {
-      perror("Failed to accept connection from clock server");
-      close(clocksock);
+      perror("Failed to connect to clock server");
       return;
     }
-    cout << " got connection!" << endl;
+
+    cout << " got connection!" << endl << "Waiting for timestep..." << flush;
 
     TimestepUpdate timestep;
     TimestepDone tsdone;
@@ -59,17 +73,18 @@ namespace net {
     bool error = false;
     while(!error) {
       error = !timestep.ParseFromFileDescriptor(clockfd);
-      cout << "Got timestep " << timestep.timestep() << endl;
+      cout << " Got timestep " << timestep.timestep() << endl;
+
       if(!error) {
         error = !tsdone.SerializeToFileDescriptor(clockfd);
-        cout << "Replied." << endl;
+        cout << "Done." << endl << "Waiting for timestep..." << flush;
       }
     }
 
-    cout << "Connection to clock server lost." << endl;
+    cout << " Connection to clock server lost." << endl;
 
     // Clean up
     shutdown(clockfd, SHUT_RDWR);
-    close(clocksock);
+    close(clockfd);
   }
 }

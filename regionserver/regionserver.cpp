@@ -88,7 +88,7 @@ int main(int argc, char* argv[])
 	
 	printf("Server Running!\n");
 
-  net::run();
+  net::run("127.0.0.1");
 	
 	printf("Server Shutting Down ...\n");
 	

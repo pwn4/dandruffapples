@@ -2,7 +2,7 @@
 #define _NET_H_
 
 namespace net {
-  void run();
+  void run(const char *clockaddr);
 }
 
 #endif
