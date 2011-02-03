@@ -14,10 +14,10 @@ using namespace std;
 
 /////////////////Variables and Declarations/////////////////
 
-char configFileName [30];
+char configFileName [30] = "config";
 
 //Config variables - MUST BE SET IN THE CONFIG FILE
-double regionWidth, regionHeight;
+char clockip [40];
 
 ////////////////////////////////////////////////////////////
 
@@ -61,14 +61,15 @@ void loadConfigFile()
 			//if it's a REGION WIDTH definition...
 			if(strcmp(token, "CLOCKIP") == 0){
 				token = strtok(NULL, " ");
-				regionWidth = atof(token);
+				strcpy(clockip, token);
+				printf("Using clockserver IP: %s", clockip);
 			}
 			
 		}
 		
 		fclose (fileHandle);
 	}else
-		printf("Error: Cannot open config file\n");
+		printf("Error: Cannot open config file %s\n", configFileName);
 }
 
 char *parse_port(char *input) {
@@ -109,9 +110,9 @@ int main(int argc, char* argv[])
 	loadConfigFile();
 	////////////////////////////////////////////////////
 	
+	net::run(clockip);
+	
 	printf("Server Running!\n");
-
-  net::run("127.0.0.1");
 	
 	printf("Server Shutting Down ...\n");
 	
