@@ -18,30 +18,6 @@
 
 using namespace std;
 
-char *parse_port(char *input) {
-  size_t input_len = strlen(input);
-  char *port;
-  
-  for(port = input; *port != ':' && (port - input) < input_len; ++port);
-  
-  if((port - input) == input_len) {
-    return NULL;
-  } else {
-    // Split the string
-    *port = '\0';
-    ++port;
-    // Strip newline
-    char *end;
-    for(end = port; *end != '\n'; ++end);
-    if(end == port) {
-      return NULL;
-    } else {
-      *end = '\0';
-      return port;
-    }
-  }
-}
-
 int main(int argc, char **argv) {
   unsigned server_count = argc > 1 ? atoi(argv[1]) : 1;
   int *servers = new int[server_count];
@@ -72,7 +48,7 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  if(0 > listen(sock, 0)) {
+  if(0 > listen(sock, 1)) {
     perror("Failed to listen on socket");
     close(sock);
     return 1;

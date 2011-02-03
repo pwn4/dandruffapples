@@ -71,6 +71,29 @@ void loadConfigFile()
 		printf("Error: Cannot open config file\n");
 }
 
+char *parse_port(char *input) {
+  size_t input_len = strlen(input);
+  char *port;
+  
+  for(port = input; *port != ':' && (port - input) < input_len; ++port);
+  
+  if((port - input) == input_len) {
+    return NULL;
+  } else {
+    // Split the string
+    *port = '\0';
+    ++port;
+    // Strip newline
+    char *end;
+    for(end = port; *end != '\n'; ++end);
+    if(end == port) {
+      return NULL;
+    } else {
+      *end = '\0';
+      return port;
+    }
+  }
+}
 
 //this is the main loop for the server
 int main(int argc, char* argv[])
