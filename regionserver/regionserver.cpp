@@ -56,13 +56,13 @@ void loadConfigFile()
 	{
 		while(fgets (readBuffer , sizeof(readBuffer) , fileHandle) != 0)
 		{	
-			token = strtok(readBuffer, " ");
+			token = strtok(readBuffer, " \n");
 			
 			//if it's a REGION WIDTH definition...
 			if(strcmp(token, "CLOCKIP") == 0){
-				token = strtok(NULL, " ");
+				token = strtok(NULL, " \n");
 				strcpy(clockip, token);
-				printf("Using clockserver IP: %s", clockip);
+				printf("Using clockserver IP: %s\n", clockip);
 			}
 			
 		}
