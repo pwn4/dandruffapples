@@ -20,7 +20,7 @@ namespace net {
   int do_connect(const char *address, int port) {
     int fd = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
     if(0 > fd) {
-      return fd;
+     return fd;
     }
 
     // Set non-blocking
@@ -41,11 +41,13 @@ namespace net {
     sockaddr.sin_port = htons(port);
     if(0 == inet_pton(AF_INET, address, &sockaddr.sin_addr)) {
       close(fd);
-      return 0;
+      printf("Error: network address invalid");
+      return -1;
     }
-
+    
+    printf("Connecting...");
     // Initiate connection
-    if(0 > connect(fd, (struct sockaddr *)&sockaddr, sizeof(struct sockaddr_in))) {
+    if(0 > connect(fd, (struct sockaddr *)&sockaddr, sizeof(struct sockaddr_in))) {     
       if(errno != EINPROGRESS) {
         int tmp = errno;
         close(fd);
