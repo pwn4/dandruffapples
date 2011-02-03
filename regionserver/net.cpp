@@ -40,12 +40,12 @@ namespace net {
     sockaddr.sin_family = AF_INET;
     sockaddr.sin_port = htons(port);
     if(0 == inet_pton(AF_INET, address, &sockaddr.sin_addr)) {
+      printf("Error: network address invalid... %s\n", address);
       close(fd);
-      printf("Error: network address invalid");
       return -1;
     }
     
-    printf("Connecting...");
+    printf("Connecting...\n");
     // Initiate connection
     if(0 > connect(fd, (struct sockaddr *)&sockaddr, sizeof(struct sockaddr_in))) {     
       if(errno != EINPROGRESS) {
@@ -62,8 +62,8 @@ namespace net {
   void run(const char *clockaddr) {
     int clockfd = do_connect(clockaddr, CLOCK_PORT);
     if(0 > clockfd) {
-      perror("Failed to connect to clock server");
-      return;
+      printf("Failed to connect to clock server\n");
+      exit(1);
     }
 
     cout << " got connection!" << endl << "Waiting for timestep..." << flush;
