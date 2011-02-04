@@ -23,8 +23,10 @@ using namespace std;
 //define variables
 char configFileName [30] = "config";
 
+int max_controllers = 10;
 unsigned server_count = 1;
 int *servers;
+int *controllers;
 int sock;
 
 
@@ -84,6 +86,7 @@ void initialize()
 {
     //////////////SOCKET INIT///////////////////////////
     servers = new int[server_count];
+    controllers = new int[max_controllers];
     
     sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
     if(0 > sock) {
