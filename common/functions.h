@@ -24,3 +24,4 @@ struct protoPacket {
 
 protoPacket parsePacket(std::string * packetBuffer);
 
+string makePacket(int protoType, void * protoObject);
