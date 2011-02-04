@@ -47,7 +47,7 @@ namespace net {
         int yes = 1;
         if(setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1) {
             perror("Failed to reuse existing socket");
-            return sock;
+            return -1;
         }
 
         struct sockaddr_in clockaddr;
