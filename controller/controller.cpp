@@ -154,7 +154,8 @@ int main(/*int argc, char* argv[]*/)
     bind(listenfd, (struct sockaddr *) &cntraddr, sizeof(cntraddr));
     listen(listenfd, 1000);							*/
     
-    listenfd = net::do_listen(CLIENTS_PORT, false);
+    listenfd = net::do_listen(CLIENTS_PORT);
+    net::set_blocking(listenfd, false);
     
 
   TimestepUpdate timestep;

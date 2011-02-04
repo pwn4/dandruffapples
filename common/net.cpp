@@ -15,33 +15,34 @@
 
 #include "../common/ports.h"
 #include "../common/timestep.pb.h"
-#include "../common/functions.h"
+#include "../common/except.h"
 
 using namespace std;
 
 namespace net {
-    int do_listen(int port, bool blocking) {
+  void set_blocking(int fd, bool state) {
+    int flags;
+    if(0 > (flags = fcntl(fd, F_GETFL, 0))) {
+      throw SystemError();
+    }
+    
+    if(state) {
+      flags &= ~O_NONBLOCK;
+    } else {
+      flags |= O_NONBLOCK;
+    }
+    
+    if(0 > fcntl(fd, F_SETFL, flags)) {
+      throw SystemError();
+    }
+  }
+  
+    int do_listen(int port) {
 
         int sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
         if(0 > sock) {
             perror("Failed to create socket");
             return sock;
-        }
-        
-        /* Set socket to non-blocking */ 
-        if(!blocking){
-            int flags; 
-            
-            if ((flags = fcntl(sock, F_GETFL, 0)) < 0) 
-            { 
-                perror("Failed to unblock socket.");
-                return -1;
-            } 
-            if (fcntl(sock, F_SETFL, flags | O_NONBLOCK) < 0) 
-            { 
-                perror("Failed to unblock socket.");
-                return -1;
-            } 
         }
 
         int yes = 1;
@@ -76,17 +77,6 @@ namespace net {
     if(0 > fd) {
         return fd;
     }
-
-    // Set non-blocking
-    // int flags;
-    // if(-1 == (flags = fcntl(fd, F_GETFL, 0)))
-    //   flags = 0;
-    // if(0 > fcntl(fd, F_SETFL, flags | O_NONBLOCK)) {
-    //   int tmp = errno;
-    //   close(fd);
-    //   errno = tmp;
-    //   return -1;
-    // }
 
     // Configure address and port
     struct sockaddr_in sockaddr;

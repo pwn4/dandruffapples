@@ -88,40 +88,12 @@ void loadConfigFile()
 
 
 int main(int argc, char **argv) {
-
   parseArguments(argc, argv);
 
   loadConfigFile();
 
-  sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
-  if(0 > sock) {
-    perror("Failed to create socket");
-    return 1;
-  }
-
-  int yes = 1;
-  if(setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1) {
-    perror("Failed to reuse existing socket");
-    return 1;
-  }
-
-  struct sockaddr_in clockaddr;
-  memset(&clockaddr, 0, sizeof(struct sockaddr_in));
-  clockaddr.sin_family = AF_INET;
-  clockaddr.sin_port = htons(CLOCK_PORT);
-  clockaddr.sin_addr.s_addr = INADDR_ANY;
-
-  if(0 > bind(sock, (struct sockaddr *)&clockaddr, sizeof(struct sockaddr_in))) {
-    perror("Failed to bind socket");
-    close(sock);
-    return 1;
-  }
-
-  if(0 > listen(sock, 1)) {
-    perror("Failed to listen on socket");
-    close(sock);
-    return 1;
-  }
+  int sock = net::do_listen(CLOCK_PORT);
+  net::set_blocking(sock, false);
 
   int epoll = epoll_create(server_count);
   if(epoll < 0) {
@@ -130,7 +102,6 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  // TODO: Sort out allocation
   struct epoll_event event;
   event.events = EPOLLIN;
   event.data.u32 = 0;
@@ -160,6 +131,7 @@ int main(int argc, char **argv) {
       if(events[i].data.u32 == 0) {
         // Accept a new region server
         int fd = accept(sock, NULL, NULL);
+        net::set_blocking(fd, false);
         servers[connected] = fd;
         event.events = EPOLLIN;
         event.data.u32 = connected+1;
@@ -179,10 +151,20 @@ int main(int argc, char **argv) {
         size_t len;
         const void *buffer;
         size_t index = events[i].data.u32 - 1;
-        if(readers[index].doRead(&type, &len, &buffer)) {
-          tsdone.ParseFromArray(buffer, len);
-          cout << "Region server " << index << " done." << endl;
-          ++ready;
+        try {
+          if(readers[index].doRead(&type, &len, &buffer)) {
+            tsdone.ParseFromArray(buffer, len);
+            cout << "Region server " << index << " done." << endl;
+            ++ready;
+          }
+        } catch(EOFError e) {
+          cerr << "Region server " << index
+               << " disconnected!  Shutting down." << endl;
+          return 1;
+        } catch(SystemError e) {
+          cerr << "Error reading from region server " << index
+               << ": " << e.what() << ".  Shutting down." << endl;
+          return 1;
         }
         
         if(ready == connected && connected == server_count) {
