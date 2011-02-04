@@ -27,11 +27,10 @@ This program communications with clients, controllers, PNGviewers, other regions
 using namespace std;
 
 /////////////////Variables and Declarations/////////////////
-
 char configFileName [30] = "config";
 
-//Config variables - MUST BE SET IN THE CONFIG FILE
-char clockip [40];
+//Config variables
+char clockip [40] = "127.0.0.1";
 
 ////////////////////////////////////////////////////////////
 
