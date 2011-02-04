@@ -4,11 +4,22 @@
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <cerrno>
+#include <cstring>
 
 #include "except.h"
 
 MessageReader::MessageReader(int fd, size_t initialSize) : _fd(fd), _bufsize(initialSize), _typepos(0), _lenpos(0), _bufpos(0) {
   _buffer = (uint8_t*)malloc(_bufsize);
+}
+
+MessageReader::MessageReader(const MessageReader& m) {
+  _fd = m._fd;
+  _bufsize = m._bufsize;
+  _typepos = m._typepos;
+  _lenpos = m._lenpos;
+  _bufpos = m._bufpos;
+  _buffer = (uint8_t*)malloc(_bufsize);
+  memcpy(_buffer, m._buffer, _bufpos);
 }
 
 MessageReader::~MessageReader() {

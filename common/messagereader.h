@@ -16,6 +16,7 @@ protected:
   
 public:
   MessageReader(int fd, size_t initialSize = 256);
+  MessageReader(const MessageReader&);
   ~MessageReader();
 
   bool doRead(MessageType *type, size_t *len, const void **buffer);

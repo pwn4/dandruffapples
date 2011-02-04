@@ -21,6 +21,7 @@ protected:
 public:
   MessageWriter(int fd, MessageType typeTag, const google::protobuf::MessageLite *message);
   MessageWriter(int fd, size_t prealloc = 32);
+  MessageWriter(const MessageWriter&);
   ~MessageWriter();
 
   void init(MessageType typeTag, const google::protobuf::MessageLite *message);
