@@ -60,70 +60,97 @@ namespace net {
     return fd;
   }
   
-  void run(const char *clockaddr) {
-    int clockfd = do_connect(clockaddr, CLOCK_PORT);
-    if(0 > clockfd) {
-      printf("Failed to connect to clock server\n");
-      exit(1);
-    }
-
-    cout << " Got connection!" << endl << "Waiting for timestep..." << flush;
-
-    TimestepUpdate timestep;
-    TimestepDone tsdone;
-    tsdone.set_done(true);
+  //struct for parsePacket to return
+    struct protoPacket {
+        string packetData;
+        int packetType;
+    } ;
     
-    int bufsize=1024;        /* a 1K socket input buffer. May need to increase later. */
-    int recvsize;
-    int packettype;
-    int packetsize;
-    char *buffer = new char[bufsize];
-    std::string packetBuffer="";
-    std::string payload;
-    std::string token;
-    size_t nextDelim;
-
-    recvsize = recv(clockfd,buffer,bufsize,0);
-    while(recvsize > 0)
-    {        
-        //add recvsize characters to the packetBuffer. We have to parse them ourselves there.
-        for(int i = 0; i < recvsize; i++)
-            packetBuffer.push_back(buffer[i]);
-    
-        //we may have multiple packets all in the buffer together. Tokenize them. Damn TCP streaming
-        nextDelim = packetBuffer.find('\0');
-        while(nextDelim != string::npos)
+    //takes a string with packetBuffer data, returns packetType=-1 if no packet data in the string
+    //otherwise returns the google proto object and its type (for casting).
+    //WARNING: modifies the string given!
+    protoPacket parsePacket(std::string * packetBuffer)
+    {
+        protoPacket rtn;
+        
+        std::string token;
+        size_t nextDelim;
+        int packetsize;
+        
+        //we may have multiple packets all in the buffer together. Tokenize one. Damn TCP streaming
+        nextDelim = (*packetBuffer).find('\0');
+        if(nextDelim == string::npos)
         {
-            //the first string is the proto id.
-            token = packetBuffer.substr(0, nextDelim);
-            packettype = atoi(token.c_str());
-         
-            packetBuffer.erase(0, nextDelim+1); //take it off
-
-            //the next string is the packet length
-            nextDelim = packetBuffer.find('\0');
-            token = packetBuffer.substr(0, nextDelim);
-            packetsize = atoi(token.c_str());
-            packetBuffer.erase(0, nextDelim+1); //take it off
-            
-            //we now have our packet. normally use the packettype to identify it, but this is just for now
-            payload = packetBuffer.substr(0, packetsize);
-            packetBuffer.erase(0, payload.length()); //take it off
-            timestep.ParseFromString(payload);
-            cout << "Timestep: " << timestep.timestep() << endl << flush;
-            ///////////////////////
-            
-            nextDelim = packetBuffer.find('\0');
+            rtn.packetType = -1;
+            return rtn;
         }
 
-		//get more data
-		recvsize = recv(clockfd,buffer,bufsize,0);
+        //the first string is the proto id.
+        token = (*packetBuffer).substr(0, nextDelim);
+        rtn.packetType = atoi(token.c_str());
+        (*packetBuffer).erase(0, nextDelim+1); //take it off
+
+        //the next string is the packet length
+        nextDelim = (*packetBuffer).find('\0');
+        token = (*packetBuffer).substr(0, nextDelim);
+        packetsize = atoi(token.c_str());
+        (*packetBuffer).erase(0, nextDelim+1); //take it off
+        
+        //we now have our packet. normally use the packettype to identify it, but this is just for now
+        rtn.packetData = (*packetBuffer).substr(0, packetsize);
+        (*packetBuffer).erase(0, rtn.packetData.length()); //take it off
+        ///////////////////////
+        
+        return rtn;
+        
     }
+  
+    void run(const char *clockaddr) {
+        int clockfd = do_connect(clockaddr, CLOCK_PORT);
+        if(0 > clockfd) {
+          printf("Failed to connect to clock server\n");
+          exit(1);
+        }
 
-    cout << " Connection to clock server lost." << endl;
+        cout << " Got connection!" << endl << "Waiting for timestep..." << flush;
 
-    // Clean up
-    shutdown(clockfd, SHUT_RDWR);
-    close(clockfd);
-  }
+        TimestepUpdate timestep;
+        TimestepDone tsdone;
+        tsdone.set_done(true);
+
+        int bufsize=1024;        /* a 1K socket input buffer. May need to increase later. */
+        int recvsize;
+        char *buffer = new char[bufsize];
+        std::string packetBuffer="";
+        protoPacket nextPacket;
+
+        recvsize = recv(clockfd,buffer,bufsize,0);
+        while(recvsize > 0)
+        {        
+            //add recvsize characters to the packetBuffer. We have to parse them ourselves there.
+            for(int i = 0; i < recvsize; i++)
+                packetBuffer.push_back(buffer[i]);
+
+            //we may have multiple packets all in the buffer together. Tokenize them. Damn TCP streaming
+            nextPacket = parsePacket(&packetBuffer);
+            while(nextPacket.packetType != -1)
+            {
+                //parse that data with that sexy parse function
+                timestep.ParseFromString(nextPacket.packetData);
+                cout << "Timestep: " << timestep.timestep() << endl << flush;
+                ///////////////////////
+
+                nextPacket = parsePacket(&packetBuffer);
+            }
+
+	        //get more data
+	        recvsize = recv(clockfd,buffer,bufsize,0);
+        }
+
+        cout << " Connection to clock server lost." << endl;
+
+        // Clean up
+        shutdown(clockfd, SHUT_RDWR);
+        close(clockfd);
+    }
 }
