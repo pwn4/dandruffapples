@@ -28,7 +28,8 @@ int max_controllers = 10;
 unsigned server_count = 1;
 int *servers;
 int *controllers;
-int sock;
+int freeController = 0;
+int sock, controllerSock;
 
 
 
@@ -89,10 +90,18 @@ void initialize()
     servers = new int[server_count];
     controllers = new int[max_controllers];
     
-    sock = net::do_listen(CLOCK_PORT);
+    sock = net::do_listen(CLOCK_PORT, true);
+    controllerSock = net::do_listen(CONTROLLERS_PORT, false);
+    
     if(sock < 0)
     {
-        printf("Server aborting...");
+        printf("Clock socket error: Server aborting...");
+        exit(1);
+    }
+    
+    if(controllerSock < 0)
+    {
+        printf("Controller socket error: Server aborting...");
         exit(1);
     }
 }
@@ -125,9 +134,21 @@ void run()
     char *buffer = new char[bufsize];
     protoPacket nextPacket;
 
-    //send timesteps continually
+    //send timesteps continually - this is the main loop for the clock server
     int currentStep = 0;
     while(true){
+    
+        //check for new controller connections, given that there's space
+        if(freeController < max_controllers)
+        {
+            controllers[freeController] = accept(controllerSock, NULL, NULL);
+            if(controllers[freeController] < 0 && errno != EINTR)
+                printf("Attempted controller connect: error in accepting.\n");
+            else if(controllers[freeController] >= 0)
+            {
+                freeController++;
+            }
+        }
         
         //create the timestep packet
         cout << "Sending timestep " << currentStep << endl;
