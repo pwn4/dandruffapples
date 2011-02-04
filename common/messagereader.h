@@ -18,7 +18,7 @@ public:
   MessageReader(int fd, size_t initialSize = 256);
   ~MessageReader();
 
-  bool doRead(MessageType *type, const void **buffer);
+  bool doRead(MessageType *type, size_t *len, const void **buffer);
 };
 
 #endif

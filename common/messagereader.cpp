@@ -15,7 +15,7 @@ MessageReader::~MessageReader() {
   free(_buffer);
 }
 
-bool MessageReader::doRead(MessageType *type, const void **buffer) {
+bool MessageReader::doRead(MessageType *type, size_t *len, const void **buffer) {
   ssize_t bytes;
   // Read type, if necessary
   if(_typepos < sizeof(_type)) {
@@ -25,6 +25,8 @@ bool MessageReader::doRead(MessageType *type, const void **buffer) {
     } while(bytes < 0 && errno == EINTR);
     if(bytes <= 0) {
       throw SystemError();
+    } else if(bytes == 0) {
+      throw EOF();
     }
     
     _typepos += bytes;
@@ -42,6 +44,8 @@ bool MessageReader::doRead(MessageType *type, const void **buffer) {
     } while(bytes < 0 && errno == EINTR);
     if(bytes <= 0) {
       throw SystemError();
+    } else if(bytes == 0) {
+      throw EOF();
     }
     
     _lenpos += bytes;
@@ -66,6 +70,8 @@ bool MessageReader::doRead(MessageType *type, const void **buffer) {
   } while(bytes < 0 && errno == EINTR);
   if(bytes <= 0) {
     throw SystemError();
+  } else if(bytes == 0) {
+    throw EOF();
   }
 
   // Keep track of how much we've read
@@ -77,9 +83,12 @@ bool MessageReader::doRead(MessageType *type, const void **buffer) {
     _typepos = 0;
     _lenpos = 0;
     _bufpos = 0;
+
     // Make our data available
-    *buffer = _buffer;
     *type = (MessageType)_type;
+    *len = _msglen;
+    *buffer = _buffer;
+
     return true;
   }
   
