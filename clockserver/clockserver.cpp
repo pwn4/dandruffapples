@@ -25,6 +25,8 @@ char configFileName [30] = "config";
 
 unsigned server_count = 1;
 int *servers;
+int sock;
+
 
 
 //this function parses any minimal command line arguments and uses their values
@@ -78,32 +80,23 @@ void loadConfigFile()
 }
 
 
-int main(int argc, char **argv) {
-	//Print a starting message
-	printf("--== Clock Server Software ==-\n");
-	
-	////////////////////////////////////////////////////
-	printf("Clock Server Initializing ...\n");
-	
-	parseArguments(argc, argv);
-	
-	loadConfigFile();
-	////////////////////////////////////////////////////
-	
+void initialize()
+{
+    //////////////SOCKET INIT///////////////////////////
     servers = new int[server_count];
-
-    int sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
+    
+    sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
     if(0 > sock) {
         perror("Failed to create socket");
-        return 1;
+        exit(1);
     }
 
     int yes = 1;
     if(setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1) {
         perror("Failed to reuse existing socket");
-        return 1;
+        exit(1);
     }
-
+    
     struct sockaddr_in clockaddr;
     memset(&clockaddr, 0, sizeof(struct sockaddr_in));
     clockaddr.sin_family = AF_INET;
@@ -113,17 +106,18 @@ int main(int argc, char **argv) {
     if(0 > bind(sock, (struct sockaddr *)&clockaddr, sizeof(struct sockaddr_in))) {
         perror("Failed to bind socket");
         close(sock);
-        return 1;
+        exit(1);
     }
 
     if(0 > listen(sock, 1)) {
         perror("Failed to listen on socket");
         close(sock);
-        return 1;
+        exit(1);
     }
+}
 
-    cout << "Waiting for region server connections" << flush;
-
+void acceptRegionServers()
+{
     for(unsigned i = 0; i < server_count;) {
       do {
         servers[i] = accept(sock, NULL, NULL);
@@ -137,9 +131,10 @@ int main(int argc, char **argv) {
       cout << "." << flush;
       ++i;
     }
+}
 
-    cout << " All region servers connected!" << endl;
-
+void run()
+{
     // Do stepping
     TimestepUpdate update;
     TimestepDone done;
@@ -200,11 +195,43 @@ int main(int argc, char **argv) {
         currentStep++;
 
     }
+}
 
+void shutdownSockets()
+{
     for(unsigned i = 0; i < server_count; ++i) {
     shutdown(servers[i], SHUT_RDWR);
     close(servers[i]);
     }
     delete[] servers;
+}
+
+int main(int argc, char **argv) {
+	//Print a starting message
+	printf("--== Clock Server Software ==-\n");
+	
+	////////////////////////////////////////////////////
+	printf("Clock Server Initializing ...\n");
+	
+	parseArguments(argc, argv);
+	
+	loadConfigFile();
+	
+	initialize();
+	////////////////////////////////////////////////////
+
+    cout << "Waiting for region server connections" << flush;
+
+    acceptRegionServers();
+
+    cout << " All region servers connected!" << endl;
+
+    run();
+
+    ////////////////////////////////////////////////////
+    
+    shutdownSockets();
+
+
     return 0;
 }
