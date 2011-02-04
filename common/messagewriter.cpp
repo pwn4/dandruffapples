@@ -2,19 +2,31 @@
 
 #include "except.h"
 
-MessageWriter::MessageWriter(int fd, MessageType typeTag, const google::protobuf::MessageLite *message) {
-  _fd = fd;
-  _written = 0;
-  _msglen = message->ByteSize();
-  _buflen = _msglen + sizeof(uint8_t) + sizeof(uint16_t);
-  _buffer = new uint8_t[_buflen]; 
-  _buffer[0] = typeTag;
-  *(uint16_t*)(_buffer + sizeof(uint8_t)) = htons(_msglen);
-  message->SerializeWithCachedSizesToArray(_buffer + sizeof(uint8_t) + sizeof(uint16_t));
+MessageWriter::MessageWriter(int fd, size_t prealloc) : _fd(fd), _written(0), _buflen(prealloc), _buffer(new uint8_t[_buflen]) {}
+
+MessageWriter::MessageWriter(int fd, MessageType typeTag, const google::protobuf::MessageLite *message) : _fd(fd), _written(0), _buflen(0), _buffer(NULL) {
+  init(typeTag, message);
 }
 
 MessageWriter::~MessageWriter()  {
-  delete[] _buffer;
+  if(_buffer) {
+    delete[] _buffer;
+  }
+}
+
+void MessageWriter::init(MessageType typeTag, const google::protobuf::MessageLite *message) {
+  _msglen = message->ByteSize();
+  size_t newlen = _msglen + sizeof(uint8_t) + sizeof(uint16_t);
+  if(_buflen < newlen) {
+    if(_buffer) {
+      delete[] _buffer;
+    }
+    _buflen = newlen;
+    _buffer = new uint8_t[_buflen];
+  }
+  _buffer[0] = typeTag;
+  *(uint16_t*)(_buffer + sizeof(uint8_t)) = htons(_msglen);
+  message->SerializeWithCachedSizesToArray(_buffer + sizeof(uint8_t) + sizeof(uint16_t));
 }
 
 bool MessageWriter::doWrite()  {
