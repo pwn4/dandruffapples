@@ -2,14 +2,15 @@
 #include <cstdlib>
 #include <cstring>
 #include <cerrno>
-
-#include <sstream>
 #include <iostream>
+#include <vector>
+
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <sys/epoll.h>
 
 #include "../common/timestep.pb.h"
 
@@ -19,12 +20,10 @@
 #include "../common/messagereader.h"
 #include "../common/messagewriter.h"
 
-// AAA.BBB.CCC.DDD:EEEEE\n\0
 using namespace std;
 
 int main(int argc, char **argv) {
   unsigned server_count = argc > 1 ? atoi(argv[1]) : 1;
-  int *servers = new int[server_count];
 
   int sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
   if(0 > sock) {
@@ -56,80 +55,101 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  cout << "Waiting for region server connections" << flush;
-
-  for(unsigned i = 0; i < server_count;) {
-    do {
-      servers[i] = accept(sock, NULL, NULL);
-    } while(servers[i] < 0 && errno == EINTR);
-
-    if(0 > servers[i]) {
-      perror("Failed to accept connection");
-      continue;
-    }
-
-    cout << "." << flush;
-    ++i;
+  int epoll = epoll_create(server_count);
+  if(epoll < 0) {
+    perror("Failed to create epoll handle");
+    close(sock);
+    return 1;
   }
 
-  cout << " All region servers connected!" << endl;
+  // TODO: Sort out allocation
+  struct epoll_event event;
+  event.events = EPOLLIN;
+  event.data.u32 = 0;
+  if(0 > epoll_ctl(epoll, EPOLL_CTL_ADD, sock, &event)) {
+    perror("Failed to add listen socket to epoll");
+  }
 
-  // Do stepping
-  TimestepUpdate update;
-  TimestepDone done;
+  vector<int> servers(server_count, -1);
+  vector<MessageReader> readers;
+  vector<MessageWriter> writers;
+  size_t maxevents = 1 + server_count;
+  struct epoll_event *events = new struct epoll_event[maxevents];
+  size_t connected = 0, ready = 0;
+  TimestepDone tsdone;
+  TimestepUpdate tsupdate;
+  unsigned long long step = 0;
 
-  //send timesteps continually
-  int currentStep = 0;
-  bool error = false;
-  while(!error) {
-    //create the timestep packet
-    update.set_timestep(currentStep);
-        
-    //broadcast to the servers
-    cout << "Sending timestep " << currentStep << flush;
-    for(size_t i = 0; i < server_count; ++i) {
-      MessageWriter writer(servers[i], TIMESTEPUPDATE, &update);
-      for(bool complete = false; !complete;) {
-        complete = writer.doWrite();
-      }
-
-      cout << "." << flush;
+  cout << "Listening for connections." << endl;
+  while(true) {    
+    int eventcount = epoll_wait(epoll, events, maxevents, -1);
+    if(eventcount < 0) {
+      perror("Failed to wait on sockets");
+      break;
     }
-    cout << " Done." << endl;
 
-    //wait for 'done' from each server. When rewriting this, should make it fair and check for messages from each server while waiting, instead of 'blocking' on servers until they're done.
-    cout << "Waiting for responses" << flush;
-    for(size_t i = 0; i < server_count; ++i) {
-      MessageReader reader(servers[i], 16);
-      MessageType type;
-      size_t len;
-      const void *buffer;
-      for(bool complete = false; !complete;) {
-        try {
-          complete = reader.doRead(&type, &len, &buffer);
-        } catch(EOFError e) {
-          cout << " region server disconnected, shutting down" << flush;
-          error = true;
-          break;
-        } catch(SystemError e) {
-          cerr << " error performing network I/O: " << e.what() << flush;
-          error = true;
-          break;
+    for(size_t i = 0; i < (unsigned)eventcount; ++i) {
+      if(events[i].data.u32 == 0) {
+        // Accept a new region server
+        int fd = accept(sock, NULL, NULL);
+        servers[connected] = fd;
+        event.events = EPOLLIN;
+        event.data.u32 = connected+1;
+        if(0 > epoll_ctl(epoll, EPOLL_CTL_ADD, fd, &event)) {
+          perror("Failed to add region server socket to epoll");
+          return 1;
+        }
+
+        readers.push_back(MessageReader(fd));
+        writers.push_back(MessageWriter(fd));
+
+        cout << "Region server " << connected << " connected!" << endl;
+
+        ++connected;
+      } else if(events[i].events & EPOLLIN) {
+        MessageType type;
+        size_t len;
+        const void *buffer;
+        size_t index = events[i].data.u32 - 1;
+        if(readers[index].doRead(&type, &len, &buffer)) {
+          tsdone.ParseFromArray(buffer, len);
+          cout << "Region server " << index << " done." << endl;
+          ++ready;
+        }
+        
+        if(ready == connected && connected == server_count) {
+          cout << "All servers done, sending timestep " << step << "." << endl;
+          // All servers are ready, prepare to send next step
+          ready = 0;
+          tsupdate.set_timestep(step++);
+          for(size_t j = 0; j < connected; ++j) {
+            writers[j].init(TIMESTEPUPDATE, &tsupdate);
+            
+            event.events = EPOLLOUT;
+            event.data.u32 = j+1;
+            epoll_ctl(epoll, EPOLL_CTL_MOD, servers[j], &event);
+          }
+        }
+      } else if(events[i].events & EPOLLOUT) {
+        size_t index = events[i].data.u32 - 1;
+        if(writers[index].doWrite()) {
+          // We're done writing for this server
+          cout << "Send complete to region server " << index << "." << endl;
+          event.events = EPOLLIN;
+          event.data.u32 = index+1;
+          epoll_ctl(epoll, EPOLL_CTL_MOD, servers[index], &event);
         }
       }
-      cout << "." << flush;
     }
-    cout << " Done." << endl;
-        
-    //delay to bind simulation speed for now
-    sleep(2);
-    currentStep++;
   }
 
-  for(size_t i = 0; i < server_count; ++i) {
-    shutdown(servers[i], SHUT_RDWR);
-    close(servers[i]);
+  // Clean up
+  close(epoll);
+  for(size_t i = 0; i < connected; ++i) {
+    if(i > 0) {
+      shutdown(servers[i], SHUT_RDWR);
+      close(servers[i]);
+    }
   }
-  delete[] servers;
   return 0;
 }
