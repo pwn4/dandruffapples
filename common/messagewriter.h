@@ -8,9 +8,10 @@
 #include <cerrno>
 #include <arpa/inet.h>
 
+#include <google/protobuf/message_lite.h>
+
 #include "types.h"
 
-template<class T>
 class MessageWriter {
 protected:
   int _fd;
@@ -18,10 +19,7 @@ protected:
   uint8_t *_buffer;
 
 public:
-  MessageWriter(int fd, MessageType typeTag, const T *message) : _fd(fd), _written(0), _len(message->ByteSize()), _buffer(malloc(_len + sizeof(uint16_t))) {
-    *(uint16_t*)_buffer = htons(typeTag);
-    message->SerializeWithCachedSizesToArray(_buffer + sizeof(uint16_t));
-  }
+  MessageWriter(int fd, MessageType typeTag, const google::protobuf::MessageLite *message);
   ~MessageWriter();
 
   bool doWrite();

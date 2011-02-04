@@ -2,13 +2,18 @@
 
 #include "except.h"
 
-template<class T>
-MessageWriter<T>::~MessageWriter()  {
-  free(_buffer);
+MessageWriter::MessageWriter(int fd, MessageType typeTag, const google::protobuf::MessageLite *message) :
+  _fd(fd), _written(0), _len(message->ByteSize()),
+  _buffer(new uint8_t[_len + sizeof(uint16_t)]) {
+  *(uint16_t*)_buffer = htons(typeTag);
+  message->SerializeWithCachedSizesToArray(_buffer + sizeof(uint16_t));
 }
 
-template<class T>
-bool MessageWriter<T>::doWrite()  {
+MessageWriter::~MessageWriter()  {
+  delete[] _buffer;
+}
+
+bool MessageWriter::doWrite()  {
   ssize_t bytes;
   do {
     bytes = write(_fd, _buffer, _len);
