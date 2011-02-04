@@ -23,7 +23,7 @@ namespace net {
   void set_blocking(int fd, bool state) {
     int flags;
     if(0 > (flags = fcntl(fd, F_GETFL, 0))) {
-      throw SystemError();
+      throw SystemError("Failed to read existing flags on FD");
     }
     
     if(state) {
@@ -33,7 +33,7 @@ namespace net {
     }
     
     if(0 > fcntl(fd, F_SETFL, flags)) {
-      throw SystemError();
+      throw SystemError("Failed to set blocking state on FD");
     }
   }
   
