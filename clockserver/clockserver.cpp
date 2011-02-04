@@ -87,17 +87,12 @@ int main(int argc, char **argv) {
         //create the timestep packet
         cout << "Sending timestep " << i << endl;
         update.set_timestep(i);
-
-        std::stringstream ss;
-        std::string msg;
-        //add the proto object data
-        update.SerializeToString(&msg);
-        //add the packet length and proto id to the front
-        ss << TIMESTEPUPDATE << '\0' << msg.length() << '\0' << msg;
+        
+        string msg = makePacket(TIMESTEPUPDATE, &update);
 
         //broadcast to the servers
         for(unsigned j = 0; j < server_count; ++j) {
-            send(servers[j], ss.str().c_str(), ss.str().length(), 0);
+            send(servers[j], msg.c_str(), msg.length(), 0);
         }
 
         //wait for 'done' from each server. When rewriting this, should make it fair and check for messages from each server while waiting, instead of 'blocking' on servers until they're done.
