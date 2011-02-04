@@ -81,12 +81,13 @@ int main(int argc, char **argv) {
     char *buffer = new char[bufsize];
     protoPacket nextPacket;
 
-    //send timesteps
-    for(unsigned i = 0; i < 10; ++i) {
+    //send timesteps continually
+    int currentStep = 0;
+    while(true){
         
         //create the timestep packet
-        cout << "Sending timestep " << i << endl;
-        update.set_timestep(i);
+        cout << "Sending timestep " << currentStep << endl;
+        update.set_timestep(currentStep);
         
         string msg = makePacket(TIMESTEPUPDATE, &update);
 
@@ -125,6 +126,10 @@ int main(int argc, char **argv) {
                 }
             }
         }
+        
+        //delay to bind simulation speed for now
+        sleep(2);
+        currentStep++;
 
     }
 
