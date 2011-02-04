@@ -92,9 +92,25 @@ namespace net {
             while(nextPacket.packetType != -1)
             {
                 //parse that data with that sexy parse function
-                timestep.ParseFromString(nextPacket.packetData);
-                cout << "Timestep: " << timestep.timestep() << endl << flush;
-                ///////////////////////
+                if(nextPacket.packetType == TIMESTEPUPDATE) //timestep done packet
+                {
+                    timestep.ParseFromString(nextPacket.packetData);
+                    cout << "Timestep: " << timestep.timestep() << endl << flush;
+                    
+                    //send a 'done' packet
+                    std::stringstream ss;
+                    std::string msg;
+                    //add the proto object data
+                    tsdone.SerializeToString(&msg);
+                    //add the packet length and proto id to the front
+                    ss << TIMESTEPDONE << '\0' << msg.length() << '\0' << msg;
+                    
+                    cout << "Sending Done..." << endl << flush;
+                    send(clockfd, ss.str().c_str(), ss.str().length(), 0);
+                }
+                
+                //don't do anything if its of a different type. Will add more later for different proto types
+                
 
                 nextPacket = parsePacket(&packetBuffer);
             }
