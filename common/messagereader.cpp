@@ -35,6 +35,9 @@ bool MessageReader::doRead(MessageType *type, size_t *len, const void **buffer) 
       bytes = read(_fd, &_type + _typepos, sizeof(_type) - _typepos);
     } while(bytes < 0 && errno == EINTR);
     if(bytes < 0) {
+      if(errno == EAGAIN || errno == EWOULDBLOCK) {
+        return false;
+      }
       throw SystemError();
     } else if(bytes == 0) {
       throw EOFError();
@@ -42,9 +45,7 @@ bool MessageReader::doRead(MessageType *type, size_t *len, const void **buffer) 
     
     _typepos += bytes;
 
-    // No byte reordering necessary because it's one byte.
-    
-    return false;
+    // No byte reordering necessary because it's one byte.    
   }
 
   // Read length, if necessary
@@ -55,6 +56,9 @@ bool MessageReader::doRead(MessageType *type, size_t *len, const void **buffer) 
     } while(bytes < 0 && errno == EINTR);
     if(bytes < 0) {
       throw SystemError();
+      if(errno == EAGAIN || errno == EWOULDBLOCK) {
+        return false;
+      }
     } else if(bytes == 0) {
       throw EOFError();
     }
@@ -71,8 +75,6 @@ bool MessageReader::doRead(MessageType *type, size_t *len, const void **buffer) 
         _buffer = (uint8_t*)realloc(_buffer, _bufsize);
       }
     }
-
-    return false;
   }
 
   // Read message body
@@ -80,6 +82,9 @@ bool MessageReader::doRead(MessageType *type, size_t *len, const void **buffer) 
     bytes = read(_fd, _buffer + _bufpos, _msglen - _bufpos);
   } while(bytes < 0 && errno == EINTR);
   if(bytes < 0) {
+    if(errno == EAGAIN || errno == EWOULDBLOCK) {
+      return false;
+    }
     throw SystemError();
   } else if(bytes == 0) {
     throw EOFError();
