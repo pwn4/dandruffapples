@@ -5,16 +5,17 @@
 #include <arpa/inet.h>
 #include <cerrno>
 
+#include "except.h"
+
 MessageReader::MessageReader(int fd, size_t initialSize) : _fd(fd), _bufsize(initialSize), _typepos(0), _lenpos(0), _bufpos(0) {
-  _buffer = (char*)malloc(_bufsize);
+  _buffer = (uint8_t*)malloc(_bufsize);
 }
 
 MessageReader::~MessageReader() {
   free(_buffer);
 }
 
-ssize_t MessageReader::doRead(MessageType *type, const void **buffer) {
-  *buffer = NULL;
+bool MessageReader::doRead(MessageType *type, const void **buffer) {
   ssize_t bytes;
   // Read type, if necessary
   if(_typepos < sizeof(_type)) {
@@ -23,14 +24,14 @@ ssize_t MessageReader::doRead(MessageType *type, const void **buffer) {
       bytes = read(_fd, &_type + _typepos, sizeof(_type) - _typepos);
     } while(bytes < 0 && errno == EINTR);
     if(bytes <= 0) {
-      return bytes;
+      throw SystemError();
     }
     
     _typepos += bytes;
 
     // No byte reordering necessary because it's one byte.
     
-    return bytes;
+    return false;
   }
 
   // Read length, if necessary
@@ -40,7 +41,7 @@ ssize_t MessageReader::doRead(MessageType *type, const void **buffer) {
       bytes = read(_fd, &_msglen + _lenpos, sizeof(_msglen) - _lenpos);
     } while(bytes < 0 && errno == EINTR);
     if(bytes <= 0) {
-      return bytes;
+      throw SystemError();
     }
     
     _lenpos += bytes;
@@ -52,11 +53,11 @@ ssize_t MessageReader::doRead(MessageType *type, const void **buffer) {
       // Be sure we have enough space for the entire message
       if(_bufsize < _msglen) {
         _bufsize *= 2;
-        _buffer = (char*)realloc(_buffer, _bufsize);
+        _buffer = (uint8_t*)realloc(_buffer, _bufsize);
       }
     }
 
-    return bytes;
+    return false;
   }
 
   // Read message body
@@ -64,7 +65,7 @@ ssize_t MessageReader::doRead(MessageType *type, const void **buffer) {
     bytes = read(_fd, _buffer + _bufpos, _msglen - _bufpos);
   } while(bytes < 0 && errno == EINTR);
   if(bytes <= 0) {
-    return bytes;
+    throw SystemError();
   }
 
   // Keep track of how much we've read
@@ -74,7 +75,8 @@ ssize_t MessageReader::doRead(MessageType *type, const void **buffer) {
     // We've got the complete message.
     *buffer = _buffer;
     *type = (MessageType)_type;
+    return true;
   }
   
-  return bytes;
+  return false;
 }

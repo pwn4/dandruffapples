@@ -9,7 +9,7 @@
 class MessageReader {
 protected:
   int _fd;
-  char *_buffer;
+  uint8_t *_buffer;
   size_t _bufsize, _typepos, _lenpos, _bufpos;
   uint16_t _msglen;
   uint8_t _type;
@@ -19,7 +19,7 @@ public:
   ~MessageReader();
 
   // Check errno if < 0
-  ssize_t doRead(MessageType *type, const void **buffer);
+  bool doRead(MessageType *type, const void **buffer);
 };
 
 #endif
