@@ -2,7 +2,7 @@
 #define _NET_H_
 
 namespace net {
-  void run(const char *clockaddr);
+  int do_connect(const char *address, int port);
 }
 
 #endif
