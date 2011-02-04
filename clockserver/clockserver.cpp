@@ -23,13 +23,17 @@
 using namespace std;
 
 
-/////////////////Variables and Declarations/////////////////
+//define variables
 char configFileName [30] = "config";
 
-//Config variables
-char clockip [40] = "127.0.0.1";
+int max_controllers = 10;
+unsigned server_count = 1;
+int *servers;
 
-////////////////////////////////////////////////////////////
+int *controllers; //Ben, you killed my controller handling code in the merge
+int freeController = 0;
+int sock, controllerSock;
+
 
 
 //this function parses any minimal command line arguments and uses their values
@@ -69,10 +73,10 @@ void loadConfigFile()
 			token = strtok(readBuffer, " \n");
 			
 			//if it's a REGION WIDTH definition...
-			if(strcmp(token, "CLOCKIP") == 0){
+			if(strcmp(token, "NUMSERVERS") == 0){
 				token = strtok(NULL, " \n");
-				strcpy(clockip, token);
-				printf("Using clockserver IP: %s\n", clockip);
+				server_count = atoi(token);
+				printf("NUMSERVERS: %d\n", server_count);
 			}
 			
 		}
@@ -83,10 +87,9 @@ void loadConfigFile()
 }
 
 
-int main(int argc, char **argv) {
-  unsigned server_count = argc > 1 ? atoi(argv[1]) : 1;
+int main() {
 
-  int sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
+  sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
   if(0 > sock) {
     perror("Failed to create socket");
     return 1;
