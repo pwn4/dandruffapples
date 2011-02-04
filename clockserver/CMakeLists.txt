@@ -1,5 +1,6 @@
 add_executable(clockserver
-  clockserver.cpp
+    clockserver.cpp
+    ../common/functions.cpp
   )
 
 target_link_libraries(clockserver common)
