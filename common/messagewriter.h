@@ -22,6 +22,7 @@ public:
     *(uint16_t*)_buffer = htons(typeTag);
     message->SerializeWithCachedSizesToArray(_buffer + sizeof(uint16_t));
   }
+  ~MessageWriter();
 
   bool doWrite();
 };

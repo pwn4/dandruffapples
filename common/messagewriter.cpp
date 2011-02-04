@@ -3,6 +3,11 @@
 #include "except.h"
 
 template<class T>
+MessageWriter<T>::~MessageWriter()  {
+  free(_buffer);
+}
+
+template<class T>
 bool MessageWriter<T>::doWrite()  {
   ssize_t bytes;
   do {
