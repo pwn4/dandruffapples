@@ -38,7 +38,7 @@ bool MessageReader::doRead(MessageType *type, size_t *len, const void **buffer) 
       if(errno == EAGAIN || errno == EWOULDBLOCK) {
         return false;
       }
-      throw SystemError();
+      throw SystemError("Failed to read message type");
     } else if(bytes == 0) {
       throw EOFError();
     }
@@ -55,10 +55,10 @@ bool MessageReader::doRead(MessageType *type, size_t *len, const void **buffer) 
       bytes = read(_fd, &_msglen + _lenpos, sizeof(_msglen) - _lenpos);
     } while(bytes < 0 && errno == EINTR);
     if(bytes < 0) {
-      throw SystemError();
       if(errno == EAGAIN || errno == EWOULDBLOCK) {
         return false;
       }
+      throw SystemError("Failed to read message size");
     } else if(bytes == 0) {
       throw EOFError();
     }
@@ -85,7 +85,7 @@ bool MessageReader::doRead(MessageType *type, size_t *len, const void **buffer) 
     if(errno == EAGAIN || errno == EWOULDBLOCK) {
       return false;
     }
-    throw SystemError();
+    throw SystemError("Failed to read message body");
   } else if(bytes == 0) {
     throw EOFError();
   }
