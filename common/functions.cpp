@@ -15,8 +15,26 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include <google/protobuf/message.h>
+
 using namespace std;
 
+
+//takes a protoID number such as TIMESTEPUPDATE, a pointer to the object to be sent, and returns the string to be sent.
+
+string makePacket(int protoType, void * protoObject)
+{
+    std::stringstream ss;
+    std::string msg;
+    
+    //add the proto object data
+    (* ((google::protobuf::Message *)protoObject)).SerializeToString(&msg);
+    
+    //add the packet length and proto id to the front
+    ss << protoType << '\0' << msg.length() << '\0' << msg;
+    
+    return ss.str();
+}
 
 //takes a string with packetBuffer data, returns packetType=-1 if no packet data in the string
 //otherwise returns the google proto object and its type (for casting).
