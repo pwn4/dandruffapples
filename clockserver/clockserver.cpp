@@ -57,17 +57,17 @@ int main(int argc, char **argv) {
     cout << "Waiting for region server connections" << flush;
 
     for(unsigned i = 0; i < server_count;) {
-    do {
+      do {
         servers[i] = accept(sock, NULL, NULL);
-    } while(servers[i] < 0 && errno == EINTR);
+      } while(servers[i] < 0 && errno == EINTR);
 
-    if(0 > servers[i]) {
-      perror("Failed to accept connection");
-      continue;
-    }
+      if(0 > servers[i]) {
+        perror("Failed to accept connection");
+        continue;
+      }
 
-    cout << "." << flush;
-    ++i;
+      cout << "." << flush;
+      ++i;
     }
 
     cout << " All region servers connected!" << endl;

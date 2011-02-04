@@ -1,3 +1,6 @@
+#ifndef _FUNCTIONS_H_
+#define _FUNCTIONS_H_
+
 #include <sstream>
 #include <iostream>
 #include <cstdio>
@@ -10,18 +13,20 @@
 #include <arpa/inet.h>
 #include <sys/select.h>
 
-#define TIMESTEPUPDATE 0
-#define TIMESTEPDONE 1
-
-using namespace std;
+enum MessageType {
+  TIMESTEPUPDATE,
+  TIMESTEPDONE,
+};
 
 //struct for parsePacket to return
 struct protoPacket {
-    string packetData;
-    int packetType;
-} ;
+  std::string packetData;
+  int packetType;
+};
 
 
 protoPacket parsePacket(std::string * packetBuffer);
 
-string makePacket(int protoType, void * protoObject);
+std::string makePacket(MessageType protoType, void * protoObject);
+
+#endif

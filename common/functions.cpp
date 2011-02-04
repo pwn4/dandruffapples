@@ -22,7 +22,7 @@ using namespace std;
 
 //takes a protoID number such as TIMESTEPUPDATE, a pointer to the object to be sent, and returns the string to be sent.
 
-string makePacket(int protoType, void * protoObject)
+string makePacket(MessageType protoType, void * protoObject)
 {
     std::stringstream ss;
     std::string msg;
