@@ -110,9 +110,9 @@ int main(int argc, char* argv[])
 	loadConfigFile();
 	////////////////////////////////////////////////////
 	
-	net::run(clockip);
-	
 	printf("Server Running!\n");
+	
+	net::run(clockip);
 	
 	printf("Server Shutting Down ...\n");
 	
