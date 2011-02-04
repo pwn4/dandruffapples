@@ -73,6 +73,11 @@ bool MessageReader::doRead(MessageType *type, const void **buffer) {
   
   if(_bufpos == _msglen) {
     // We've got the complete message.
+    // Reset internal state to enable reuse
+    _typepos = 0;
+    _lenpos = 0;
+    _bufpos = 0;
+    // Make our data available
     *buffer = _buffer;
     *type = (MessageType)_type;
     return true;

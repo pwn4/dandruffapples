@@ -18,7 +18,6 @@ public:
   MessageReader(int fd, size_t initialSize = 256);
   ~MessageReader();
 
-  // Check errno if < 0
   bool doRead(MessageType *type, const void **buffer);
 };
 
