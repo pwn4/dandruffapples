@@ -17,12 +17,80 @@
 
 // AAA.BBB.CCC.DDD:EEEEE\n\0
 #define ADDR_LEN (3 + 1 + 3 + 1 + 3 + 1 + 3 + 1 + 5 + 2)
-
 using namespace std;
 
+
+//define variables
+char configFileName [30] = "config";
+
+unsigned server_count = 1;
+int *servers;
+
+
+//this function parses any minimal command line arguments and uses their values
+void parseArguments(int argc, char* argv[])
+{
+	//loop through the arguments
+	for(int i = 0; i < argc; i++)
+	{
+		//if it's a configuration file name...
+		if(strcmp(argv[i], "-c") == 0)
+		{
+			strcpy(configFileName, argv[i+1]);
+		
+			printf("Using config file: %s\n", configFileName);
+			
+			i++; //increment the loop counter for one argument
+		}
+	}
+}
+
+
+//this function loads the config file so that the server parameters don't need to be added every time
+void loadConfigFile()
+{
+	//open the config file
+	FILE * fileHandle;
+	fileHandle = fopen (configFileName,"r");
+	
+	//create a read buffer. No line should be longer than 200 chars long.
+	char readBuffer [200];
+	char * token;
+	
+	if (fileHandle != NULL)
+	{
+		while(fgets (readBuffer , sizeof(readBuffer) , fileHandle) != 0)
+		{	
+			token = strtok(readBuffer, " \n");
+			
+			//if it's a REGION WIDTH definition...
+			if(strcmp(token, "NUMSERVERS") == 0){
+				token = strtok(NULL, " \n");
+				server_count = atoi(token);
+				printf("NUMSERVERS: %d\n", server_count);
+			}
+			
+		}
+		
+		fclose (fileHandle);
+	}else
+		printf("Error: Cannot open config file %s\n", configFileName);
+}
+
+
 int main(int argc, char **argv) {
-    unsigned server_count = argc > 1 ? atoi(argv[1]) : 1;
-    int *servers = new int[server_count];
+	//Print a starting message
+	printf("--== Clock Server Software ==-\n");
+	
+	////////////////////////////////////////////////////
+	printf("Clock Server Initializing ...\n");
+	
+	parseArguments(argc, argv);
+	
+	loadConfigFile();
+	////////////////////////////////////////////////////
+	
+    servers = new int[server_count];
 
     int sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
     if(0 > sock) {
