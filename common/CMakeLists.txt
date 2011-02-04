@@ -20,6 +20,7 @@ add_library(common
   ${PROTO_SRCS}
   ${PROTO_HDRS}
   functions.cpp
+  net.cpp
   )
 
 target_link_libraries(common ${PROTOBUF_LIBRARY} ${CMAKE_THREAD_LIBS_INIT})
