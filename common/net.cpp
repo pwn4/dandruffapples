@@ -41,14 +41,12 @@ namespace net {
 
         int sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
         if(0 > sock) {
-            perror("Failed to create socket");
-            return sock;
+          throw SystemError("Failed to create socket");
         }
 
         int yes = 1;
         if(setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1) {
-            perror("Failed to reuse existing socket");
-            return -1;
+          throw SystemError("Failed to configure socket for reuse");
         }
 
         struct sockaddr_in clockaddr;
@@ -58,15 +56,11 @@ namespace net {
         clockaddr.sin_addr.s_addr = INADDR_ANY;
 
         if(0 > bind(sock, (struct sockaddr *)&clockaddr, sizeof(struct sockaddr_in))) {
-            perror("Failed to bind socket");
-            close(sock);
-            return -1;
+          throw SystemError("Failed to bind socket");
         }
 
         if(0 > listen(sock, 1)) {
-            perror("Failed to listen on socket");
-            close(sock);
-            return -1;
+          throw SystemError("Failed to listen on socket");
         }
         
         return sock;
