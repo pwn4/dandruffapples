@@ -15,7 +15,7 @@
 class MessageWriter {
 protected:
   int _fd;
-  size_t _written, _len;
+  size_t _written, _msglen, _buflen;
   uint8_t *_buffer;
 
 public:
