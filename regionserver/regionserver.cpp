@@ -21,8 +21,10 @@ This program communications with clients, controllers, PNGviewers, other regions
 
 #include "../common/ports.h"
 #include "../common/timestep.pb.h"
-#include "../common/functions.h"
 #include "../common/net.h"
+#include "../common/messagewriter.h"
+#include "../common/messagereader.h"
+#include "../common/except.h"
 
 using namespace std;
 
@@ -111,7 +113,7 @@ char *parse_port(char *input) {
 
 void run() {
   cout << "Connecting to clock server..." << flush;
-  int clockfd = do_connect(clockip, CLOCK_PORT);
+  int clockfd = net::do_connect(clockip, CLOCK_PORT);
   if(0 > clockfd) {
     perror(" failed to connect to clock server");
     return;

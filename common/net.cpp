@@ -94,12 +94,10 @@ namespace net {
     sockaddr.sin_family = AF_INET;
     sockaddr.sin_port = htons(port);
     if(0 == inet_pton(AF_INET, address, &sockaddr.sin_addr)) {
-      printf("Error: network address invalid... %s\n", address);
       close(fd);
-      return -1;
+      return 0;
     }
     
-    printf("Connecting...\n");
     // Initiate connection
     if(0 > connect(fd, (struct sockaddr *)&sockaddr, sizeof(struct sockaddr_in))) {     
       if(errno != EINPROGRESS) {
