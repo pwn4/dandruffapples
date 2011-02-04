@@ -142,9 +142,7 @@ void run()
         if(freeController < max_controllers)
         {
             controllers[freeController] = accept(controllerSock, NULL, NULL);
-            if(controllers[freeController] < 0 && errno != EINTR)
-                printf("Attempted controller connect: error in accepting.\n");
-            else if(controllers[freeController] >= 0)
+            if(controllers[freeController] >= 0)
             {
                 freeController++;
             }
@@ -159,6 +157,10 @@ void run()
         //broadcast to the servers
         for(unsigned j = 0; j < server_count; ++j) {
             send(servers[j], msg.c_str(), msg.length(), 0);
+        }
+        //and to controllers
+        for(int j = 0; j < freeController; ++j) {
+            send(controllers[j], msg.c_str(), msg.length(), 0);
         }
 
         //wait for 'done' from each server. When rewriting this, should make it fair and check for messages from each server while waiting, instead of 'blocking' on servers until they're done.
