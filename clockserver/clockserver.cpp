@@ -24,17 +24,9 @@ using namespace std;
 
 
 //define variables
-char configFileName [30] = "config";
+char configFileName[30] = "config";
 
-int max_controllers = 10;
 unsigned server_count = 1;
-int *servers;
-
-int *controllers; //Ben, you killed my controller handling code in the merge
-int freeController = 0;
-int sock, controllerSock;
-
-
 
 //this function parses any minimal command line arguments and uses their values
 void parseArguments(int argc, char* argv[])
@@ -61,29 +53,29 @@ void loadConfigFile()
 	//open the config file
 	FILE * fileHandle;
 	fileHandle = fopen (configFileName,"r");
+  if(0 > fileHandle) {
+    perror("Couldn't open config file");
+    return;
+  }
 	
-	//create a read buffer. No line should be longer than 200 chars long.
-	char readBuffer [200];
-	char * token;
-	
-	if (fileHandle != NULL)
-	{
-		while(fgets (readBuffer , sizeof(readBuffer) , fileHandle) != 0)
-		{	
-			token = strtok(readBuffer, " \n");
-			
-			//if it's a REGION WIDTH definition...
-			if(strcmp(token, "NUMSERVERS") == 0){
-				token = strtok(NULL, " \n");
-				server_count = atoi(token);
-				printf("NUMSERVERS: %d\n", server_count);
-			}
-			
-		}
+	char *buffer = NULL, *endptr = NULL;
+  size_t len;
+  while(0 < getdelim(&buffer, &len, ' ', fileHandle)) {	
+    if(!strcmp(buffer, "NUMSERVERS ")) {
+      if(0 > getdelim(&buffer, &len, '\n', fileHandle)) {
+        cerr << "Couldn't read value for NUMSERVERS from config file." << endl;
+        break;
+      }
+      server_count = strtol(buffer, &endptr, 10);
+      if(endptr == buffer) {
+        cerr << "Value for NUMSERVERS in config file is not a number!" << endl;
+        break;
+      }
+      printf("NUMSERVERS: %d\n", server_count);
+    }
+  }
 		
-		fclose (fileHandle);
-	}else
-		printf("Error: Cannot open config file %s\n", configFileName);
+  fclose(fileHandle);
 }
 
 
