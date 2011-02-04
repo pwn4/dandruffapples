@@ -129,22 +129,24 @@ void run() {
   tsdone.set_done(true);
   MessageWriter writer(clockfd, TIMESTEPDONE, &tsdone);
   MessageReader reader(clockfd);
+  MessageType type;
+  size_t len;
+  const void *buffer;
 
   try {
+    cout << "Notifying clock server that our init's complete..." << flush;
     while(true) {
-      MessageType type;
-      size_t len;
-      const void *buffer;
+      for(bool complete = false; !complete;) {
+        complete = writer.doWrite();
+      }
+      cout << " done." << endl;
+      
       cout << "Waiting for timestep..." << flush;
       for(bool complete = false; !complete;) {
         complete = reader.doRead(&type, &len, &buffer);
       }
       timestep.ParseFromArray(buffer, len);
       cout << " got " << timestep.timestep() << ", replying..." << flush;
-      for(bool complete = false; !complete;) {
-        complete = writer.doWrite();
-      }
-      cout << " done." << endl;
     }
   } catch(EOFError e) {
     cout << " clock server disconnected, shutting down." << endl;
