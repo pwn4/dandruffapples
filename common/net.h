@@ -3,6 +3,7 @@
 
 namespace net {
   int do_connect(const char *address, int port);
+  int do_listen(int port);
 }
 
 #endif
