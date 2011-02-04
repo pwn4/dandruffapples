@@ -1,5 +1,6 @@
 #include "net.h"
 
+#include <sstream>
 #include <iostream>
 #include <cstdio>
 #include <cstring>
@@ -66,21 +67,57 @@ namespace net {
       exit(1);
     }
 
-    cout << " got connection!" << endl << "Waiting for timestep..." << flush;
+    cout << " Got connection!" << endl << "Waiting for timestep..." << flush;
 
     TimestepUpdate timestep;
     TimestepDone tsdone;
     tsdone.set_done(true);
     
-    bool error = false;
-    while(!error) {
-      error = !timestep.ParseFromFileDescriptor(clockfd);
-      cout << " Got timestep " << timestep.timestep() << endl;
+    int bufsize=1024;        /* a 1K socket input buffer. May need to increase later. */
+    int recvsize;
+    int packettype;
+    int packetsize;
+    char *buffer = new char[bufsize];
+    std::string packetBuffer="";
+    std::string payload;
+    std::string token;
+    size_t nextDelim;
 
-      if(!error) {
-        error = !tsdone.SerializeToFileDescriptor(clockfd);
-        cout << "Done." << endl << "Waiting for timestep..." << flush;
-      }
+    recvsize = recv(clockfd,buffer,bufsize,0);
+    while(recvsize > 0)
+    {        
+        //add recvsize characters to the packetBuffer. We have to parse them ourselves there.
+        for(int i = 0; i < recvsize; i++)
+            packetBuffer.push_back(buffer[i]);
+    
+        //we may have multiple packets all in the buffer together. Tokenize them. Damn TCP streaming
+        nextDelim = packetBuffer.find('\0');
+        while(nextDelim != string::npos)
+        {
+            //the first string is the proto id.
+            token = packetBuffer.substr(0, nextDelim);
+            packettype = atoi(token.c_str());
+         
+            packetBuffer.erase(0, nextDelim+1); //take it off
+
+            //the next string is the packet length
+            nextDelim = packetBuffer.find('\0');
+            token = packetBuffer.substr(0, nextDelim);
+            packetsize = atoi(token.c_str());
+            packetBuffer.erase(0, nextDelim+1); //take it off
+            
+            //we now have our packet. normally use the packettype to identify it, but this is just for now
+            payload = packetBuffer.substr(0, packetsize);
+            packetBuffer.erase(0, payload.length()); //take it off
+            timestep.ParseFromString(payload);
+            cout << "Timestep: " << timestep.timestep() << endl << flush;
+            ///////////////////////
+            
+            nextDelim = packetBuffer.find('\0');
+        }
+
+		//get more data
+		recvsize = recv(clockfd,buffer,bufsize,0);
     }
 
     cout << " Connection to clock server lost." << endl;
