@@ -13,10 +13,7 @@
 #include <arpa/inet.h>
 #include <sys/select.h>
 
-enum MessageType {
-  TIMESTEPUPDATE,
-  TIMESTEPDONE,
-};
+#include "types.h"
 
 //struct for parsePacket to return
 struct protoPacket {

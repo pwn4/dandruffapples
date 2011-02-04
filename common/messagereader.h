@@ -4,7 +4,7 @@
 #include <sys/types.h>
 #include <stdint.h>
 
-#include "functions.h"
+#include "types.h"
 
 class MessageReader {
 protected:
