@@ -48,7 +48,12 @@ bool MessageWriter::doWrite()  {
   } while(bytes < 0 && errno == EINTR);
   
   if(bytes < 0) {
-    throw SystemError();
+    if(errno == EAGAIN || errno == EWOULDBLOCK) {
+      // We're only supposed to be called when the socket is writable,
+      // but no harm in being resilient.
+      return false;
+    }
+    throw SystemError("Failed to write message");
   }
 
   _written += bytes;
