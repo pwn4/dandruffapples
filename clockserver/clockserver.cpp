@@ -13,229 +13,111 @@
 
 #include "../common/timestep.pb.h"
 #include "../common/ports.h"
-#include "../common/functions.h"
 #include "../common/net.h"
+#include "../common/messagereader.h"
+#include "../common/messagewriter.h"
 
 // AAA.BBB.CCC.DDD:EEEEE\n\0
-#define ADDR_LEN (3 + 1 + 3 + 1 + 3 + 1 + 3 + 1 + 5 + 2)
 using namespace std;
 
+int main(int argc, char **argv) {
+  unsigned server_count = argc > 1 ? atoi(argv[1]) : 1;
+  int *servers = new int[server_count];
 
-//define variables
-char configFileName [30] = "config";
+  int sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
+  if(0 > sock) {
+    perror("Failed to create socket");
+    return 1;
+  }
 
-int max_controllers = 10;
-unsigned server_count = 1;
-int *servers;
-int *controllers;
-int freeController = 0;
-int sock, controllerSock;
+  int yes = 1;
+  if(setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1) {
+    perror("Failed to reuse existing socket");
+    return 1;
+  }
 
+  struct sockaddr_in clockaddr;
+  memset(&clockaddr, 0, sizeof(struct sockaddr_in));
+  clockaddr.sin_family = AF_INET;
+  clockaddr.sin_port = htons(CLOCK_PORT);
+  clockaddr.sin_addr.s_addr = INADDR_ANY;
 
+  if(0 > bind(sock, (struct sockaddr *)&clockaddr, sizeof(struct sockaddr_in))) {
+    perror("Failed to bind socket");
+    close(sock);
+    return 1;
+  }
 
-//this function parses any minimal command line arguments and uses their values
-void parseArguments(int argc, char* argv[])
-{
-	//loop through the arguments
-	for(int i = 0; i < argc; i++)
-	{
-		//if it's a configuration file name...
-		if(strcmp(argv[i], "-c") == 0)
-		{
-			strcpy(configFileName, argv[i+1]);
-		
-			printf("Using config file: %s\n", configFileName);
-			
-			i++; //increment the loop counter for one argument
-		}
-	}
-}
+  if(0 > listen(sock, 1)) {
+    perror("Failed to listen on socket");
+    close(sock);
+    return 1;
+  }
 
+  cout << "Waiting for region server connections" << flush;
 
-//this function loads the config file so that the server parameters don't need to be added every time
-void loadConfigFile()
-{
-	//open the config file
-	FILE * fileHandle;
-	fileHandle = fopen (configFileName,"r");
-	
-	//create a read buffer. No line should be longer than 200 chars long.
-	char readBuffer [200];
-	char * token;
-	
-	if (fileHandle != NULL)
-	{
-		while(fgets (readBuffer , sizeof(readBuffer) , fileHandle) != 0)
-		{	
-			token = strtok(readBuffer, " \n");
-			
-			//if it's a REGION WIDTH definition...
-			if(strcmp(token, "NUMSERVERS") == 0){
-				token = strtok(NULL, " \n");
-				server_count = atoi(token);
-				printf("NUMSERVERS: %d\n", server_count);
-			}
-			
-		}
-		
-		fclose (fileHandle);
-	}else
-		printf("Error: Cannot open config file %s\n", configFileName);
-}
+  for(unsigned i = 0; i < server_count;) {
+    do {
+      servers[i] = accept(sock, NULL, NULL);
+    } while(servers[i] < 0 && errno == EINTR);
 
-
-void initialize()
-{
-    //////////////SOCKET INIT///////////////////////////
-    servers = new int[server_count];
-    controllers = new int[max_controllers];
-    
-    sock = net::do_listen(CLOCK_PORT, true);
-    controllerSock = net::do_listen(CONTROLLERS_PORT, false);
-    
-    if(sock < 0)
-    {
-        printf("Clock socket error: Server aborting...");
-        exit(1);
+    if(0 > servers[i]) {
+      perror("Failed to accept connection");
+      continue;
     }
-    
-    if(controllerSock < 0)
-    {
-        printf("Controller socket error: Server aborting...");
-        exit(1);
-    }
-}
 
-void acceptRegionServers()
-{
-    for(unsigned i = 0; i < server_count;) {
-      do {
-        servers[i] = accept(sock, NULL, NULL);
-      } while(servers[i] < 0 && errno == EINTR);
+    cout << "." << flush;
+    ++i;
+  }
 
-      if(0 > servers[i]) {
-        perror("Failed to accept connection");
-        continue;
+  cout << " All region servers connected!" << endl;
+
+  // Do stepping
+  TimestepUpdate update;
+  TimestepDone done;
+
+  //send timesteps continually
+  int currentStep = 0;
+  while(true) {
+    //create the timestep packet
+    update.set_timestep(currentStep);
+        
+    //broadcast to the servers
+    cout << "Sending timestep " << currentStep << flush;
+    for(size_t i = 0; i < server_count; ++i) {
+      MessageWriter writer(servers[i], TIMESTEPUPDATE, &update);
+      for(bool complete = false; !complete;) {
+        complete = writer.doWrite();
       }
 
       cout << "." << flush;
-      ++i;
     }
-}
+    cout << " Done." << endl;
 
-void run()
-{
-    // Do stepping
-    TimestepUpdate update;
-    TimestepDone done;
-    std::string* packetBuffer = new std::string[server_count];
-    int bufsize=1024;        /* a 1K socket input buffer. May need to increase later. */
-    int recvsize;
-    char *buffer = new char[bufsize];
-    protoPacket nextPacket;
-
-    //send timesteps continually - this is the main loop for the clock server
-    int currentStep = 0;
-    while(true){
-    
-        //check for new controller connections, given that there's space
-        if(freeController < max_controllers)
-        {
-            controllers[freeController] = accept(controllerSock, NULL, NULL);
-            if(controllers[freeController] >= 0)
-            {
-                freeController++;
-            }
-        }
-        
-        //create the timestep packet
-        cout << "Sending timestep " << currentStep << endl;
-        update.set_timestep(currentStep);
-        
-        string msg = makePacket(TIMESTEPUPDATE, &update);
-
-        //broadcast to the servers
-        for(unsigned j = 0; j < server_count; ++j) {
-            send(servers[j], msg.c_str(), msg.length(), 0);
-        }
-        //and to controllers
-        for(int j = 0; j < freeController; ++j) {
-            send(controllers[j], msg.c_str(), msg.length(), 0);
-        }
-
-        //wait for 'done' from each server. When rewriting this, should make it fair and check for messages from each server while waiting, instead of 'blocking' on servers until they're done.
-        bool serverDoned;
-        for(size_t j = 0; j < server_count; j++)
-        {
-            serverDoned = false;
-            recvsize = recv(servers[j], buffer, bufsize, 0);
-            while(recvsize > 0 && !serverDoned)
-            {      
-                //add recvsize characters to the packetBuffer. We have to parse them ourselves there.
-                for(int k = 0; k < recvsize; k++)
-                    packetBuffer[j].push_back(buffer[k]);
-
-                //we may have multiple packets all in the buffer together. Tokenize them. Damn TCP streaming
-                nextPacket = parsePacket(&packetBuffer[j]);
-                while(nextPacket.packetType != -1)
-                {
-                    //parse that data with that sexy parse function
-                    if(nextPacket.packetType == TIMESTEPDONE) //timestep done packet
-                    {
-                        //don't even both parseing it. If it's a done type, it's done.
-                        serverDoned = true;
-                        break;
-                    }
-                    
-                    //don't do anything if its of a different type. Will add more later for different proto types
-
-                    nextPacket = parsePacket(&packetBuffer[j]);
-                }
-            }
-        }
-        
-        //delay to bind simulation speed for now
-        sleep(2);
-        currentStep++;
-
+    //wait for 'done' from each server. When rewriting this, should make it fair and check for messages from each server while waiting, instead of 'blocking' on servers until they're done.
+    cout << "Waiting for responses" << flush;
+    for(size_t i = 0; i < server_count; ++i) {
+      MessageReader reader(servers[i], 16);
+      MessageType type;
+      size_t len;
+      const void *buffer;
+      for(bool complete = false; !complete;) {
+        complete = reader.doRead(&type, &len, &buffer);
+      }
+      cout << "." << flush;
     }
-}
+    cout << " Done." << endl;
+        
+    //delay to bind simulation speed for now
+    sleep(2);
+    currentStep++;
 
-void shutdownSockets()
-{
-    for(unsigned i = 0; i < server_count; ++i) {
+  }
+
+  for(size_t i = 0; i < server_count; ++i) {
     shutdown(servers[i], SHUT_RDWR);
     close(servers[i]);
-    }
-    delete[] servers;
-}
-
-int main(int argc, char **argv) {
-	//Print a starting message
-	printf("--== Clock Server Software ==-\n");
-	
-	////////////////////////////////////////////////////
-	printf("Clock Server Initializing ...\n");
-	
-	parseArguments(argc, argv);
-	
-	loadConfigFile();
-	
-	initialize();
-	////////////////////////////////////////////////////
-
-    cout << "Waiting for region server connections" << flush;
-
-    acceptRegionServers();
-
-    cout << " All region servers connected!" << endl;
-
-    run();
-
-    ////////////////////////////////////////////////////
-    
-    shutdownSockets();
-
-
-    return 0;
+  }
+  delete[] servers;
+  return 0;
 }

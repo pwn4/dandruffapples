@@ -110,65 +110,46 @@ char *parse_port(char *input) {
 }
 
 void run() {
-    int clockfd = net::do_connect(clockip, CLOCK_PORT);
-    if(0 > clockfd) {
-      printf("Failed to connect to clock server\n");
-      exit(1);
+  cout << "Connecting to clock server..." << flush;
+  int clockfd = do_connect(clockip, CLOCK_PORT);
+  if(0 > clockfd) {
+    perror(" failed to connect to clock server");
+    return;
+  } else if(0 == clockfd) {
+    cerr << " invalid address: " << clockip << endl;
+    return;
+  }
+
+  cout << " done." << endl;
+
+  TimestepUpdate timestep;
+  TimestepDone tsdone;
+  tsdone.set_done(true);
+  MessageWriter writer(clockfd, TIMESTEPDONE, &tsdone);
+  MessageReader reader(clockfd);
+    
+  while(true) {
+    MessageType type;
+    size_t len;
+    const void *buffer;
+    cout << "Waiting for timestep..." << flush;
+    for(bool complete = false; !complete;) {
+      complete = reader.doRead(&type, &len, &buffer);
     }
-
-    cout << " Got connection!" << endl << "Waiting for timestep..." << flush;
-
-    TimestepUpdate timestep;
-    TimestepDone tsdone;
-    tsdone.set_done(true);
-
-    int bufsize=1024;        /* a 1K socket input buffer. May need to increase later. */
-    int recvsize;
-    char *buffer = new char[bufsize];
-    std::string packetBuffer="";
-    protoPacket nextPacket;
-
-    recvsize = recv(clockfd,buffer,bufsize,0);
-    while(recvsize > 0)
-    {        
-        //add recvsize characters to the packetBuffer. We have to parse them ourselves there.
-        for(int i = 0; i < recvsize; i++)
-            packetBuffer.push_back(buffer[i]);
-
-        //we may have multiple packets all in the buffer together. Tokenize them. Damn TCP streaming
-        nextPacket = parsePacket(&packetBuffer);
-        while(nextPacket.packetType != -1)
-        {
-            //parse that data with that sexy parse function
-            if(nextPacket.packetType == TIMESTEPUPDATE) //timestep done packet
-            {
-                timestep.ParseFromString(nextPacket.packetData);
-                cout << "Timestep: " << timestep.timestep() << endl << flush;
-                
-                cout << "Sending Done..." << endl << flush;
-                
-                string msg = makePacket(TIMESTEPDONE, &tsdone);
-                
-                send(clockfd, msg.c_str(), msg.length(), 0);
-            }
-            
-            //don't do anything if its of a different type. Will add more later for different proto types
-            
-
-            nextPacket = parsePacket(&packetBuffer);
-        }
-
-        //get more data
-        recvsize = recv(clockfd,buffer,bufsize,0);
+    timestep.ParseFromArray(buffer, len);
+    cout << " got " << timestep.timestep() << ", replying..." << flush;
+    for(bool complete = false; !complete;) {
+      complete = writer.doWrite();
     }
+    cout << " done." << endl;
+  }
 
-    cout << " Connection to clock server lost." << endl;
+  cout << " Connection to clock server lost." << endl;
 
-    // Clean up
-    shutdown(clockfd, SHUT_RDWR);
-    close(clockfd);
+  // Clean up
+  shutdown(clockfd, SHUT_RDWR);
+  close(clockfd);
 }
-
 
 //this is the main loop for the server
 int main(int argc, char* argv[])
