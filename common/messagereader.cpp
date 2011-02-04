@@ -26,7 +26,7 @@ bool MessageReader::doRead(MessageType *type, size_t *len, const void **buffer) 
     if(bytes < 0) {
       throw SystemError();
     } else if(bytes == 0) {
-      throw EOF();
+      throw EOFError();
     }
     
     _typepos += bytes;
@@ -45,7 +45,7 @@ bool MessageReader::doRead(MessageType *type, size_t *len, const void **buffer) 
     if(bytes < 0) {
       throw SystemError();
     } else if(bytes == 0) {
-      throw EOF();
+      throw EOFError();
     }
     
     _lenpos += bytes;
@@ -71,7 +71,7 @@ bool MessageReader::doRead(MessageType *type, size_t *len, const void **buffer) 
   if(bytes < 0) {
     throw SystemError();
   } else if(bytes == 0) {
-    throw EOF();
+    throw EOFError();
   }
 
   // Keep track of how much we've read

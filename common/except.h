@@ -9,7 +9,7 @@ class SystemError : public std::runtime_error {
   SystemError(int errno_) : runtime_error(strerror(errno_)) {}
 };
 
-class EOF : public std::runtime_error {
+class EOFError : public std::runtime_error {
  public:
-  EOF() : runtime_error("End of file") {}
+  EOFError() : runtime_error("End of file") {}
 };
