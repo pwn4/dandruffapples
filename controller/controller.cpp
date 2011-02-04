@@ -1,14 +1,24 @@
-#include <netinet/in.h>
-#include <time.h>
-#include <strings.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <sstream>
+#include <iostream>
+#include <cstdio>
+#include <cstring>
+#include <cerrno>
+
 #include <unistd.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
 #include <arpa/inet.h>
-#include <netdb.h>
+#include <sys/select.h>
+
+#include <stdio.h>
+#include <string>
+#include <string.h>
+#include <stdlib.h>
+
 #include "../common/ports.h"
 #include "../common/timestep.pb.h"
+#include "../common/functions.h"
+#include "../common/net.h"
 
 #define ROBOT_LOOKUP_SIZE 100
 
@@ -19,7 +29,64 @@ struct server_client{
 	int *client;
 };
 
+//variable declarations
 server_client lookup[ROBOT_LOOKUP_SIZE];	//robot lookup table
+char configFileName [30] = "config";
+int servfd, listenfd, clientfd;
+
+//Config variables
+char clockip [40] = "127.0.0.1";
+
+
+//this function parses any minimal command line arguments and uses their values
+void parseArguments(int argc, char* argv[])
+{
+	//loop through the arguments
+	for(int i = 0; i < argc; i++)
+	{
+		//if it's a configuration file name...
+		if(strcmp(argv[i], "-c") == 0)
+		{
+			strcpy(configFileName, argv[i+1]);
+		
+			printf("Using config file: %s\n", configFileName);
+			
+			i++; //increment the loop counter for one argument
+		}
+	}
+}
+
+//this function loads the config file so that the server parameters don't need to be added every time
+void loadConfigFile()
+{
+	//open the config file
+	FILE * fileHandle;
+	fileHandle = fopen (configFileName,"r");
+	
+	//create a read buffer. No line should be longer than 200 chars long.
+	char readBuffer [200];
+	char * token;
+	
+	if (fileHandle != NULL)
+	{
+		while(fgets (readBuffer , sizeof(readBuffer) , fileHandle) != 0)
+		{	
+			token = strtok(readBuffer, " \n");
+			
+			//if it's a REGION WIDTH definition...
+			if(strcmp(token, "CLOCKIP") == 0){
+				token = strtok(NULL, " \n");
+				strcpy(clockip, token);
+				printf("Using clockserver IP: %s\n", clockip);
+			}
+			
+		}
+		
+		fclose (fileHandle);
+	}else
+		printf("Error: Cannot open config file %s\n", configFileName);
+}
+
 
 //Server claims robot
 //rid: robot id
@@ -37,12 +104,19 @@ void clientClaim(int rid, int *fd){
 
 int main(/*int argc, char* argv[]*/)
 {
-	//connect to clock server
-	int	servfd, listenfd, clientfd;
-	unsigned int sock_len = sizeof(struct sockaddr_in);
-    struct sockaddr_in servaddr, clientaddr, cntraddr;
+	//Print a starting message
+	printf("--== Controller Server Software ==-\n");
 
-	if ( (servfd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+	//connect to clock server
+
+	unsigned int sock_len = sizeof(struct sockaddr_in);
+    
+    struct sockaddr_in clientaddr;
+    
+    //using net::functions instead of manually connecting. comment for now, delete later if correctly not needed
+    
+    //struct sockaddr_in servaddr, clientaddr, cntraddr;
+	/*if ( (servfd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
 		printf("socket error\n");
 	}
 
@@ -50,7 +124,7 @@ int main(/*int argc, char* argv[]*/)
 	bzero(&servaddr, sizeof(servaddr));
 	servaddr.sin_family = AF_INET;
 	servaddr.sin_port = htons(CLOCK_PORT);
-	if(inet_pton(AF_INET, "127.0.0.1", &servaddr.sin_addr) <= 0) {		//hardcoded
+	if(inet_pton(AF_INET, clockip, &servaddr.sin_addr) <= 0) {		//hardcoded
 		printf("inet_pton error for localhost\n");
 	}
 
@@ -60,12 +134,16 @@ int main(/*int argc, char* argv[]*/)
 	}
 	else{
 		serverClaim(1,&servfd);
-	}
+	}*/
+	
+	servfd = net::do_connect(clockip, CLOCK_PORT);
+	
+	cout << "Connected to Clock Server" << endl << flush;
 
 	//clockserver and regionserver connections successful!
 
 	//ready to receive client connections!
-    listenfd = socket(AF_INET, SOCK_STREAM, 0);
+    /*listenfd = socket(AF_INET, SOCK_STREAM, 0);
 
 	//fill out the cntraddr fields
     bzero(&cntraddr, sizeof(cntraddr));
@@ -74,16 +152,22 @@ int main(/*int argc, char* argv[]*/)
     cntraddr.sin_port = htons(CONTROLLERS_PORT);
 
     bind(listenfd, (struct sockaddr *) &cntraddr, sizeof(cntraddr));
-    listen(listenfd, 1000);							//hardcoded
+    listen(listenfd, 1000);							*/
+    
+    listenfd = net::do_listen(CONTROLLERS_PORT, true);
 
 	while(1){
+	    //artificial delay to test simultaneous clock server connection and client handling
+	    sleep(3);
+	    
+	
 		clientfd = accept(listenfd, (struct sockaddr *) &clientaddr, &sock_len);
 		pid_t pid;
 
 		if( (pid = fork()) == 0 ){
 			//client has connected!
 			close(listenfd);
-			printf("Got connection from: %s%d\n",inet_ntoa(clientaddr.sin_addr), getpid());
+			    //printf("Got connection from: %s pid:%d\n",inet_ntoa(clientaddr.sin_addr), getpid());
 			close(clientfd);
 			exit(0);
 		}
