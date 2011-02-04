@@ -3,6 +3,7 @@
 #include <cstring>
 #include <cerrno>
 
+#include <sstream>
 #include <iostream>
 #include <unistd.h>
 #include <fcntl.h>
@@ -75,13 +76,24 @@ int main(int argc, char **argv) {
   // Do stepping
   TimestepUpdate update;
   TimestepDone done;
-  for(unsigned i = 0; i < 10; ++i) {
+  for(unsigned i = 0; i < 11; ++i) {
     cout << "Sending timestep " << i << endl;
     update.set_timestep(i);
     for(unsigned j = 0; j < server_count; ++j) {
-      update.SerializeToFileDescriptor(servers[j]);
+      
+        std::stringstream ss;
+        std::string msg;
+        //add the proto object data
+        update.SerializeToString(&msg);
+        //add the packet length and proto id to the front
+        ss << "0" << '\0' << msg.length() << '\0' << msg;
+
+        send(servers[j], ss.str().c_str(), ss.str().length(), 0);
+    
     }
   }
+  
+  while(1){}
 
   for(unsigned i = 0; i < server_count; ++i) {
     shutdown(servers[i], SHUT_RDWR);
