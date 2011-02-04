@@ -11,6 +11,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <sys/select.h>
+#include <fcntl.h>
 
 #include "../common/ports.h"
 #include "../common/timestep.pb.h"
@@ -19,12 +20,28 @@
 using namespace std;
 
 namespace net {
-    int do_listen(int port) {
+    int do_listen(int port, bool blocking) {
 
         int sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
         if(0 > sock) {
             perror("Failed to create socket");
             return sock;
+        }
+        
+        /* Set socket to non-blocking */ 
+        if(!blocking){
+            int flags; 
+            
+            if ((flags = fcntl(sock, F_GETFL, 0)) < 0) 
+            { 
+                perror("Failed to unblock socket.");
+                return -1;
+            } 
+            if (fcntl(sock, F_SETFL, flags | O_NONBLOCK) < 0) 
+            { 
+                perror("Failed to unblock socket.");
+                return -1;
+            } 
         }
 
         int yes = 1;
