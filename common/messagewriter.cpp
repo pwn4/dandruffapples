@@ -25,6 +25,7 @@ bool MessageWriter::doWrite()  {
 
   _written += bytes;
   if(_written == _len) {
+    _written = 0;
     return true;
   }
   
