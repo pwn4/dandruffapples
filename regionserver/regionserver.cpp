@@ -127,24 +127,28 @@ void run() {
   tsdone.set_done(true);
   MessageWriter writer(clockfd, TIMESTEPDONE, &tsdone);
   MessageReader reader(clockfd);
-    
-  while(true) {
-    MessageType type;
-    size_t len;
-    const void *buffer;
-    cout << "Waiting for timestep..." << flush;
-    for(bool complete = false; !complete;) {
-      complete = reader.doRead(&type, &len, &buffer);
-    }
-    timestep.ParseFromArray(buffer, len);
-    cout << " got " << timestep.timestep() << ", replying..." << flush;
-    for(bool complete = false; !complete;) {
-      complete = writer.doWrite();
-    }
-    cout << " done." << endl;
-  }
 
-  cout << " Connection to clock server lost." << endl;
+  try {
+    while(true) {
+      MessageType type;
+      size_t len;
+      const void *buffer;
+      cout << "Waiting for timestep..." << flush;
+      for(bool complete = false; !complete;) {
+        complete = reader.doRead(&type, &len, &buffer);
+      }
+      timestep.ParseFromArray(buffer, len);
+      cout << " got " << timestep.timestep() << ", replying..." << flush;
+      for(bool complete = false; !complete;) {
+        complete = writer.doWrite();
+      }
+      cout << " done." << endl;
+    }
+  } catch(EOFError e) {
+    cout << " clock server disconnected, shutting down." << endl;
+  } catch(SystemError e) {
+    cerr << " error performing network I/O: " << e.what() << endl;
+  }
 
   // Clean up
   shutdown(clockfd, SHUT_RDWR);

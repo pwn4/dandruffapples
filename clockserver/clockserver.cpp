@@ -12,6 +12,8 @@
 #include <arpa/inet.h>
 
 #include "../common/timestep.pb.h"
+
+#include "../common/except.h"
 #include "../common/ports.h"
 #include "../common/net.h"
 #include "../common/messagereader.h"
@@ -78,7 +80,8 @@ int main(int argc, char **argv) {
 
   //send timesteps continually
   int currentStep = 0;
-  while(true) {
+  bool error = false;
+  while(!error) {
     //create the timestep packet
     update.set_timestep(currentStep);
         
@@ -102,7 +105,17 @@ int main(int argc, char **argv) {
       size_t len;
       const void *buffer;
       for(bool complete = false; !complete;) {
-        complete = reader.doRead(&type, &len, &buffer);
+        try {
+          complete = reader.doRead(&type, &len, &buffer);
+        } catch(EOFError e) {
+          cout << " region server disconnected, shutting down" << flush;
+          error = true;
+          break;
+        } catch(SystemError e) {
+          cerr << " error performing network I/O: " << e.what() << flush;
+          error = true;
+          break;
+        }
       }
       cout << "." << flush;
     }
@@ -111,7 +124,6 @@ int main(int argc, char **argv) {
     //delay to bind simulation speed for now
     sleep(2);
     currentStep++;
-
   }
 
   for(size_t i = 0; i < server_count; ++i) {
