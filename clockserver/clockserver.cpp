@@ -87,7 +87,11 @@ void loadConfigFile()
 }
 
 
-int main() {
+int main(int argc, char **argv) {
+
+  parseArguments(argc, argv);
+
+  loadConfigFile();
 
   sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
   if(0 > sock) {
