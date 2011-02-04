@@ -16,5 +16,10 @@ PROTOBUF_GENERATE_CPP(PROTO_SRCS PROTO_HDRS
   timestep.proto
   )
 
-add_library(common ${PROTO_SRCS} ${PROTO_HDRS})
+add_library(common
+  ${PROTO_SRCS}
+  ${PROTO_HDRS}
+  functions.cpp
+  )
+
 target_link_libraries(common ${PROTOBUF_LIBRARY} ${CMAKE_THREAD_LIBS_INIT})
