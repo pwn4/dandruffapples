@@ -76,24 +76,31 @@ int main(int argc, char **argv) {
   // Do stepping
   TimestepUpdate update;
   TimestepDone done;
-  for(unsigned i = 0; i < 11; ++i) {
+  bool *doned = new bool[server_count];
+  
+  
+  for(unsigned i = 0; i < 10; ++i) {
     cout << "Sending timestep " << i << endl;
     update.set_timestep(i);
-    for(unsigned j = 0; j < server_count; ++j) {
-      
-        std::stringstream ss;
-        std::string msg;
-        //add the proto object data
-        update.SerializeToString(&msg);
-        //add the packet length and proto id to the front
-        ss << "0" << '\0' << msg.length() << '\0' << msg;
-
-        send(servers[j], ss.str().c_str(), ss.str().length(), 0);
     
+    std::stringstream ss;
+    std::string msg;
+    //add the proto object data
+    update.SerializeToString(&msg);
+    //add the packet length and proto id to the front
+    ss << "0" << '\0' << msg.length() << '\0' << msg;
+    
+    for(unsigned j = 0; j < server_count; ++j) {
+        send(servers[j], ss.str().c_str(), ss.str().length(), 0);
     }
+    
+    //clear the array
+    for(int j = 0; j < server_count; j++)
+        doned[j] = false;
+        
+    //wait for done from each server
+    
   }
-  
-  while(1){}
 
   for(unsigned i = 0; i < server_count; ++i) {
     shutdown(servers[i], SHUT_RDWR);
