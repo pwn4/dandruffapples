@@ -23,7 +23,7 @@ bool MessageReader::doRead(MessageType *type, size_t *len, const void **buffer) 
     do {
       bytes = read(_fd, &_type + _typepos, sizeof(_type) - _typepos);
     } while(bytes < 0 && errno == EINTR);
-    if(bytes <= 0) {
+    if(bytes < 0) {
       throw SystemError();
     } else if(bytes == 0) {
       throw EOF();
@@ -42,7 +42,7 @@ bool MessageReader::doRead(MessageType *type, size_t *len, const void **buffer) 
     do {
       bytes = read(_fd, &_msglen + _lenpos, sizeof(_msglen) - _lenpos);
     } while(bytes < 0 && errno == EINTR);
-    if(bytes <= 0) {
+    if(bytes < 0) {
       throw SystemError();
     } else if(bytes == 0) {
       throw EOF();
@@ -68,7 +68,7 @@ bool MessageReader::doRead(MessageType *type, size_t *len, const void **buffer) 
   do {
     bytes = read(_fd, _buffer + _bufpos, _msglen - _bufpos);
   } while(bytes < 0 && errno == EINTR);
-  if(bytes <= 0) {
+  if(bytes < 0) {
     throw SystemError();
   } else if(bytes == 0) {
     throw EOF();
