@@ -154,7 +154,7 @@ int main(/*int argc, char* argv[]*/)
     bind(listenfd, (struct sockaddr *) &cntraddr, sizeof(cntraddr));
     listen(listenfd, 1000);							*/
     
-    listenfd = net::do_listen(CONTROLLERS_PORT, true);
+    listenfd = net::do_listen(CLIENTS_PORT, true);
 
 	while(1){
 	    //artificial delay to test simultaneous clock server connection and client handling
