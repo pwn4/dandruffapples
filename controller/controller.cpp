@@ -136,7 +136,7 @@ int main(/*int argc, char* argv[]*/)
 		serverClaim(1,&servfd);
 	}*/
 	
-	servfd = net::do_connect(clockip, CLOCK_PORT);
+	servfd = net::do_connect(clockip, CONTROLLERS_PORT);
 	
 	cout << "Connected to Clock Server" << endl << flush;
 
@@ -154,12 +154,48 @@ int main(/*int argc, char* argv[]*/)
     bind(listenfd, (struct sockaddr *) &cntraddr, sizeof(cntraddr));
     listen(listenfd, 1000);							*/
     
-    listenfd = net::do_listen(CLIENTS_PORT, true);
+    listenfd = net::do_listen(CLIENTS_PORT, false);
+    
+
+  TimestepUpdate timestep;
+
+  int bufsize=1024;        /* a 1K socket input buffer. May need to increase later. */
+  int recvsize;
+  char *buffer = new char[bufsize];
+  std::string packetBuffer="";
+  protoPacket nextPacket;
 
 	while(1){
-	    //artificial delay to test simultaneous clock server connection and client handling
-	    sleep(3);
-	    
+
+    //check for data from the clock server
+    recvsize = recv(servfd,buffer,bufsize,0);
+    while(recvsize > 0)
+    {
+        //add recvsize characters to the packetBuffer. We have to parse them ourselves there.
+        for(int i = 0; i < recvsize; i++)
+            packetBuffer.push_back(buffer[i]);
+
+        //we may have multiple packets all in the buffer together. Tokenize them. Damn TCP streaming
+        nextPacket = parsePacket(&packetBuffer);
+        while(nextPacket.packetType != -1)
+        {
+            //parse that data with that sexy parse function
+            if(nextPacket.packetType == TIMESTEPUPDATE) //timestep done packet
+            {
+                timestep.ParseFromString(nextPacket.packetData);
+                cout << "Timestep: " << timestep.timestep() << endl << flush;
+            }
+            
+            //don't do anything if its of a different type. Will add more later for different proto types
+            
+
+            nextPacket = parsePacket(&packetBuffer);
+        }
+
+        //get more data
+        recvsize = recv(servfd,buffer,bufsize,0);
+    }
+	
 	
 		clientfd = accept(listenfd, (struct sockaddr *) &clientaddr, &sock_len);
 		pid_t pid;
