@@ -14,6 +14,7 @@
 #include "../common/timestep.pb.h"
 #include "../common/ports.h"
 #include "../common/functions.h"
+#include "../common/net.h"
 
 // AAA.BBB.CCC.DDD:EEEEE\n\0
 #define ADDR_LEN (3 + 1 + 3 + 1 + 3 + 1 + 3 + 1 + 5 + 2)
@@ -88,33 +89,10 @@ void initialize()
     servers = new int[server_count];
     controllers = new int[max_controllers];
     
-    sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
-    if(0 > sock) {
-        perror("Failed to create socket");
-        exit(1);
-    }
-
-    int yes = 1;
-    if(setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1) {
-        perror("Failed to reuse existing socket");
-        exit(1);
-    }
-    
-    struct sockaddr_in clockaddr;
-    memset(&clockaddr, 0, sizeof(struct sockaddr_in));
-    clockaddr.sin_family = AF_INET;
-    clockaddr.sin_port = htons(CLOCK_PORT);
-    clockaddr.sin_addr.s_addr = INADDR_ANY;
-
-    if(0 > bind(sock, (struct sockaddr *)&clockaddr, sizeof(struct sockaddr_in))) {
-        perror("Failed to bind socket");
-        close(sock);
-        exit(1);
-    }
-
-    if(0 > listen(sock, 1)) {
-        perror("Failed to listen on socket");
-        close(sock);
+    sock = net::do_listen(CLOCK_PORT);
+    if(sock < 0)
+    {
+        printf("Server aborting...");
         exit(1);
     }
 }
