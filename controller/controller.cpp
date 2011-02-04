@@ -71,7 +71,7 @@ int main(/*int argc, char* argv[]*/)
     bzero(&cntraddr, sizeof(cntraddr));
     cntraddr.sin_family = AF_INET;
     cntraddr.sin_addr.s_addr = htonl(INADDR_ANY);	//receives packets from all interfaces
-    cntraddr.sin_port = htons(50001);				//hardcoded
+    cntraddr.sin_port = htons(CONTROLLERS_PORT);
 
     bind(listenfd, (struct sockaddr *) &cntraddr, sizeof(cntraddr));
     listen(listenfd, 1000);							//hardcoded
