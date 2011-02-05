@@ -109,7 +109,9 @@ bool MessageReader::doRead(MessageType *type, size_t *len, const void **buffer) 
     _bufpos = 0;
 
     // Make our data available
-    *type = (MessageType)_type;
+    if(type) {
+      *type = (MessageType)_type;
+    }
     *len = _msglen;
     *buffer = _buffer;
 
