@@ -20,6 +20,7 @@
 #include "../common/net.h"
 #include "../common/messagereader.h"
 #include "../common/messagewriter.h"
+#include "../common/parseconf.h"
 
 using namespace std;
 
@@ -98,7 +99,10 @@ struct connection {
 int main(int argc, char **argv) {
   parseArguments(argc, argv);
 
-  loadConfigFile();
+  //loadConfigFile();
+  conf configuration = parseconf(configFileName);
+  if(configuration.find("NUMSERVERS") != configuration.end())
+    server_count = strtol(configuration["NUMSERVERS"].c_str(), NULL, 10);
 
   // Disregard SIGPIPE so we can handle things normally
   signal(SIGPIPE, SIG_IGN);
