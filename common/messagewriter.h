@@ -1,6 +1,8 @@
 #ifndef _MESSAGEWRITER_H_
 #define _MESSAGEWRITER_H_
 
+#include <stdexcept>
+
 #include <sys/types.h>
 #include <stdint.h>
 #include <cstdlib>
@@ -11,6 +13,11 @@
 #include <google/protobuf/message_lite.h>
 
 #include "types.h"
+
+class UninitializedMessageError : public std::runtime_error {
+public:
+  UninitializedMessageError() : runtime_error("Attempted to write an uninitialized message!") {}
+};
 
 class MessageWriter {
 protected:

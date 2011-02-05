@@ -27,6 +27,9 @@ MessageWriter::~MessageWriter()  {
 }
 
 void MessageWriter::init(MessageType typeTag, const google::protobuf::MessageLite *message) {
+  if(!message->IsInitialized()) {
+    throw UninitializedMessageError();
+  }
   _msglen = message->ByteSize();
   _blocklen = _msglen + sizeof(uint8_t) + sizeof(uint16_t);
   if(_buflen < _blocklen) {

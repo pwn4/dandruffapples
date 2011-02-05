@@ -4,6 +4,7 @@
 enum MessageType {
   TIMESTEPUPDATE,
   TIMESTEPDONE,
+  MESSAGETYPE_MAX
 };
 
 #endif

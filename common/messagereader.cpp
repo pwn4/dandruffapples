@@ -48,6 +48,10 @@ bool MessageReader::doRead(MessageType *type, size_t *len, const void **buffer) 
     // No byte reordering necessary because it's one byte.    
   }
 
+  if(_type >= MESSAGETYPE_MAX) {
+    throw UnknownMessageError();
+  }
+
   // Read length, if necessary
   if(_lenpos < sizeof(_msglen)) {
     // We're (still) reading a new message; get just its length
@@ -75,6 +79,10 @@ bool MessageReader::doRead(MessageType *type, size_t *len, const void **buffer) 
         _buffer = (uint8_t*)realloc(_buffer, _bufsize);
       }
     }
+  }
+
+  if(_msglen == 0) {
+    throw ZeroLengthMessageError();
   }
 
   // Read message body
