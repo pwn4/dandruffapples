@@ -22,11 +22,11 @@ MessageWriter::~MessageWriter()  {
   }
 }
 
-void MessageWriter::init(MessageType typeTag, const google::protobuf::MessageLite *message) {
-  if(!message->IsInitialized()) {
+void MessageWriter::init(MessageType typeTag, const google::protobuf::MessageLite &message) {
+  if(!message.IsInitialized()) {
     throw UninitializedMessageError();
   }
-  _msglen = message->ByteSize();
+  _msglen = message.ByteSize();
   _blocklen = _msglen + sizeof(uint8_t) + sizeof(uint16_t);
   if(_buflen < _blocklen) {
     if(_buffer) {
@@ -37,7 +37,7 @@ void MessageWriter::init(MessageType typeTag, const google::protobuf::MessageLit
   }
   _buffer[0] = typeTag;
   *(uint16_t*)(_buffer + sizeof(uint8_t)) = htons(_msglen);
-  message->SerializeWithCachedSizesToArray(_buffer + sizeof(uint8_t) + sizeof(uint16_t));
+  message.SerializeWithCachedSizesToArray(_buffer + sizeof(uint8_t) + sizeof(uint16_t));
 }
 
 bool MessageWriter::doWrite() {
@@ -67,6 +67,6 @@ bool MessageWriter::doWrite() {
   return false;
 }
 
-bool MessageWriter::writing() {
+bool MessageWriter::writing() const {
   return _msglen;
 }

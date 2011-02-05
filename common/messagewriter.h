@@ -30,10 +30,10 @@ public:
   MessageWriter(const MessageWriter&);
   ~MessageWriter();
 
-  void init(MessageType typeTag, const google::protobuf::MessageLite *message);
+  void init(MessageType typeTag, const google::protobuf::MessageLite &message);
 
   bool doWrite();
-  bool writing();
+  bool writing() const;
 };
 
 #endif
