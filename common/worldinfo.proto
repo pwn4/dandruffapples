@@ -1,0 +1,16 @@
+message WorldInfo {
+    message RegionInfo {
+      required fixed32 ip = 1;
+      required uint32 regionId = 2;
+      optional uint32 neighborPlace = 3;
+    }
+    
+    message RobotInfo {
+      required fixed32 id = 1;
+      required fixed32 robotRegion = 2;
+      required fixed32 robotTeam = 3;
+    }
+
+    repeated RegionInfo region = 1;
+    repeated RobotInfo robot = 2;
+}
