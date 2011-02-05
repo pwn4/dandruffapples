@@ -80,7 +80,8 @@ void loadConfigFile()
 }
 
 struct connection {
-  enum {
+  enum Type {
+    UNSPECIFIED,
     REGION_LISTEN,
     CONTROLLER_LISTEN,
     REGION,
@@ -90,7 +91,8 @@ struct connection {
   MessageReader reader;
   MessageWriter writer;
 
-  connection(int fd_) : fd(fd_), reader(fd_), writer(fd_) {}
+  connection(int fd_) : type(UNSPECIFIED), fd(fd_), reader(fd_), writer(fd_) {}
+  connection(int fd_, Type type_) : type(type_), fd(fd_), reader(fd_), writer(fd_) {}
 };
 
 int main(int argc, char **argv) {
@@ -134,7 +136,7 @@ int main(int argc, char **argv) {
     return 1;
   }
   
-  vector<connection> connections;
+  vector<connection*> connections;
   size_t maxevents = 1 + server_count;
   struct epoll_event *events = new struct epoll_event[maxevents];
   size_t connected = 0, ready = 0;
@@ -180,13 +182,13 @@ int main(int argc, char **argv) {
             // All servers are ready, prepare to send next step
             ready = 0;
             tsupdate.set_timestep(step++);
-            for(vector<connection>::iterator i = connections.begin();
+            for(vector<connection*>::iterator i = connections.begin();
                 i != connections.end(); ++i) {
-              i->writer.init(TIMESTEPUPDATE, &tsupdate);
+              (*i)->writer.init(TIMESTEPUPDATE, &tsupdate);
             
               event.events = EPOLLOUT;
-              event.data.ptr = &*i;
-              epoll_ctl(epoll, EPOLL_CTL_MOD, i->fd, &event);
+              event.data.ptr = *i;
+              epoll_ctl(epoll, EPOLL_CTL_MOD, (*i)->fd, &event);
             }
           }
           break;
@@ -196,14 +198,15 @@ int main(int argc, char **argv) {
         {
           // Accept a new region server
           int fd = accept(c->fd, NULL, NULL);
+          if(fd < 0) {
+            throw new SystemError("Failed to accept region");
+          }
           net::set_blocking(fd, false);
 
-          connection newconn(fd);
-          newconn.type = connection::REGION;
-          connections.push_back(newconn);
+          connections.push_back(new connection(fd, connection::REGION));
 
           event.events = EPOLLIN;
-          event.data.ptr = &connections.back();
+          event.data.ptr = connections.back();
           if(0 > epoll_ctl(epoll, EPOLL_CTL_ADD, fd, &event)) {
             perror("Failed to add region server socket to epoll");
             return 1;
@@ -219,11 +222,13 @@ int main(int argc, char **argv) {
         {
           // Accept a new region server
           int fd = accept(c->fd, NULL, NULL);
+          if(fd < 0) {
+            throw new SystemError("Failed to accept controller");
+          }
           net::set_blocking(fd, false);
 
-          connection newconn(fd);
-          newconn.type = connection::CONTROLLER;
-          newconn.writer.init(TIMESTEPUPDATE, &tsupdate);
+          connection *newconn = new connection(fd, connection::CONTROLLER);
+          newconn->writer.init(TIMESTEPUPDATE, &tsupdate);
           connections.push_back(newconn);
 
           event.events = EPOLLOUT;
@@ -253,10 +258,10 @@ int main(int argc, char **argv) {
 
   // Clean up
   close(epoll);
-  for(vector<connection>::iterator i = connections.begin();
+  for(vector<connection*>::iterator i = connections.begin();
       i != connections.end(); ++i) {
-    shutdown(i->fd, SHUT_RDWR);
-    close(i->fd);
+    shutdown((*i)->fd, SHUT_RDWR);
+    close((*i)->fd);
   }
   close(sock);
   close(controllerSock);
