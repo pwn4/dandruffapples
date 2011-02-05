@@ -26,7 +26,6 @@ protected:
   uint8_t *_buffer;
 
 public:
-  MessageWriter(int fd, MessageType typeTag, const google::protobuf::MessageLite *message);
   MessageWriter(int fd, size_t prealloc = 32);
   MessageWriter(const MessageWriter&);
   ~MessageWriter();
