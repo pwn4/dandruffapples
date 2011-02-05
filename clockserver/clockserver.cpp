@@ -197,7 +197,7 @@ int main(int argc, char **argv) {
           // Accept a new region server
           int fd = accept(c->fd, NULL, NULL);
           if(fd < 0) {
-            throw new SystemError("Failed to accept region");
+            throw SystemError("Failed to accept region");
           }
           net::set_blocking(fd, false);
 
@@ -222,7 +222,7 @@ int main(int argc, char **argv) {
           // Accept a new region server
           int fd = accept(c->fd, NULL, NULL);
           if(fd < 0) {
-            throw new SystemError("Failed to accept controller");
+            throw SystemError("Failed to accept controller");
           }
           net::set_blocking(fd, false);
 
