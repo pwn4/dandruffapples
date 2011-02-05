@@ -32,7 +32,8 @@ using namespace std;
 char configFileName [30] = "config";
 
 //Config variables
-char clockip [40] = "127.0.0.1";
+char controllerip [10][40] = new char[10][40]; //controller IPs - max 10. Don't really need any more.
+int freecontroller = 0;
 
 ////////////////////////////////////////////////////////////
 
@@ -74,10 +75,10 @@ void loadConfigFile()
 			token = strtok(readBuffer, " \n");
 			
 			//if it's a REGION WIDTH definition...
-			if(strcmp(token, "CLOCKIP") == 0){
+			if(strcmp(token, "CONTROLLERIP") == 0){
 				token = strtok(NULL, " \n");
-				strcpy(clockip, token);
-				printf("Using clockserver IP: %s\n", clockip);
+				strcpy(controllerip[freeController++], token);
+				printf("Storing controller IP: %s\n", clockip);
 			}
 			
 		}
@@ -87,52 +88,30 @@ void loadConfigFile()
 		printf("Error: Cannot open config file %s\n", configFileName);
 }
 
-char *parse_port(char *input) {
-  size_t input_len = strlen(input);
-  char *port;
-  
-  for(port = input; *port != ':' && (port - input) < input_len; ++port);
-  
-  if((port - input) == input_len) {
-    return NULL;
-  } else {
-    // Split the string
-    *port = '\0';
-    ++port;
-    // Strip newline
-    char *end;
-    for(end = port; *end != '\n'; ++end);
-    if(end == port) {
-      return NULL;
-    } else {
-      *end = '\0';
-      return port;
-    }
-  }
-}
 
 void run() {
-  cout << "Connecting to clock server..." << flush;
-  int clockfd = net::do_connect(clockip, CLOCK_PORT);
-  if(0 > clockfd) {
-    perror(" failed to connect to clock server");
-    return;
-  } else if(0 == clockfd) {
-    cerr << " invalid address: " << clockip << endl;
-    return;
+  int controllerfd = -1;
+  int currentController = rand() % freeController;
+  while(controllerfd < 0)
+  {
+    cout << "Attempting to connect to controller " <<  << "..." << flush;
+    controllerfd = net::do_connect(controllerip[i], CLIENT_PORT);
+    if(0 > controllerfd) {
+      cout << " failed to connect." << endl;
+    } else if(0 == controllerfd) {
+      cerr << " invalid address: " << controllerfd << endl;
+    }
+    currentController = rand() % freeController;
   }
 
-  cout << " done." << endl;
+  cout << " connected." << endl;
 
   TimestepUpdate timestep;
-  TimestepDone tsdone;
-  tsdone.set_done(true);
-  MessageWriter writer(clockfd, TIMESTEPDONE, &tsdone);
-  MessageReader reader(clockfd);
+  MessageReader reader(controllerfd);
   MessageType type;
   size_t len;
   const void *buffer;
-
+/*
   try {
     cout << "Notifying clock server that our init's complete..." << flush;
     while(true) {
@@ -152,32 +131,32 @@ void run() {
     cout << " clock server disconnected, shutting down." << endl;
   } catch(SystemError e) {
     cerr << " error performing network I/O: " << e.what() << endl;
-  }
+  }*/
 
   // Clean up
-  shutdown(clockfd, SHUT_RDWR);
-  close(clockfd);
+  shutdown(controllerfd, SHUT_RDWR);
+  close(controllerfd);
 }
 
-//this is the main loop for the server
+//this is the main loop for the client
 int main(int argc, char* argv[])
 {
 	//Print a starting message
 	printf("--== Client Software ==-\n");
 	
 	////////////////////////////////////////////////////
-	printf("Server Initializing ...\n");
+	printf("Client Initializing ...\n");
 	
 	parseArguments(argc, argv);
 	
 	loadConfigFile();
 	////////////////////////////////////////////////////
 	
-	printf("Server Running!\n");
+	printf("Client Running!\n");
 	
 	run();
 	
-	printf("Server Shutting Down ...\n");
+	printf("Client Shutting Down ...\n");
 	
 	printf("Goodbye!\n");
 }
