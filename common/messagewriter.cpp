@@ -17,7 +17,7 @@ MessageWriter::MessageWriter(const MessageWriter &m) {
   _blocklen = m._blocklen;
   _buflen = m._buflen;
   _buffer = new uint8_t[_buflen];
-  memcpy(_buffer, m._buffer, _msglen);
+  memcpy(_buffer, m._buffer, _blocklen);
 }
 
 MessageWriter::~MessageWriter()  {
