@@ -117,9 +117,8 @@ int main(int argc, char **argv) {
   }
 
   struct epoll_event event;
-  connection listenconn(sock), controllerlistenconn(controllerSock);
-  listenconn.type = connection::REGION_LISTEN;
-  controllerlistenconn.type = connection::CONTROLLER_LISTEN;
+  connection listenconn(sock, connection::REGION_LISTEN),
+    controllerlistenconn(controllerSock, connection::CONTROLLER_LISTEN);
   event.events = EPOLLIN;
   event.data.ptr = &listenconn;
   if(0 > epoll_ctl(epoll, EPOLL_CTL_ADD, sock, &event)) {
@@ -185,7 +184,6 @@ int main(int argc, char **argv) {
             for(vector<connection*>::iterator i = connections.begin();
                 i != connections.end(); ++i) {
               (*i)->writer.init(TIMESTEPUPDATE, &tsupdate);
-            
               event.events = EPOLLOUT;
               event.data.ptr = *i;
               epoll_ctl(epoll, EPOLL_CTL_MOD, (*i)->fd, &event);
@@ -203,10 +201,11 @@ int main(int argc, char **argv) {
           }
           net::set_blocking(fd, false);
 
-          connections.push_back(new connection(fd, connection::REGION));
+          connection *newconn = new connection(fd, connection::REGION);
+          connections.push_back(newconn);
 
           event.events = EPOLLIN;
-          event.data.ptr = connections.back();
+          event.data.ptr = newconn;
           if(0 > epoll_ctl(epoll, EPOLL_CTL_ADD, fd, &event)) {
             perror("Failed to add region server socket to epoll");
             return 1;
@@ -232,7 +231,7 @@ int main(int argc, char **argv) {
           connections.push_back(newconn);
 
           event.events = EPOLLOUT;
-          event.data.ptr = &connections.back();
+          event.data.ptr = newconn;
           if(0 > epoll_ctl(epoll, EPOLL_CTL_ADD, fd, &event)) {
             perror("Failed to add region server socket to epoll");
             return 1;
