@@ -1,4 +1,4 @@
-add_executable(regionserver
+add_executable(client
   client.cpp
   )
 

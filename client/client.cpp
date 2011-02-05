@@ -32,8 +32,7 @@ using namespace std;
 char configFileName [30] = "config";
 
 //Config variables
-char controllerip [10][40] = new char[10][40]; //controller IPs - max 10. Don't really need any more.
-int freecontroller = 0;
+vector<string> controllerips; //controller IPs 
 
 ////////////////////////////////////////////////////////////
 
@@ -77,8 +76,9 @@ void loadConfigFile()
 			//if it's a REGION WIDTH definition...
 			if(strcmp(token, "CONTROLLERIP") == 0){
 				token = strtok(NULL, " \n");
-				strcpy(controllerip[freeController++], token);
-				printf("Storing controller IP: %s\n", clockip);
+				string newcontrollerip = token;
+				controllerips.push_back(newcontrollerip);
+				printf("Storing controller IP: %s\n", newcontrollerip.c_str());
 			}
 			
 		}
@@ -91,17 +91,17 @@ void loadConfigFile()
 
 void run() {
   int controllerfd = -1;
-  int currentController = rand() % freeController;
+  int currentController = rand() % controllerips.size();
   while(controllerfd < 0)
   {
-    cout << "Attempting to connect to controller " <<  << "..." << flush;
-    controllerfd = net::do_connect(controllerip[i], CLIENT_PORT);
+    cout << "Attempting to connect to controller " << controllerips.at(currentController) << "..." << flush;
+    controllerfd = net::do_connect(controllerips.at(currentController).c_str(), CLIENTS_PORT);
     if(0 > controllerfd) {
       cout << " failed to connect." << endl;
     } else if(0 == controllerfd) {
       cerr << " invalid address: " << controllerfd << endl;
     }
-    currentController = rand() % freeController;
+    currentController = rand() % controllerips.size();
   }
 
   cout << " connected." << endl;
