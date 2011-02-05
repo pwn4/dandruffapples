@@ -1,3 +1,6 @@
+#ifndef _EXCEPT_H_
+#define _EXCEPT_H_
+
 #include <stdexcept>
 #include <cerrno>
 #include <cstring>
@@ -20,3 +23,5 @@ class EOFError : public std::runtime_error {
 public:
   EOFError() : runtime_error("End of file") {}
 };
+
+#endif
