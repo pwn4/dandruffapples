@@ -6,10 +6,6 @@
 
 MessageWriter::MessageWriter(int fd, size_t prealloc) : _fd(fd), _written(0), _msglen(0), _blocklen(0), _buflen(prealloc), _buffer(new uint8_t[_buflen]) {}
 
-MessageWriter::MessageWriter(int fd, MessageType typeTag, const google::protobuf::MessageLite *message) : _fd(fd), _written(0), _msglen(0), _buflen(0), _buffer(NULL) {
-  init(typeTag, message);
-}
-
 MessageWriter::MessageWriter(const MessageWriter &m) {
   _fd = m._fd;
   _written = m._written;
@@ -44,7 +40,7 @@ void MessageWriter::init(MessageType typeTag, const google::protobuf::MessageLit
   message->SerializeWithCachedSizesToArray(_buffer + sizeof(uint8_t) + sizeof(uint16_t));
 }
 
-bool MessageWriter::doWrite()  {
+bool MessageWriter::doWrite() {
   ssize_t bytes;
   do {
     bytes = write(_fd, _buffer + _written, _blocklen - _written);
@@ -63,8 +59,14 @@ bool MessageWriter::doWrite()  {
 
   if(_written == _blocklen) {
     _written = 0;
+    _msglen = 0;
+    _blocklen = 0;
     return true;
   }
   
   return false;
+}
+
+bool MessageWriter::writing() {
+  return _msglen;
 }
