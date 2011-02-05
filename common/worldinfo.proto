@@ -22,6 +22,6 @@ message RobotInfo {
 }
 
 message WorldInfo {
-  repeated RegionInfo regions = 1;
-  repeated RobotInfo robots = 2;
+  repeated RegionInfo region = 1;
+  repeated RobotInfo robot = 2;
 }
