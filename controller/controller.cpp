@@ -17,7 +17,7 @@
 
 #include "../common/ports.h"
 #include "../common/timestep.pb.h"
-#include "../common/functions.h"
+#include "../common/messagereader.h"
 #include "../common/net.h"
 
 #define ROBOT_LOOKUP_SIZE 100
@@ -104,110 +104,26 @@ void clientClaim(int rid, int *fd){
 
 int main(/*int argc, char* argv[]*/)
 {
-	//Print a starting message
+	// Print a starting message
 	printf("--== Controller Server Software ==-\n");
-
-	//connect to clock server
-
-	unsigned int sock_len = sizeof(struct sockaddr_in);
-    
-    struct sockaddr_in clientaddr;
-    
-    //using net::functions instead of manually connecting. comment for now, delete later if correctly not needed
-    
-    //struct sockaddr_in servaddr, clientaddr, cntraddr;
-	/*if ( (servfd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-		printf("socket error\n");
-	}
-
-	//fill in the servaddr fields
-	bzero(&servaddr, sizeof(servaddr));
-	servaddr.sin_family = AF_INET;
-	servaddr.sin_port = htons(CLOCK_PORT);
-	if(inet_pton(AF_INET, clockip, &servaddr.sin_addr) <= 0) {		//hardcoded
-		printf("inet_pton error for localhost\n");
-	}
-
-	if(connect(servfd, (struct sockaddr *) &servaddr, sizeof(servaddr)) < 0) {
-	//connect to the server
-		printf("connect error\n");
-	}
-	else{
-		serverClaim(1,&servfd);
-	}*/
 	
 	servfd = net::do_connect(clockip, CONTROLLERS_PORT);
-	
-	cout << "Connected to Clock Server" << endl << flush;
-
-	//clockserver and regionserver connections successful!
-
-	//ready to receive client connections!
-    /*listenfd = socket(AF_INET, SOCK_STREAM, 0);
-
-	//fill out the cntraddr fields
-    bzero(&cntraddr, sizeof(cntraddr));
-    cntraddr.sin_family = AF_INET;
-    cntraddr.sin_addr.s_addr = htonl(INADDR_ANY);	//receives packets from all interfaces
-    cntraddr.sin_port = htons(CONTROLLERS_PORT);
-
-    bind(listenfd, (struct sockaddr *) &cntraddr, sizeof(cntraddr));
-    listen(listenfd, 1000);							*/
+	cout << "Connected to Clock Server" << endl;
     
-    listenfd = net::do_listen(CLIENTS_PORT);
-    net::set_blocking(listenfd, false);
-    
+  listenfd = net::do_listen(CLIENTS_PORT);
+  net::set_blocking(listenfd, false);
 
   TimestepUpdate timestep;
+  MessageReader reader(servfd);
 
-  int bufsize=1024;        /* a 1K socket input buffer. May need to increase later. */
-  int recvsize;
-  char *buffer = new char[bufsize];
-  std::string packetBuffer="";
-  protoPacket nextPacket;
-
-	while(1){
-
-    //check for data from the clock server
-    recvsize = recv(servfd,buffer,bufsize,0);
-    while(recvsize > 0)
-    {
-        //add recvsize characters to the packetBuffer. We have to parse them ourselves there.
-        for(int i = 0; i < recvsize; i++)
-            packetBuffer.push_back(buffer[i]);
-
-        //we may have multiple packets all in the buffer together. Tokenize them. Damn TCP streaming
-        nextPacket = parsePacket(&packetBuffer);
-        while(nextPacket.packetType != -1)
-        {
-            //parse that data with that sexy parse function
-            if(nextPacket.packetType == TIMESTEPUPDATE) //timestep done packet
-            {
-                timestep.ParseFromString(nextPacket.packetData);
-                cout << "Timestep: " << timestep.timestep() << endl << flush;
-            }
-            
-            //don't do anything if its of a different type. Will add more later for different proto types
-            
-
-            nextPacket = parsePacket(&packetBuffer);
-        }
-
-        //get more data
-        recvsize = recv(servfd,buffer,bufsize,0);
+  MessageType type;
+  size_t len;
+  const void *buffer;
+  while(true) {
+    for(bool complete = false; !complete;) {
+      complete = reader.doRead(&type, &len, &buffer);
     }
-	
-	
-		clientfd = accept(listenfd, (struct sockaddr *) &clientaddr, &sock_len);
-		pid_t pid;
-
-		if( (pid = fork()) == 0 ){
-			//client has connected!
-			close(listenfd);
-			    //printf("Got connection from: %s pid:%d\n",inet_ntoa(clientaddr.sin_addr), getpid());
-			close(clientfd);
-			exit(0);
-		}
-		close(clientfd);
-	}
+    timestep.ParseFromArray(buffer, len);
+    cout << "Got timestep " << timestep.timestep() << endl;
+  }
 }
