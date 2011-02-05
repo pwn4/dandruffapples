@@ -132,21 +132,35 @@ void run() {
   MessageType type;
   size_t len;
   const void *buffer;
+  int timeSteps = 0;
+  time_t lastSecond = time(NULL);
 
   try {
     cout << "Notifying clock server that our init's complete..." << flush;
     while(true) {
+    
+      //check if its time to output
+      if(time(NULL) > lastSecond)
+      {
+        cout << timeSteps << " timesteps/second." << endl;
+        timeSteps = 0;
+        lastSecond = time(NULL);
+      }
+    
       for(bool complete = false; !complete;) {
         complete = writer.doWrite();
       }
-      cout << " done." << endl;
-      
-      cout << "Waiting for timestep..." << flush;
+
       for(bool complete = false; !complete;) {
         complete = reader.doRead(&type, &len, &buffer);
       }
-      timestep.ParseFromArray(buffer, len);
-      cout << " got " << timestep.timestep() << ", replying..." << flush;
+      
+      if(type == TIMESTEPUPDATE)
+      {
+        timeSteps++;
+        timestep.ParseFromArray(buffer, len);
+      }
+      
     }
   } catch(EOFError e) {
     cout << " clock server disconnected, shutting down." << endl;
