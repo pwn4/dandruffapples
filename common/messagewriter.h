@@ -34,6 +34,7 @@ public:
   void init(MessageType typeTag, const google::protobuf::MessageLite *message);
 
   bool doWrite();
+  bool writing();
 };
 
 #endif

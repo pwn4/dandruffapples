@@ -44,7 +44,7 @@ void MessageWriter::init(MessageType typeTag, const google::protobuf::MessageLit
   message->SerializeWithCachedSizesToArray(_buffer + sizeof(uint8_t) + sizeof(uint16_t));
 }
 
-bool MessageWriter::doWrite()  {
+bool MessageWriter::doWrite() {
   ssize_t bytes;
   do {
     bytes = write(_fd, _buffer + _written, _blocklen - _written);
@@ -63,8 +63,14 @@ bool MessageWriter::doWrite()  {
 
   if(_written == _blocklen) {
     _written = 0;
+    _msglen = 0;
+    _blocklen = 0;
     return true;
   }
   
   return false;
+}
+
+bool MessageWriter::writing() {
+  return _msglen;
 }
