@@ -1,0 +1,3 @@
+message ClaimTeam {
+   required fixed32 id = 1;
+}
