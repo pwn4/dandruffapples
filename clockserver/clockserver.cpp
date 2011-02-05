@@ -11,6 +11,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <sys/epoll.h>
+#include <signal.h>
 
 #include "../common/timestep.pb.h"
 
@@ -96,6 +97,9 @@ int main(int argc, char **argv) {
   parseArguments(argc, argv);
 
   loadConfigFile();
+
+  // Disregard SIGPIPE so we can handle things normally
+  signal(SIGPIPE, SIG_IGN);
 
   int sock = net::do_listen(CLOCK_PORT);
   int controllerSock = net::do_listen(CONTROLLERS_PORT);
