@@ -127,7 +127,7 @@ void run() {
   TimestepUpdate timestep;
   TimestepDone tsdone;
   tsdone.set_done(true);
-  MessageWriter writer(clockfd, TIMESTEPDONE, &tsdone);
+  MessageWriter writer(clockfd);
   MessageReader reader(clockfd);
   MessageType type;
   size_t len;
@@ -146,7 +146,8 @@ void run() {
         timeSteps = 0;
         lastSecond = time(NULL);
       }
-    
+
+      writer.init(TIMESTEPDONE, &tsdone);
       for(bool complete = false; !complete;) {
         complete = writer.doWrite();
       }
