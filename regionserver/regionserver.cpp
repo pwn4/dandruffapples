@@ -2,7 +2,6 @@
 Regionserver program
 This program communications with clients, controllers, PNGviewers, other regionservers, and clockservers.
 //////////////////////////////////////////////////////////////////////////////////////////////////*/
-#include <sstream>
 #include <iostream>
 #include <cstdio>
 #include <cstring>
@@ -147,7 +146,7 @@ void run() {
         lastSecond = time(NULL);
       }
 
-      writer.init(TIMESTEPDONE, &tsdone);
+      writer.init(TIMESTEPDONE, tsdone);
       for(bool complete = false; !complete;) {
         complete = writer.doWrite();
       }

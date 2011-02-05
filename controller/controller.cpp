@@ -3,7 +3,7 @@
 #include <cstdio>
 #include <cstring>
 #include <cerrno>
-#include <queue>
+#include <tr1/memory>
 
 #include <unistd.h>
 #include <sys/socket.h>
@@ -21,7 +21,7 @@
 #include "../common/ports.h"
 #include "../common/timestep.pb.h"
 #include "../common/messagereader.h"
-#include "../common/messagewriter.h"
+#include "../common/messagequeue.h"
 #include "../common/net.h"
 #include "../common/except.h"
 
@@ -117,11 +117,10 @@ struct connection {
   } type;
   int fd;
   MessageReader reader;
-  MessageWriter writer;
-  queue<google::protobuf::MessageLite*> waiting;
+  MessageQueue queue;
 
-  connection(int fd_) : type(UNSPECIFIED), fd(fd_), reader(fd_), writer(fd_) {}
-  connection(int fd_, Type type_) : type(type_), fd(fd_), reader(fd_), writer(fd_) {}
+  connection(int fd_) : type(UNSPECIFIED), fd(fd_), reader(fd_), queue(fd_) {}
+  connection(int fd_, Type type_) : type(type_), fd(fd_), reader(fd_), queue(fd_) {}
 };
 
 int main(/*int argc, char* argv[]*/)
@@ -182,9 +181,10 @@ int main(/*int argc, char* argv[]*/)
             timestep.ParseFromArray(buffer, len);
 
             // Enqueue update to all clients
+            msg_ptr update(new TimestepUpdate(timestep));
             for(vector<connection*>::iterator i = clients.begin();
                 i != clients.end(); ++i) {
-              (*i)->waiting.push(new TimestepUpdate(timestep));
+              (*i)->queue.push(TIMESTEPUPDATE, update);
               event.events = EPOLLIN | EPOLLOUT;
               event.data.ptr = *i;
               epoll_ctl(epoll, EPOLL_CTL_MOD, (*i)->fd, &event);
@@ -220,19 +220,11 @@ int main(/*int argc, char* argv[]*/)
         switch(c->type) {
         case connection::CLIENT:
         {
-          if(!c->writer.writing()) {
-            if(!c->waiting.empty()) {
-              c->writer.init(TIMESTEPUPDATE, c->waiting.front());
-            }
+          if(c->queue.doWrite()) {
+            event.events = EPOLLIN;
+            event.data.ptr = c;
+            epoll_ctl(epoll, EPOLL_CTL_MOD, c->fd, &event);
           }
-          if(c->writer.doWrite()) {
-            delete c->waiting.front();
-            c->waiting.pop();
-            if(!c->waiting.empty()) {
-              c->writer.init(TIMESTEPUPDATE, c->waiting.front());
-            }
-          }
-          
           break;
         }
         default:

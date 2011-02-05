@@ -19,7 +19,7 @@
 #include "../common/ports.h"
 #include "../common/net.h"
 #include "../common/messagereader.h"
-#include "../common/messagewriter.h"
+#include "../common/messagequeue.h"
 #include "../common/parseconf.h"
 
 using namespace std;
@@ -88,12 +88,18 @@ struct connection {
     REGION,
     CONTROLLER
   } type;
+  
+  enum State {
+    INIT,
+    RUN
+  } state;
+  
   int fd;
   MessageReader reader;
-  MessageWriter writer;
+  MessageQueue queue;
 
-  connection(int fd_) : type(UNSPECIFIED), fd(fd_), reader(fd_), writer(fd_) {}
-  connection(int fd_, Type type_) : type(type_), fd(fd_), reader(fd_), writer(fd_) {}
+  connection(int fd_) : type(UNSPECIFIED), state(INIT), fd(fd_), reader(fd_), queue(fd_) {}
+  connection(int fd_, Type type_) : type(type_), state(INIT), fd(fd_), reader(fd_), queue(fd_) {}
 };
 
 int main(int argc, char **argv) {
@@ -144,9 +150,9 @@ int main(int argc, char **argv) {
   struct epoll_event *events = new struct epoll_event[maxevents];
   size_t connected = 0, ready = 0;
   TimestepDone tsdone;
-  TimestepUpdate tsupdate;
+  TimestepUpdate timestep;
   unsigned long long step = 0;
-  tsupdate.set_timestep(step++);
+  timestep.set_timestep(step++);
   time_t lastSecond = time(NULL);
   int timeSteps = 0;
 
@@ -193,10 +199,11 @@ int main(int argc, char **argv) {
             
             // All servers are ready, prepare to send next step
             ready = 0;
-            tsupdate.set_timestep(step++);
+            timestep.set_timestep(step++);
+            msg_ptr update(new TimestepUpdate(timestep));
             for(vector<connection*>::iterator i = connections.begin();
                 i != connections.end(); ++i) {
-              (*i)->writer.init(TIMESTEPUPDATE, &tsupdate);
+              (*i)->queue.push(TIMESTEPUPDATE, update);
               event.events = EPOLLOUT;
               event.data.ptr = *i;
               epoll_ctl(epoll, EPOLL_CTL_MOD, (*i)->fd, &event);
@@ -240,7 +247,6 @@ int main(int argc, char **argv) {
           net::set_blocking(fd, false);
 
           connection *newconn = new connection(fd, connection::CONTROLLER);
-          newconn->writer.init(TIMESTEPUPDATE, &tsupdate);
           connections.push_back(newconn);
 
           event.events = EPOLLOUT;
@@ -257,11 +263,25 @@ int main(int argc, char **argv) {
           break;
         }
       } else if(events[i].events & EPOLLOUT) {
-        if(c->writer.doWrite()) {
-          // We're done writing for this server
-          event.events = c->type == connection::CONTROLLER ? 0 : EPOLLIN;
-          event.data.ptr = c;
-          epoll_ctl(epoll, EPOLL_CTL_MOD, c->fd, &event);
+        switch(c->type) {
+        case connection::CONTROLLER:
+          if(c->state == connection::INIT) {
+            // Begin initialization message send
+          }
+          if(c->queue.doWrite()) {
+            event.events = 0;
+            event.data.ptr = c;
+            epoll_ctl(epoll, EPOLL_CTL_MOD, c->fd, &event);
+          }
+          break;
+        case connection::REGION:
+          if(c->queue.doWrite()) {
+            // We're done writing for this server
+            event.events = EPOLLIN;
+            event.data.ptr = c;
+            epoll_ctl(epoll, EPOLL_CTL_MOD, c->fd, &event);
+          }
+          break;
         }
       }
     }
