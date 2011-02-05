@@ -137,6 +137,7 @@ int main(int argc, char **argv) {
   TimestepDone tsdone;
   TimestepUpdate tsupdate;
   unsigned long long step = 0;
+  tsupdate.set_timestep(step++);
 
   cout << "Listening for connections." << endl;
   while(true) {    
