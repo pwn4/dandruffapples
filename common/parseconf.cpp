@@ -22,7 +22,6 @@ conf parseconf(const char *path) {
     string key;
     tok = strtok(buffer, delims);
     if(!tok) {
-      free(buffer);
       continue;
     }
     key = tok;
