@@ -10,6 +10,8 @@ find_package(Threads REQUIRED)
 
 PROTOBUF_GENERATE_CPP(PROTO_SRCS PROTO_HDRS
   claim.proto
+  claimteam.proto
+  worldinfo.proto
   clientrobot.proto
   puckstack.proto
   serverrobot.proto
