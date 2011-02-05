@@ -78,6 +78,17 @@ void loadConfigFile()
   fclose(fileHandle);
 }
 
+struct connection {
+  enum {
+    REGION,
+    CONTROLLER
+  } type;
+  int fd;
+  MessageReader reader;
+  MessageWriter writer;
+
+  connection(int fd_) : fd(fd_), reader(fd_), writer(fd_) {}
+};
 
 int main(int argc, char **argv) {
   parseArguments(argc, argv);
@@ -101,9 +112,8 @@ int main(int argc, char **argv) {
     perror("Failed to add listen socket to epoll");
   }
 
-  vector<int> servers(server_count, -1);
-  vector<MessageReader> readers;
-  vector<MessageWriter> writers;
+  
+  vector<connection> connections;
   size_t maxevents = 1 + server_count;
   struct epoll_event *events = new struct epoll_event[maxevents];
   size_t connected = 0, ready = 0;
@@ -120,66 +130,67 @@ int main(int argc, char **argv) {
     }
 
     for(size_t i = 0; i < (unsigned)eventcount; ++i) {
+      connection *c = (connection*)events[i].data.ptr;
       if(events[i].data.u32 == 0) {
         // Accept a new region server
         int fd = accept(sock, NULL, NULL);
         net::set_blocking(fd, false);
-        servers[connected] = fd;
+
+        connection c(fd);
+        c.type = connection::REGION;
+        connections.push_back(c);
+
         event.events = EPOLLIN;
-        event.data.u32 = connected+1;
+        event.data.ptr = &connections.back();
         if(0 > epoll_ctl(epoll, EPOLL_CTL_ADD, fd, &event)) {
           perror("Failed to add region server socket to epoll");
           return 1;
         }
 
-        readers.push_back(MessageReader(fd));
-        writers.push_back(MessageWriter(fd));
-
-        cout << "Region server " << connected << " connected!" << endl;
+        cout << "Got region server connection." << endl;
 
         ++connected;
-      } else if(events[i].events & EPOLLIN) {
+      } else if(events[i].events & EPOLLIN &&
+                c->type == connection::REGION) {
         MessageType type;
         size_t len;
         const void *buffer;
-        size_t index = events[i].data.u32 - 1;
         try {
-          if(readers[index].doRead(&type, &len, &buffer)) {
+          if(c->reader.doRead(&type, &len, &buffer)) {
             tsdone.ParseFromArray(buffer, len);
-            cout << "Region server " << index << " done." << endl;
             ++ready;
           }
         } catch(EOFError e) {
-          cerr << "Region server " << index
-               << " disconnected!  Shutting down." << endl;
+          cerr << "Region server disconnected!  Shutting down." << endl;
           return 1;
         } catch(SystemError e) {
-          cerr << "Error reading from region server " << index
-               << ": " << e.what() << ".  Shutting down." << endl;
+          cerr << "Error reading from region server: "
+               << e.what() << ".  Shutting down." << endl;
           return 1;
         }
         
         if(ready == connected && connected == server_count) {
-          cout << "All servers done, sending timestep " << step << "." << endl;
+          cout << " done!" << endl
+               << "Sending timestep " << step << flush;
           // All servers are ready, prepare to send next step
           ready = 0;
           tsupdate.set_timestep(step++);
-          for(size_t j = 0; j < connected; ++j) {
-            writers[j].init(TIMESTEPUPDATE, &tsupdate);
+          for(vector<connection>::iterator i = connections.begin();
+              i != connections.end(); ++i) {
+            i->writer.init(TIMESTEPUPDATE, &tsupdate);
             
             event.events = EPOLLOUT;
-            event.data.u32 = j+1;
-            epoll_ctl(epoll, EPOLL_CTL_MOD, servers[j], &event);
+            event.data.ptr = &*i;
+            epoll_ctl(epoll, EPOLL_CTL_MOD, i->fd, &event);
           }
         }
       } else if(events[i].events & EPOLLOUT) {
-        size_t index = events[i].data.u32 - 1;
-        if(writers[index].doWrite()) {
+        if(c->writer.doWrite()) {
           // We're done writing for this server
-          cout << "Send complete to region server " << index << "." << endl;
+          cout << "." << flush;
           event.events = EPOLLIN;
-          event.data.u32 = index+1;
-          epoll_ctl(epoll, EPOLL_CTL_MOD, servers[index], &event);
+          event.data.ptr = c;
+          epoll_ctl(epoll, EPOLL_CTL_MOD, c->fd, &event);
         }
       }
     }
@@ -187,11 +198,11 @@ int main(int argc, char **argv) {
 
   // Clean up
   close(epoll);
-  for(size_t i = 0; i < connected; ++i) {
-    if(i > 0) {
-      shutdown(servers[i], SHUT_RDWR);
-      close(servers[i]);
-    }
+  for(vector<connection>::iterator i = connections.begin();
+      i != connections.end(); ++i) {
+    shutdown(i->fd, SHUT_RDWR);
+    close(i->fd);
   }
+
   return 0;
 }

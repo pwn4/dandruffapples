@@ -16,7 +16,7 @@ public:
   SystemError(int errno_) : runtime_error(strerror(errno_)), _number(errno_) {}
   SystemError(int errno_, const std::string &msg) : runtime_error((msg + ": ") + strerror(errno_)), _number(errno_) {}
 
-  int number() { return _number;}
+  int number() { return _number; }
 };
 
 class EOFError : public std::runtime_error {
