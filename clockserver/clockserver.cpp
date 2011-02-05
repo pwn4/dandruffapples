@@ -143,6 +143,8 @@ int main(int argc, char **argv) {
   TimestepUpdate tsupdate;
   unsigned long long step = 0;
   tsupdate.set_timestep(step++);
+  time_t lastSecond = time(NULL);
+  int timeSteps = 0;
 
   cout << "Listening for connections." << endl;
   while(true) {    
@@ -176,8 +178,15 @@ int main(int argc, char **argv) {
           }
         
           if(ready == connected && connected == server_count) {
-            cout << " done!" << endl
-                 << "Sending timestep " << step << flush;
+            //check if its time to output
+            if(time(NULL) > lastSecond)
+            {
+              cout << timeSteps << " timesteps/second." << endl;
+              timeSteps = 0;
+              lastSecond = time(NULL);
+            }
+            timeSteps++;
+            
             // All servers are ready, prepare to send next step
             ready = 0;
             tsupdate.set_timestep(step++);
@@ -246,7 +255,6 @@ int main(int argc, char **argv) {
       } else if(events[i].events & EPOLLOUT) {
         if(c->writer.doWrite()) {
           // We're done writing for this server
-          cout << "." << flush;
           event.events = c->type == connection::CONTROLLER ? 0 : EPOLLIN;
           event.data.ptr = c;
           epoll_ctl(epoll, EPOLL_CTL_MOD, c->fd, &event);
