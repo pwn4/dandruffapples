@@ -146,7 +146,7 @@ void run() {
         lastSecond = time(NULL);
       }
 
-      writer.init(TIMESTEPDONE, tsdone);
+      writer.init(MSG_TIMESTEPDONE, tsdone);
       for(bool complete = false; !complete;) {
         complete = writer.doWrite();
       }
@@ -155,7 +155,7 @@ void run() {
         complete = reader.doRead(&type, &len, &buffer);
       }
       
-      if(type == TIMESTEPUPDATE)
+      if(type == MSG_TIMESTEPUPDATE)
       {
         timeSteps++;
         timestep.ParseFromArray(buffer, len);

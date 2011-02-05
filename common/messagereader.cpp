@@ -48,7 +48,7 @@ bool MessageReader::doRead(MessageType *type, size_t *len, const void **buffer) 
     // No byte reordering necessary because it's one byte.    
   }
 
-  if(_type >= MESSAGETYPE_MAX) {
+  if(_type >= MSG_MAX) {
     throw UnknownMessageError();
   }
 

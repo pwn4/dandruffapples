@@ -184,7 +184,7 @@ int main(/*int argc, char* argv[]*/)
             msg_ptr update(new TimestepUpdate(timestep));
             for(vector<connection*>::iterator i = clients.begin();
                 i != clients.end(); ++i) {
-              (*i)->queue.push(TIMESTEPUPDATE, update);
+              (*i)->queue.push(MSG_TIMESTEPUPDATE, update);
               event.events = EPOLLIN | EPOLLOUT;
               event.data.ptr = *i;
               epoll_ctl(epoll, EPOLL_CTL_MOD, (*i)->fd, &event);
