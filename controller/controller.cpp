@@ -18,8 +18,11 @@
 
 #include <google/protobuf/message_lite.h>
 
-#include "../common/ports.h"
 #include "../common/timestep.pb.h"
+#include "../common/worldinfo.pb.h"
+
+
+#include "../common/ports.h"
 #include "../common/messagereader.h"
 #include "../common/messagequeue.h"
 #include "../common/net.h"
@@ -157,6 +160,7 @@ int main(/*int argc, char* argv[]*/)
   }
 
   TimestepUpdate timestep;
+  WorldInfo worldinfo;
   MessageReader reader(clockfd);
   vector<connection*> clients;
 
@@ -175,19 +179,34 @@ int main(/*int argc, char* argv[]*/)
         switch(c->type) {
         case connection::CLOCK:
         {
+          MessageType type;
           size_t len;
           const void *buffer;
-          if(c->reader.doRead(NULL, &len, &buffer)) {
-            timestep.ParseFromArray(buffer, len);
+          if(c->reader.doRead(&type, &len, &buffer)) {
+            switch(type) {
+            case MSG_WORLDINFO:
+            {
+              worldinfo.ParseFromArray(buffer, len);
+              cout << "Got world info." << endl;
+              break;
+            }
+            case MSG_TIMESTEPUPDATE:
+            {
+              timestep.ParseFromArray(buffer, len);
 
-            // Enqueue update to all clients
-            msg_ptr update(new TimestepUpdate(timestep));
-            for(vector<connection*>::iterator i = clients.begin();
-                i != clients.end(); ++i) {
-              (*i)->queue.push(MSG_TIMESTEPUPDATE, update);
-              event.events = EPOLLIN | EPOLLOUT;
-              event.data.ptr = *i;
-              epoll_ctl(epoll, EPOLL_CTL_MOD, (*i)->fd, &event);
+              // Enqueue update to all clients
+              msg_ptr update(new TimestepUpdate(timestep));
+              for(vector<connection*>::iterator i = clients.begin();
+                  i != clients.end(); ++i) {
+                (*i)->queue.push(MSG_TIMESTEPUPDATE, update);
+                event.events = EPOLLIN | EPOLLOUT;
+                event.data.ptr = *i;
+                epoll_ctl(epoll, EPOLL_CTL_MOD, (*i)->fd, &event);
+              }
+              break;
+            }
+            default:
+              cerr << "Unexpected readable socket!" << endl;
             }
           }
           break;

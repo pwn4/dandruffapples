@@ -4,6 +4,7 @@
 #include <cerrno>
 #include <iostream>
 #include <vector>
+#include <tr1/memory>
 
 #include <unistd.h>
 #include <fcntl.h>
@@ -107,9 +108,31 @@ int main(int argc, char **argv) {
   parseArguments(argc, argv);
 
   //loadConfigFile();
+  tr1::shared_ptr<WorldInfo> worldinfo(new WorldInfo());
   conf configuration = parseconf(configFileName);
-  if(configuration.find("NUMSERVERS") != configuration.end())
-    server_count = strtol(configuration["NUMSERVERS"].c_str(), NULL, 10);
+  if(configuration.find("NUMSERVERS") == configuration.end() ||
+     configuration.find("TEAMS") == configuration.end() ||
+     configuration.find("ROBOTS_PER_TEAM") == configuration.end()) {
+    cerr << "Config file is missing an entry!" << endl;
+    return 1;
+  }
+  server_count = strtol(configuration["NUMSERVERS"].c_str(), NULL, 10);
+
+  {                             // Create initial world state
+    unsigned teams = atoi(configuration["TEAMS"].c_str());
+    unsigned robots_per_team = atoi(configuration["ROBOTS_PER_TEAM"].c_str());
+    unsigned id = 0, region = 0;
+    for(unsigned team = 0; team < teams; ++team) {
+      for(unsigned robot = 0; robot < robots_per_team; ++robot) {
+        RobotInfo *i = worldinfo->add_robot();
+        i->set_id(id);
+        i->set_region(region);
+        i->set_team(team);
+        ++id;
+        region = (region + 1) % server_count;
+      }
+    }
+  }
 
   // Disregard SIGPIPE so we can handle things normally
   signal(SIGPIPE, SIG_IGN);
@@ -156,6 +179,7 @@ int main(int argc, char **argv) {
   timestep.set_timestep(step++);
   time_t lastSecond = time(NULL);
   int timeSteps = 0;
+  unsigned regionId = 0;
 
   cout << "Listening for connections." << endl;
   while(true) {    
@@ -216,7 +240,9 @@ int main(int argc, char **argv) {
         case connection::REGION_LISTEN:
         {
           // Accept a new region server
-          int fd = accept(c->fd, NULL, NULL);
+          struct sockaddr_storage addr;
+          size_t addr_size = sizeof(addr);
+          int fd = accept(c->fd, (struct sockaddr*)&addr, &addr_size);
           if(fd < 0) {
             throw SystemError("Failed to accept region");
           }
@@ -234,13 +260,19 @@ int main(int argc, char **argv) {
 
           cout << "Got region server connection." << endl;
 
+          RegionInfo *r = worldinfo->add_region();
+          r->set_address(((struct sockaddr_in*)&addr)->sin_addr.s_addr);
+          // TODO: Get this from handshake
+          r->set_port(CONTROLLERS_PORT);
+          r->set_id(regionId++);
+
           ++connected;
           break;
         }
 
         case connection::CONTROLLER_LISTEN:
         {
-          // Accept a new region server
+          // Accept a new controller
           int fd = accept(c->fd, NULL, NULL);
           if(fd < 0) {
             throw SystemError("Failed to accept controller");
@@ -268,14 +300,22 @@ int main(int argc, char **argv) {
         case connection::CONTROLLER:
           if(c->state == connection::INIT) {
             // Begin initialization message send
+            c->queue.push(MSG_WORLDINFO, worldinfo);
+            c->state = connection::RUN;
           }
+          // Write data
           if(c->queue.doWrite()) {
+            // If the queue is empty, we don't care if this is writable
             event.events = 0;
             event.data.ptr = c;
             epoll_ctl(epoll, EPOLL_CTL_MOD, c->fd, &event);
           }
           break;
         case connection::REGION:
+          if(c->state == connection::INIT) {
+            // TODO: Handshake
+            c->state = connection::RUN;
+          }
           if(c->queue.doWrite()) {
             // We're done writing for this server
             event.events = EPOLLIN;
