@@ -12,7 +12,7 @@ conf parseconf(const char *path) {
   conf res;
   FILE *file = fopen(path, "r");
   if(!file) {
-    throw new SystemError("Failed to open config file");
+    throw SystemError("Failed to open config file");
   }
 
   const char *delims = " \t\r\n";
