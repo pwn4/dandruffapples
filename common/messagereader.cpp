@@ -70,7 +70,7 @@ bool MessageReader::doRead(MessageType *type, size_t *len, const void **buffer) 
       // Handle byte ordering
       _msglen = ntohs(_msglen);
       // Be sure we have enough space for the entire message
-      if(_bufsize < _msglen) {
+      while(_bufsize < _msglen) {
         _bufsize *= 2;
         _buffer = (uint8_t*)realloc(_buffer, _bufsize);
       }
