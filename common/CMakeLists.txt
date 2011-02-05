@@ -19,7 +19,6 @@ PROTOBUF_GENERATE_CPP(PROTO_SRCS PROTO_HDRS
 add_library(common
   ${PROTO_SRCS}
   ${PROTO_HDRS}
-  functions.cpp
   net.cpp
   messagereader.cpp
   messagewriter.cpp
