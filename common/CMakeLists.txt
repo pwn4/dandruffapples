@@ -22,6 +22,7 @@ add_library(common
   net.cpp
   messagereader.cpp
   messagewriter.cpp
+  parseconf.cpp
   )
 
 target_link_libraries(common ${PROTOBUF_LIBRARY} ${CMAKE_THREAD_LIBS_INIT})
