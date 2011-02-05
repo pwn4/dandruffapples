@@ -33,8 +33,8 @@ conf parseconf(const char *path) {
     }
 
     res[key] = tok;
-    free(buffer);
   }
 
+  free(buffer);
   return res;
 }
