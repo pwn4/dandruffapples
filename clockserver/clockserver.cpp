@@ -241,7 +241,7 @@ int main(int argc, char **argv) {
         {
           // Accept a new region server
           struct sockaddr_storage addr;
-          size_t addr_size = sizeof(addr);
+          socklen_t addr_size = sizeof(addr);
           int fd = accept(c->fd, (struct sockaddr*)&addr, &addr_size);
           if(fd < 0) {
             throw SystemError("Failed to accept region");
