@@ -8,6 +8,7 @@ enum MessageType {
   MSG_WORLDINFO,
   MSG_SERVERROBOT,
   MSG_CLIENTROBOT,
+  MSG_PUCKSTACK,
   MSG_MAX
 };
 

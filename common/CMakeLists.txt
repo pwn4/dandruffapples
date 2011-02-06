@@ -14,7 +14,6 @@ PROTOBUF_GENERATE_CPP(PROTO_SRCS PROTO_HDRS
   claim.proto
   claimteam.proto
   clientrobot.proto
-  logworld.proto
   puckstack.proto
   serverrobot.proto
   timestep.proto

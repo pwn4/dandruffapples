@@ -7,7 +7,7 @@
 
 using namespace std;
 
-namespace helperFunctions
+namespace helper
 {
 	template <class T>
 

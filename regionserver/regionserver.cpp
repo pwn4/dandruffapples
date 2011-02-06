@@ -6,10 +6,10 @@ This program communications with clients, controllers, PNGviewers, other regions
 #include <cstdio>
 #include <cstring>
 #include <cerrno>
-#include <fstream>
 
 #include <unistd.h>
 #include <sys/socket.h>
+#include <sys/fcntl.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <sys/select.h>
@@ -21,8 +21,9 @@ This program communications with clients, controllers, PNGviewers, other regions
 
 #include "../common/ports.h"
 #include "../common/timestep.pb.h"
-#include "../common/logworld.pb.h"
 #include "../common/net.h"
+#include "../common/serverrobot.pb.h"
+#include "../common/puckstack.pb.h"
 #include "../common/messagewriter.h"
 #include "../common/messagereader.h"
 #include "../common/except.h"
@@ -114,20 +115,6 @@ char *parse_port(char *input) {
   }
 }
 
-//log world info of a robot to log on the local machine
-void logToFile(fstream& output, LogWorld log)
-{
-	log.set_timeframe(1);
-	log.set_robotid(2);
-	log.set_vectorx(3);
-	log.set_vectory(4);
-	log.set_angle(5);
-	log.set_pickedpuck(6);
-	log.set_stacksize(7);
-
-	log.SerializeToOstream(&output);
-}
-
 void run() {
   cout << "Connecting to clock server..." << flush;
   int clockfd = net::do_connect(clockip, CLOCK_PORT);
@@ -141,9 +128,15 @@ void run() {
 
   cout << " done." << endl;
 
-  string logName=helperFunctions::getNewName("/tmp/antix_log");
-  fstream output(logName.c_str(), ios::out | ios::binary );
-  LogWorld log;
+  //handle logging to file initializations
+  string logName=helper::getNewName("/tmp/antix_log");
+  int logfd = open(logName.c_str(), O_WRONLY | O_CREAT);
+  PuckStack puckstack;
+  ServerRobot serverrobot;
+  puckstack.set_x(1);
+  puckstack.set_y(1);
+  puckstack.set_stacksize(1);
+  serverrobot.set_id(2);
 
   TimestepUpdate timestep;
   TimestepDone tsdone;
@@ -168,7 +161,6 @@ void run() {
         lastSecond = time(NULL);
       }
 
-      logToFile(output, log);
 
       writer.init(MSG_TIMESTEPDONE, tsdone);
       for(bool complete = false; !complete;) {
@@ -195,7 +187,6 @@ void run() {
   // Clean up
   shutdown(clockfd, SHUT_RDWR);
   close(clockfd);
-  output.close();
 }
 
 //this is the main loop for the server

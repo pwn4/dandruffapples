@@ -1,9 +1,0 @@
-message LogWorld {
-  required int32 timeFrame = 1;
-  required fixed32 robotID = 2;
-  required float vectorX = 3;
-  required float vectorY = 4;
-  required float angle = 5;
-  optional bool pickedPuck = 6;
-  optional fixed32 stackSize = 7;
-}

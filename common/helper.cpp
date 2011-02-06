@@ -1,6 +1,6 @@
 #include "helper.h"
 
-namespace helperFunctions
+namespace helper
 {
 	template <class T>
 
@@ -23,7 +23,7 @@ namespace helperFunctions
 		//if it exists, choose another name
 		while(!intStat)
 		{
-			name = base+helperFunctions::toString(i);
+			name = base+helper::toString(i);
 			intStat = stat(name.c_str(),&stFileInfo);
 			i++;
 		}
