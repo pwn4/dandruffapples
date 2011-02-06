@@ -161,6 +161,7 @@ int main(/*int argc, char* argv[]*/)
 
   TimestepUpdate timestep;
   WorldInfo worldinfo;
+  RegionInfo regioninfo;
   MessageReader reader(clockfd);
   vector<connection*> clients;
 
@@ -188,6 +189,12 @@ int main(/*int argc, char* argv[]*/)
             {
               worldinfo.ParseFromArray(buffer, len);
               cout << "Got world info." << endl;
+              break;
+            }
+            case MSG_REGIONINFO:
+            {
+              regioninfo.ParseFromArray(buffer, len);
+              cout << "Got region info." << endl;
               break;
             }
             case MSG_TIMESTEPUPDATE:

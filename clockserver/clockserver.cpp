@@ -169,7 +169,7 @@ int main(int argc, char **argv) {
     return 1;
   }
   
-  vector<connection*> connections;
+  vector<connection*> regions, controllers;
   size_t maxevents = 1 + server_count;
   struct epoll_event *events = new struct epoll_event[maxevents];
   size_t connected = 0, ready = 0;
@@ -226,8 +226,15 @@ int main(int argc, char **argv) {
             ready = 0;
             timestep.set_timestep(step++);
             msg_ptr update(new TimestepUpdate(timestep));
-            for(vector<connection*>::iterator i = connections.begin();
-                i != connections.end(); ++i) {
+            for(vector<connection*>::iterator i = regions.begin();
+                i != regions.end(); ++i) {
+              (*i)->queue.push(MSG_TIMESTEPUPDATE, update);
+              event.events = EPOLLOUT;
+              event.data.ptr = *i;
+              epoll_ctl(epoll, EPOLL_CTL_MOD, (*i)->fd, &event);
+            }
+            for(vector<connection*>::iterator i = controllers.begin();
+                i != controllers.end(); ++i) {
               (*i)->queue.push(MSG_TIMESTEPUPDATE, update);
               event.events = EPOLLOUT;
               event.data.ptr = *i;
@@ -249,7 +256,7 @@ int main(int argc, char **argv) {
           net::set_blocking(fd, false);
 
           connection *newconn = new connection(fd, connection::REGION);
-          connections.push_back(newconn);
+          regions.push_back(newconn);
 
           event.events = EPOLLIN;
           event.data.ptr = newconn;
@@ -266,6 +273,16 @@ int main(int argc, char **argv) {
           r->set_port(CONTROLLERS_PORT);
           r->set_id(regionId++);
 
+          msg_ptr p(new RegionInfo(*r));
+          for(vector<connection*>::iterator i = controllers.begin();
+              i != controllers.end(); ++i) {
+            (*i)->queue.push(MSG_REGIONINFO, p);
+
+            event.events = EPOLLOUT;
+            event.data.ptr = *i;
+            epoll_ctl(epoll, EPOLL_CTL_MOD, (*i)->fd, &event);
+          }
+
           ++connected;
           break;
         }
@@ -280,14 +297,16 @@ int main(int argc, char **argv) {
           net::set_blocking(fd, false);
 
           connection *newconn = new connection(fd, connection::CONTROLLER);
-          connections.push_back(newconn);
+          controllers.push_back(newconn);
 
           event.events = EPOLLOUT;
           event.data.ptr = newconn;
           if(0 > epoll_ctl(epoll, EPOLL_CTL_ADD, fd, &event)) {
-            perror("Failed to add region server socket to epoll");
+            perror("Failed to add controller socket to epoll");
             return 1;
           }
+
+          cout << "Got controller connection." << endl;
           break;
         }
 
@@ -334,8 +353,13 @@ int main(int argc, char **argv) {
 
   // Clean up
   close(epoll);
-  for(vector<connection*>::iterator i = connections.begin();
-      i != connections.end(); ++i) {
+  for(vector<connection*>::iterator i = controllers.begin();
+      i != controllers.end(); ++i) {
+    shutdown((*i)->fd, SHUT_RDWR);
+    close((*i)->fd);
+  }
+  for(vector<connection*>::iterator i = regions.begin();
+      i != regions.end(); ++i) {
     shutdown((*i)->fd, SHUT_RDWR);
     close((*i)->fd);
   }
