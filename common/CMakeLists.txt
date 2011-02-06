@@ -13,11 +13,12 @@ find_package(Threads REQUIRED)
 PROTOBUF_GENERATE_CPP(PROTO_SRCS PROTO_HDRS
   claim.proto
   claimteam.proto
-  worldinfo.proto
   clientrobot.proto
+  logworld.proto
   puckstack.proto
   serverrobot.proto
   timestep.proto
+  worldinfo.proto
   )
 
 add_library(common
@@ -28,6 +29,7 @@ add_library(common
   messagewriter.cpp
   messagequeue.cpp
   parseconf.cpp
+  helper.cpp
   )
 
 target_link_libraries(common ${PROTOBUF_LIBRARY} ${CMAKE_THREAD_LIBS_INIT})

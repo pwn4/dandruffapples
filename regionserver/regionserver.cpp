@@ -6,6 +6,7 @@ This program communications with clients, controllers, PNGviewers, other regions
 #include <cstdio>
 #include <cstring>
 #include <cerrno>
+#include <fstream>
 
 #include <unistd.h>
 #include <sys/socket.h>
@@ -20,10 +21,13 @@ This program communications with clients, controllers, PNGviewers, other regions
 
 #include "../common/ports.h"
 #include "../common/timestep.pb.h"
+#include "../common/logworld.pb.h"
 #include "../common/net.h"
 #include "../common/messagewriter.h"
 #include "../common/messagereader.h"
 #include "../common/except.h"
+
+#include "../common/helper.h"
 
 using namespace std;
 
@@ -110,6 +114,20 @@ char *parse_port(char *input) {
   }
 }
 
+//log world info of a robot to log on the local machine
+void logToFile(fstream& output, LogWorld log)
+{
+	log.set_timeframe(1);
+	log.set_robotid(2);
+	log.set_vectorx(3);
+	log.set_vectory(4);
+	log.set_angle(5);
+	log.set_pickedpuck(6);
+	log.set_stacksize(7);
+
+	log.SerializeToOstream(&output);
+}
+
 void run() {
   cout << "Connecting to clock server..." << flush;
   int clockfd = net::do_connect(clockip, CLOCK_PORT);
@@ -122,6 +140,10 @@ void run() {
   }
 
   cout << " done." << endl;
+
+  string logName=helperFunctions::getNewName("/tmp/antix_log");
+  fstream output(logName.c_str(), ios::out | ios::binary );
+  LogWorld log;
 
   TimestepUpdate timestep;
   TimestepDone tsdone;
@@ -145,6 +167,8 @@ void run() {
         timeSteps = 0;
         lastSecond = time(NULL);
       }
+
+      logToFile(output, log);
 
       writer.init(MSG_TIMESTEPDONE, tsdone);
       for(bool complete = false; !complete;) {
@@ -171,6 +195,7 @@ void run() {
   // Clean up
   shutdown(clockfd, SHUT_RDWR);
   close(clockfd);
+  output.close();
 }
 
 //this is the main loop for the server
