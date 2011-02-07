@@ -6,8 +6,9 @@ message ServerRobot {
   optional float x = 5;
   optional float y = 6;
   optional bool hasCollided = 7;
-  repeated bool viewLostId = 8; // robot specified by seenById can no 
+  optional fixed32 controllerIp = 8;
+  repeated bool viewLostId = 9; // robot specified by seenById can no 
                                 // longer see this robot
-  repeated fixed32 seenById = 9; // list of robots viewing
+  repeated fixed32 seenById = 10; // list of robots viewing
 
 }
