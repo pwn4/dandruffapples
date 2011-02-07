@@ -285,21 +285,28 @@ int main(int argc, char **argv) {
           RegionInfo *r = worldinfo->add_region();
           r->set_address(((struct sockaddr_in*)&addr)->sin_addr.s_addr);
           // TODO: Get this from handshake
-          r->set_port(CONTROLLERS_PORT);
+          r->set_regionport(REGIONS_PORT);
+          r->set_renderport(PNG_VIEWER_PORT);
+          r->set_controllerport(CONTROLLERS_PORT);
           r->set_id(regionId++);
 
-          msg_ptr p(new RegionInfo(*r));
+          tr1::shared_ptr<RegionInfo> cr(new RegionInfo(*r));
+          cr->clear_regionport();
+          cr->clear_renderport();
           for(vector<connection*>::iterator i = controllers.begin();
               i != controllers.end(); ++i) {
-            (*i)->queue.push(MSG_REGIONINFO, p);
+            (*i)->queue.push(MSG_REGIONINFO, cr);
 
             event.events = EPOLLOUT;
             event.data.ptr = *i;
             epoll_ctl(epoll, EPOLL_CTL_MOD, (*i)->fd, &event);
           }
+          tr1::shared_ptr<RegionInfo> pr(new RegionInfo(*r));
+          pr->clear_regionport();
+          pr->clear_controllerport();
           for(vector<connection*>::iterator i = pngviewers.begin();
               i != pngviewers.end(); ++i) {
-            (*i)->queue.push(MSG_REGIONINFO, p);
+            (*i)->queue.push(MSG_REGIONINFO, pr);
             
             event.events = EPOLLOUT;
             event.data.ptr = *i;
@@ -347,7 +354,10 @@ int main(int argc, char **argv) {
           pngviewers.push_back(newconn);
 
           for(size_t i = 0; i < (unsigned)worldinfo->region_size(); ++i) {
-            newconn->queue.push(MSG_REGIONINFO, tr1::shared_ptr<RegionInfo>(new RegionInfo(worldinfo->region(i))));
+            tr1::shared_ptr<RegionInfo> r(new RegionInfo(worldinfo->region(i)));
+            r->clear_regionport();
+            r->clear_controllerport();
+            newconn->queue.push(MSG_REGIONINFO, r);
           }
 
           event.events = EPOLLOUT;

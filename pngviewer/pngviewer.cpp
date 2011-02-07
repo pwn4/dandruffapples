@@ -192,11 +192,11 @@ gboolean io_clockmessage(GIOChannel *ioch, GIOCondition cond, gpointer data)
   		//we got regionserver information
   		RegionInfo regioninfo;
 			regioninfo.ParseFromArray(buffer, len);
-			cout << "Received MSG_REGIONINFO update!" << regioninfo.address() << " " << regioninfo.port() << endl;
+			cout << "Received MSG_REGIONINFO update! " << regioninfo.address() << " " << regioninfo.renderport() << endl;
 			//connect to the server
 			struct in_addr addr;
 			addr.s_addr = regioninfo.address();
-			int fd = net::do_connect(addr, regioninfo.port());
+			int fd = net::do_connect(addr, regioninfo.renderport());
 			net::set_blocking(fd, false);
 			//store the region server mapping
 			connection *newregion = new connection(fd, regioninfo);
