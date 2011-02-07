@@ -99,6 +99,7 @@ struct connection {
   } state;
   
   int fd;
+  in_addr_t addr;
   MessageReader reader;
   MessageQueue queue;
 
@@ -223,30 +224,31 @@ int main(int argc, char **argv) {
             }
             case MSG_REGIONINFO:
             {
-              regioninfo.ParseFromArray(buffer, len);
-              //store the region's info
-              int regionId = -1;
-              for(size_t i = 0; i < (unsigned)worldinfo->region_size(); ++i) {
-                tr1::shared_ptr<RegionInfo> r(new RegionInfo(worldinfo->region(i)));
-                //update the region info
-                if(r->id() == c->fd)
-                {  
-                  regionId = i;
-                  break;
-                }
+              RegionInfo *r = worldinfo->add_region();
+              r->ParseFromArray(buffer, len);
+              r->set_address(c->addr);
+
+              tr1::shared_ptr<RegionInfo> cr(new RegionInfo(*r));
+              cr->clear_regionport();
+              cr->clear_renderport();
+              for(vector<connection*>::iterator i = controllers.begin();
+                  i != controllers.end(); ++i) {
+                (*i)->queue.push(MSG_REGIONINFO, cr);
+
+                event.events = EPOLLOUT;
+                event.data.ptr = *i;
+                epoll_ctl(epoll, EPOLL_CTL_MOD, (*i)->fd, &event);
               }
-              
-              if(regionId != -1)
-              {
-                tr1::shared_ptr<RegionInfo> r(new RegionInfo(worldinfo->region(regionId)));
-                
-                r->set_regionport(regioninfo.regionport());
-                r->set_renderport(regioninfo.renderport());
-                r->set_controllerport(regioninfo.controllerport());
-                
-                //TODO: actually change the value in the worldinfo object!!
-                
-                break;
+              tr1::shared_ptr<RegionInfo> pr(new RegionInfo(*r));
+              pr->clear_regionport();
+              pr->clear_controllerport();
+              for(vector<connection*>::iterator i = pngviewers.begin();
+                  i != pngviewers.end(); ++i) {
+                (*i)->queue.push(MSG_REGIONINFO, pr);
+            
+                event.events = EPOLLOUT;
+                event.data.ptr = *i;
+                epoll_ctl(epoll, EPOLL_CTL_MOD, (*i)->fd, &event);
               }
               
               cerr << "Info from unknown region received!" << endl;
@@ -313,6 +315,7 @@ int main(int argc, char **argv) {
           net::set_blocking(fd, false);
 
           connection *newconn = new connection(fd, connection::REGION);
+          newconn->addr = ((struct sockaddr_in*)&addr)->sin_addr.s_addr;
           regions.push_back(newconn);
 
           event.events = EPOLLIN;
@@ -324,37 +327,6 @@ int main(int argc, char **argv) {
 
           cout << "Got region server connection." << endl;
 
-          RegionInfo *r = worldinfo->add_region();
-          r->set_address(((struct sockaddr_in*)&addr)->sin_addr.s_addr);
-          //Get this from handshake. Default values for now
-          r->set_regionport(REGIONS_PORT);
-          r->set_renderport(PNG_VIEWER_PORT);
-          r->set_controllerport(CONTROLLERS_PORT);
-          r->set_id(fd);
-
-          tr1::shared_ptr<RegionInfo> cr(new RegionInfo(*r));
-          cr->clear_regionport();
-          cr->clear_renderport();
-          for(vector<connection*>::iterator i = controllers.begin();
-              i != controllers.end(); ++i) {
-            (*i)->queue.push(MSG_REGIONINFO, cr);
-
-            event.events = EPOLLOUT;
-            event.data.ptr = *i;
-            epoll_ctl(epoll, EPOLL_CTL_MOD, (*i)->fd, &event);
-          }
-          tr1::shared_ptr<RegionInfo> pr(new RegionInfo(*r));
-          pr->clear_regionport();
-          pr->clear_controllerport();
-          for(vector<connection*>::iterator i = pngviewers.begin();
-              i != pngviewers.end(); ++i) {
-            (*i)->queue.push(MSG_REGIONINFO, pr);
-            
-            event.events = EPOLLOUT;
-            event.data.ptr = *i;
-            epoll_ctl(epoll, EPOLL_CTL_MOD, (*i)->fd, &event);
-          }
-
           ++connected;
           break;
         }
@@ -362,13 +334,16 @@ int main(int argc, char **argv) {
         case connection::CONTROLLER_LISTEN:
         {
           // Accept a new controller
-          int fd = accept(c->fd, NULL, NULL);
+          struct sockaddr_storage addr;
+          socklen_t addr_size = sizeof(addr);
+          int fd = accept(c->fd, (struct sockaddr*)&addr, &addr_size);
           if(fd < 0) {
             throw SystemError("Failed to accept controller");
           }
           net::set_blocking(fd, false);
 
           connection *newconn = new connection(fd, connection::CONTROLLER);
+          newconn->addr = ((struct sockaddr_in*)&addr)->sin_addr.s_addr;
           controllers.push_back(newconn);
           
           newconn->queue.push(MSG_WORLDINFO, worldinfo);
@@ -386,13 +361,16 @@ int main(int argc, char **argv) {
         case connection::PNG_LISTEN:
         {
           // Accept a new pngviewer
-          int fd = accept(c->fd, NULL, NULL);
+          struct sockaddr_storage addr;
+          socklen_t addr_size = sizeof(addr);
+          int fd = accept(c->fd, (struct sockaddr*)&addr, &addr_size);
           if(fd < 0) {
             throw SystemError("Failed to accept png viewer");
           }
           net::set_blocking(fd, false);
 
           connection *newconn = new connection(fd, connection::PNG_VIEWER);
+          newconn->addr = ((struct sockaddr_in*)&addr)->sin_addr.s_addr;
           pngviewers.push_back(newconn);
 
           for(size_t i = 0; i < (unsigned)worldinfo->region_size(); ++i) {
