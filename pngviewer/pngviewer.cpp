@@ -1,4 +1,4 @@
-/*/////////////////////////////////////////////////////////////////////////////////////////////////
+*/////////////////////////////////////////////////////////////////////////////////////////////////
  PNGViewer program
  This program communications with clock servers and region servers
  //////////////////////////////////////////////////////////////////////////////////////////////////*/
@@ -21,6 +21,7 @@
 
 #include "../common/ports.h"
 #include "../common/timestep.pb.h"
+#include "../common/worldinfo.pb.h"
 #include "../common/net.h"
 #include "../common/messagewriter.h"
 #include "../common/messagereader.h"
@@ -30,7 +31,7 @@ using namespace std;
 
 //variable declarations
 char configFileName [30] = "config";
-int servfd, listenfd, clientfd;
+int clockfd, listenfd, clientfd;
 
 //Config variables
 char clockip [40] = "127.0.0.1";
@@ -84,12 +85,64 @@ void loadConfigFile()
 		printf("Error: Cannot open config file %s\n", configFileName);
 }
 
+char* IPAddressToString(int ip)
+{
+  char* addr = new char[16];
+
+  sprintf(addr, "%d.%d.%d.%d",
+    (ip >> 24) & 0xFF,
+    (ip >> 16) & 0xFF,
+    (ip >>  8) & 0xFF,
+    (ip      ) & 0xFF);
+  return addr;
+}
+
+
 int main(int argc, char* argv[])
 {
 	parseArguments(argc, argv);
-    loadConfigFile();
-    servfd = net::do_connect(clockip, PNG_VIEWER_PORT);
-    cout  << "serverfd:" << servfd;
-    cout << "Connected to Clock Server" << endl;
-    
+  loadConfigFile();
+  clockfd = net::do_connect(clockip, PNG_VIEWER_PORT);
+  cout << "Connected to Clock Server" << endl;
+
+	TimestepUpdate timestep;
+  WorldInfo worldinfo;
+  RegionInfo regioninfo;
+  MessageReader reader(clockfd);
+  MessageType type;
+  size_t len;
+  const void *buffer;
+
+  try {
+		while(true) {
+		  for(bool complete = false; !complete;) {
+		    complete = reader.doRead(&type, &len, &buffer);
+		  }
+		  switch (type) {
+				case MSG_REGIONINFO:
+				{
+					regioninfo.ParseFromArray(buffer, len);
+					cout << "Received MSG_REGIONINFO update!" << regioninfo.address() << " " << regioninfo.port() << endl;
+					struct in_addr addr;
+//					int fd = net::do_connect(IPAddressToString(ntohl(regioninfo.address())), regioninfo.port());
+					cout << "Connected to region server!" << endl;
+					break;
+				}
+				case MSG_WORLDINFO:
+				{
+					cout << "Received MSG_WORLDINFO update!" << endl;
+					break;
+				}
+				default:
+				{
+				  cout << "Unknown message!" << endl;
+				  break;
+				}
+		  }
+		}
+  } catch(EOFError e) {
+    cout << " clock server disconnected, shutting down." << endl;
+  } catch(SystemError e) {
+    cerr << " error performing network I/O: " << e.what() << endl;
+  }   
 }
