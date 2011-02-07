@@ -147,7 +147,7 @@ on_expose_event(GtkWidget *widget,
 
 //handler for region received messages
 gboolean io_regionmessage(GIOChannel *ioch, GIOCondition cond, gpointer data)
-{
+{cout << g_io_channel_unix_get_fd(ioch) << endl;
   connection * conn;
   //get the reader for the handle
   for(vector<connection*>::iterator i = region.begin();
@@ -158,7 +158,6 @@ gboolean io_regionmessage(GIOChannel *ioch, GIOCondition cond, gpointer data)
       break;
     }
   
-    
   if(!(conn)->reader.doRead(&type, &len, &buffer))
     return TRUE;
   switch (type) {
@@ -169,10 +168,11 @@ gboolean io_regionmessage(GIOChannel *ioch, GIOCondition cond, gpointer data)
 	  }
 	  case MSG_TIMESTEPUPDATE:
 	  {
+	    //cout << "WWWTTF" << endl;
 	    break;
     }
 	  default:
-      cerr << "Unexpected readable socket!" << type << endl;
+      cerr << "Unexpected readable socket from region! Type:" << type  << "|" << MSG_REGIONRENDER<< endl;
   }
 	
 	
@@ -201,8 +201,9 @@ gboolean io_clockmessage(GIOChannel *ioch, GIOCondition cond, gpointer data)
 			//store the region server mapping
 			connection *newregion = new connection(fd, regioninfo);
 			region.push_back(newregion);
-			ioch = g_io_channel_unix_new(fd);
-			g_io_add_watch(ioch, G_IO_IN, io_regionmessage, NULL); //start watching it
+			GIOChannel *nioch;
+			nioch = g_io_channel_unix_new(fd);
+			g_io_add_watch(nioch, G_IO_IN, io_regionmessage, NULL); //start watching it
 			cout << "Connected to region server!" << endl;
 			//update knowledge of the world
       
@@ -211,7 +212,7 @@ gboolean io_clockmessage(GIOChannel *ioch, GIOCondition cond, gpointer data)
 	  }
 	
 	  default:
-      cerr << "Unexpected readable socket!" << type << endl;
+      cerr << "Unexpected readable socket from clock! Type:" << type << endl;
   }
 	
 	
@@ -231,7 +232,7 @@ int main(int argc, char* argv[])
   clockfd = net::do_connect(clockip, PNG_VIEWER_PORT);
   net::set_blocking(clockfd, false);
   reader = new MessageReader(clockfd);
-  cout << "Connected to Clock Server" << endl;
+  cout << "Connected to Clock Server " << clockfd << endl;
   
   //create the window object and init
   GtkWidget *window;
