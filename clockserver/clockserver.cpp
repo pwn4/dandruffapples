@@ -348,7 +348,9 @@ int main(int argc, char **argv) {
           connection *newconn = new connection(fd, connection::PNG_VIEWER);
           pngviewers.push_back(newconn);
 
-          newconn->queue.push(MSG_WORLDINFO, worldinfo);
+          for(size_t i = 0; i < (unsigned)worldinfo->region_size(); ++i) {
+            newconn->queue.push(MSG_WORLDINFO, tr1::shared_ptr<RegionInfo>(new RegionInfo(worldinfo->region(i))));
+          }
 
           event.events = EPOLLOUT;
           event.data.ptr = newconn;
