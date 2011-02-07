@@ -277,10 +277,9 @@ void run() {
   puckstack.set_stacksize(1);
   serverrobot.set_id(2);
 
-  RegionRender png;
+  tr1::shared_ptr<RegionRender> png;
   //I think this is what we want
-  Blob blob=handleWorldImage();
-  png.set_image(blob.data(), blob.length());
+  Blob blob;
 
   //server variables
   TimestepUpdate timestep;
@@ -357,7 +356,17 @@ void run() {
               
               //DO TIMESTEP STUFF HERE/////////
               timeSteps++;
-              
+              blob = handleWorldImage();
+              png->set_image(blob.data(), blob.length());
+              png->set_timestep(timestep.timestep());
+
+              for(vector<connection*>::iterator i = pngviewers.begin();
+                  i != pngviewers.end(); ++i) {
+                (*i)->queue.push(MSG_REGIONRENDER, png);
+                event.events = EPOLLOUT;
+                event.data.ptr = *i;
+                epoll_ctl(epoll, EPOLL_CTL_MOD, (*i)->fd, &event);
+              }
               //END TIMESTEP CALCULATIONS//////
 
 
@@ -415,6 +424,13 @@ void run() {
           }
           break;
         case connection::PNGVIEWER:
+          if(c->queue.doWrite()) {
+            // If the queue is empty, we don't care if this is writable
+            event.events = 0;
+            event.data.ptr = c;
+            epoll_ctl(epoll, EPOLL_CTL_MOD, c->fd, &event);
+          }
+          break;
         case connection::CONTROLLER:
         case connection::REGION:
 
