@@ -36,6 +36,14 @@ This program communications with clients, controllers, PNGviewers, other regions
 #include "../common/messagequeue.h"
 #include "../common/net.h"
 #include "../common/except.h"
+#include "../common/parseconf.h"
+#include "../common/timestep.pb.h"
+#include "../common/serverrobot.pb.h"
+#include "../common/puckstack.pb.h"
+#include "../common/messagewriter.h"
+#include "../common/messagereader.h"
+
+#include "../common/helper.h"
 
 using namespace std;
 
@@ -66,37 +74,17 @@ void parseArguments(int argc, char* argv[])
 	}
 }
 
-
-//this function loads the config file so that the server parameters don't need to be added every time
 void loadConfigFile()
 {
-	//open the config file
-	FILE * fileHandle;
-	fileHandle = fopen (configFileName,"r");
-	
-	//create a read buffer. No line should be longer than 200 chars long.
-	char readBuffer [200];
-	char * token;
-	
-	if (fileHandle != NULL)
-	{
-		while(fgets (readBuffer , sizeof(readBuffer) , fileHandle) != 0)
-		{	
-			token = strtok(readBuffer, " \n");
-			
-			//if it's a REGION WIDTH definition...
-			if(strcmp(token, "CLOCKIP") == 0){
-				token = strtok(NULL, " \n");
-				strcpy(clockip, token);
-				printf("Using clockserver IP: %s\n", clockip);
-			}
-			
-		}
-		
-		fclose (fileHandle);
-	}else
-		printf("Error: Cannot open config file %s\n", configFileName);
+  //load the config file
+  conf configuration = parseconf(configFileName);
+  if(configuration.find("CLOCKIP") == configuration.end()) {
+    cerr << "Config file is missing an entry!" << endl;
+    exit(1);
+  }
+  strcpy(clockip, configuration["CLOCKIP"].c_str());
 }
+
 
 char *parse_port(char *input) {
   size_t input_len = strlen(input);
@@ -122,15 +110,36 @@ char *parse_port(char *input) {
   }
 }
 
+//specifies an object to work with sockets and file IO
+struct connection {
+  enum Type {
+    UNSPECIFIED,
+    LISTEN,
+    CLOCK,
+    CONTROLLER,
+    REGION,
+    FILE
+  } type;
+  int fd;
+  MessageReader reader;
+  MessageQueue queue;
+
+  connection(int fd_) : type(UNSPECIFIED), fd(fd_), reader(fd_), queue(fd_) {}
+  connection(int fd_, Type type_) : type(type_), fd(fd_), reader(fd_), queue(fd_) {}
+};
+
+//the main function
 void run() {
+
   cout << "Connecting to clock server..." << flush;
+  
   int clockfd = net::do_connect(clockip, CLOCK_PORT);
   if(0 > clockfd) {
     perror(" failed to connect to clock server");
-    return;
+    exit(1);;
   } else if(0 == clockfd) {
     cerr << " invalid address: " << clockip << endl;
-    return;
+    exit(1);;
   }
 
   cout << " done." << endl;
