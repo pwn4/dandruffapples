@@ -356,7 +356,7 @@ void run() {
               
               timeSteps++;
 
-              if(timestep.timestep() % 100 == 0) {
+              if(timestep.timestep() % 200 == 0) {
                 // Only generate an image for one in 100 timesteps
                 blob = handleWorldImage();
                 png->set_image(blob.data(), blob.length());
