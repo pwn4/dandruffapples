@@ -30,7 +30,7 @@ This program communications with clients, controllers, PNGviewers, other regions
 #include "../common/puckstack.pb.h"
 #include "../common/messagewriter.h"
 #include "../common/worldinfo.pb.h"
-
+#include "../common/pngfile.pb.h"
 
 #include "../common/ports.h"
 #include "../common/messagereader.h"
@@ -45,9 +45,10 @@ This program communications with clients, controllers, PNGviewers, other regions
 #include "../common/messagereader.h"
 
 #include "../common/helper.h"
+#include <Magick++.h>
 
 using namespace std;
-
+using namespace Magick;
 /////////////////Variables and Declarations/////////////////
 char configFileName [30] = "config";
 
@@ -155,6 +156,29 @@ struct connection {
   connection(int fd_, Type type_) : type(type_), fd(fd_), reader(fd_), queue(fd_) {}
 };
 
+Image handleWorldImage()
+{
+	Image regionPiece("320x240", "white");
+	regionPiece.magick("png");
+
+	int x,y;
+
+	for( int i=0;i<10;i++ )
+	{
+		x=rand()%320;
+		y=rand()%240;
+
+		//make the pixel more visible by drawing more pixels around it
+		regionPiece.pixelColor(x, y, Color("black"));
+		regionPiece.pixelColor(x+1, y, Color("black"));
+		regionPiece.pixelColor(x-1, y, Color("black"));
+		regionPiece.pixelColor(x, y+1, Color("black"));
+		regionPiece.pixelColor(x, y-1, Color("black"));
+	}
+
+	return regionPiece;
+}
+
 //the main function
 void run() {
 
@@ -172,6 +196,7 @@ void run() {
     exit(1);;
   }
   cout << " done." << endl;
+
 
   //listen for controller connections
   int controllerfd = net::do_listen(controllerPort);
@@ -249,6 +274,11 @@ void run() {
   puckstack.set_y(1);
   puckstack.set_stacksize(1);
   serverrobot.set_id(2);
+
+  PngFile png;
+  //I think this is what we want
+  Image regionPiece=handleWorldImage();
+  png.set_png(&regionPiece, sizeof(regionPiece));
 
   //server variables
   TimestepUpdate timestep;
