@@ -277,7 +277,7 @@ void run() {
   puckstack.set_stacksize(1);
   serverrobot.set_id(2);
 
-  tr1::shared_ptr<RegionRender> png;
+  tr1::shared_ptr<RegionRender> png(new RegionRender());
   //I think this is what we want
   Blob blob;
 
