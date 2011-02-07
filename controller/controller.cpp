@@ -162,7 +162,7 @@ int main(/*int argc, char* argv[]*/)
   TimestepUpdate timestep;
   WorldInfo worldinfo;
   RegionInfo regioninfo;
-  MessageReader reader(clockfd);
+//  MessageReader reader(clockfd);
   vector<connection*> clients;
 
   #define MAX_EVENTS 128
@@ -193,6 +193,7 @@ int main(/*int argc, char* argv[]*/)
             }
             case MSG_REGIONINFO:
             {
+							//should add connections to region servers
               regioninfo.ParseFromArray(buffer, len);
               cout << "Got region info." << endl;
               break;
@@ -219,7 +220,20 @@ int main(/*int argc, char* argv[]*/)
           break;
         }
         
+				case connection::CLIENT:
+				//client is sending clientRobot instructions
+        {
+					break;
+				}
+				
+				case connection::REGION:
+				//region servers are sending serverRobot instructions
+        {
+					break;
+				}
+				
         case connection::LISTEN:
+				//for client connections
         {
           int fd = accept(c->fd, NULL, NULL);
           if(fd < 0) {
@@ -239,10 +253,12 @@ int main(/*int argc, char* argv[]*/)
           break;
         }
         default:
-          cerr << "Unexpected readable socket!" << endl;
+					close(c->fd);	//supposed to handle when clients disconnect
+          cerr << "Unexpected readable socket!, Did client disconnect?" << endl;
           break;
         }
       } else if(events[i].events & EPOLLOUT) {
+				//ready to write
         switch(c->type) {
         case connection::CLIENT:
         {

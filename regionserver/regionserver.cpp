@@ -199,7 +199,6 @@ void run() {
   }  
   cout << " done." << endl;
 
-
   //listen for controller connections
   int controllerfd = net::do_listen(controllerPort);
   net::set_blocking(controllerfd, false);
@@ -212,14 +211,26 @@ void run() {
   int pngfd = net::do_listen(pngviewerPort);
   net::set_blocking(pngfd, false);
 
+  //create a new file for logging
+  string logName=helper::getNewName("/tmp/antix_log");
+  int logfd = open(logName.c_str(), O_WRONLY | O_CREAT, 0644 );
+  //net::set_blocking(logfd, false);
+
+  if(logfd<0)
+  {
+	  perror("Failed to create log file");
+	  exit(1);
+  }
+
   //create epoll
-  int epoll = epoll_create(15); //9 adjacents, the clock, and a few controllers
+  int epoll = epoll_create(16); //9 adjacents, log file, the clock, and a few controllers
   if(epoll < 0) {
     perror("Failed to create epoll handle");
     close(controllerfd);
     close(regionfd);
     close(pngfd);
     close(clockfd);
+    close(logfd);
     exit(1);
   }
   
@@ -227,6 +238,7 @@ void run() {
   connection clockconn(clockfd, connection::CLOCK),
     controllerconn(controllerfd, connection::CONTROLLER_LISTEN),
     regionconn(regionfd, connection::REGION_LISTEN),
+    logconn(logfd, connection::FILE),
     pngconn(pngfd, connection::PNGVIEWER_LISTEN);
   
   //epoll setup
@@ -239,6 +251,7 @@ void run() {
     close(regionfd);
     close(pngfd);
     close(clockfd);
+    close(logfd);
     exit(1);
   }
   event.data.ptr = &controllerconn;
@@ -248,6 +261,7 @@ void run() {
     close(regionfd);
     close(pngfd);
     close(clockfd);
+    close(logfd);
     exit(1);
   }
   event.data.ptr = &regionconn;
@@ -257,6 +271,7 @@ void run() {
     close(regionfd);
     close(pngfd);
     close(clockfd);
+    close(logfd);
     exit(1);
   }
   event.data.ptr = &pngconn;
@@ -266,12 +281,23 @@ void run() {
     close(regionfd);
     close(pngfd);
     close(clockfd);
+    close(logfd);
     exit(1);
   }
+  /*
+  event.events = EPOLLOUT;
+  event.data.ptr = &logconn;
+  if(0 > epoll_ctl(epoll, EPOLL_CTL_ADD, logfd, &event)) {
+    perror("Failed to add log handle to epoll");
+    close(controllerfd);
+    close(regionfd);
+    close(pngfd);
+    close(clockfd);
+    close(logfd);
+    exit(1);
+  }*/
 
   //handle logging to file initializations
-  string logName=helper::getNewName("/tmp/antix_log");
-  int logfd = open(logName.c_str(), O_WRONLY | O_CREAT);
   PuckStack puckstack;
   ServerRobot serverrobot;
   puckstack.set_x(1);
@@ -280,7 +306,6 @@ void run() {
   serverrobot.set_id(2);
 
   tr1::shared_ptr<RegionRender> png(new RegionRender());
-  //I think this is what we want
   Blob blob;
 
   //server variables
@@ -292,8 +317,6 @@ void run() {
   
   MessageWriter writer(clockfd);
   MessageReader reader(clockfd);
-  MessageType type;
-  
   int timeSteps = 0;
   time_t lastSecond = time(NULL);
   vector<connection*> controllers;
@@ -385,6 +408,22 @@ void run() {
                 }
               }
 
+              /*for(int i = 0;i <100; i++) {
+            	 msg_ptr serverrobot_ptr(new ServerRobot(serverrobot));
+            	 logconn.queue.push(MSG_SERVERROBOT, serverrobot_ptr);
+                 event.events = EPOLLOUT;
+                 event.data.ptr = &logconn;
+                 epoll_ctl(epoll, EPOLL_CTL_MOD, logconn.fd, &event);
+               }
+
+              for(int i = 0;i <100; i++) {
+            	 msg_ptr puckstack_ptr(new PuckStack(puckstack));
+            	 logconn.queue.push(MSG_PUCKSTACK, puckstack_ptr);
+                 event.events = EPOLLOUT;
+                 event.data.ptr = &logconn;
+                 epoll_ctl(epoll, EPOLL_CTL_MOD, logconn.fd, &event);
+               }*/
+
               //Respond with done message
               msg_ptr update(new TimestepDone(tsdone));
               c->queue.push(MSG_TIMESTEPDONE, update);
@@ -475,6 +514,7 @@ void run() {
   close(regionfd);
   shutdown(pngfd, SHUT_RDWR);
   close(pngfd);
+  close(logfd);
 }
 
 
