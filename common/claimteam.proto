@@ -1,3 +1,6 @@
 message ClaimTeam {
    required fixed32 id = 1;
+   optional fixed32 clientId = 2;
+   optional int32 clientPort = 3;
+   optional bool granted = 4;
 }
