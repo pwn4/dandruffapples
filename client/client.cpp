@@ -111,27 +111,43 @@ void run() {
   MessageType type;
   size_t len;
   const void *buffer;
-/*
+
+  // Create thread: client robot calculations
+  // parent thread: continue in while loop, looking for updates
+
   try {
-    cout << "Notifying clock server that our init's complete..." << flush;
+    //cout << "Notifying clock server that our init's complete..." << flush;
     while(true) {
-      for(bool complete = false; !complete;) {
-        complete = writer.doWrite();
-      }
-      cout << " done." << endl;
+      //for(bool complete = false; !complete;) {
+      //  complete = writer.doWrite();
+      //}
+      //cout << " done." << endl;
       
-      cout << "Waiting for timestep..." << flush;
+      //cout << "Waiting for timestep..." << flush;
       for(bool complete = false; !complete;) {
         complete = reader.doRead(&type, &len, &buffer);
       }
-      timestep.ParseFromArray(buffer, len);
-      cout << " got " << timestep.timestep() << ", replying..." << flush;
+
+      switch (type) {
+      case MSG_TIMESTEPUPDATE:
+        timestep.ParseFromArray(buffer, len);
+        cout << "Client received timestep #" << timestep.timestep() << endl; 
+        // update timestep global variable
+        break;
+      case MSG_SERVERROBOT:
+        cout << "Received ServerRobot update!" << endl;
+        // update robot position global variables
+        break;
+      default:
+        cout << "Unknown message!" << endl;
+        break;
+      }
     }
   } catch(EOFError e) {
     cout << " clock server disconnected, shutting down." << endl;
   } catch(SystemError e) {
     cerr << " error performing network I/O: " << e.what() << endl;
-  }*/
+  }
 
   // Clean up
   shutdown(controllerfd, SHUT_RDWR);
