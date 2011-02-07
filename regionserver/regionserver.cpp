@@ -354,21 +354,21 @@ void run() {
             {
               timestep.ParseFromArray(buffer, len);
               
-              //DO TIMESTEP STUFF HERE/////////
               timeSteps++;
-              blob = handleWorldImage();
-              png->set_image(blob.data(), blob.length());
-              png->set_timestep(timestep.timestep());
 
-              for(vector<connection*>::iterator i = pngviewers.begin();
-                  i != pngviewers.end(); ++i) {
-                (*i)->queue.push(MSG_REGIONRENDER, png);
-                event.events = EPOLLOUT;
-                event.data.ptr = *i;
-                epoll_ctl(epoll, EPOLL_CTL_MOD, (*i)->fd, &event);
+              if(timestep.timestep() % 100 == 0) {
+                // Only generate an image for one in 100 timesteps
+                blob = handleWorldImage();
+                png->set_image(blob.data(), blob.length());
+                png->set_timestep(timestep.timestep());
+                for(vector<connection*>::iterator i = pngviewers.begin();
+                    i != pngviewers.end(); ++i) {
+                  (*i)->queue.push(MSG_REGIONRENDER, png);
+                  event.events = EPOLLOUT;
+                  event.data.ptr = *i;
+                  epoll_ctl(epoll, EPOLL_CTL_MOD, (*i)->fd, &event);
+                }
               }
-              //END TIMESTEP CALCULATIONS//////
-
 
               //Respond with done message
               msg_ptr update(new TimestepDone(tsdone));
