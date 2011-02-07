@@ -1,6 +1,6 @@
 message RegionInfo {
   required fixed32 address = 1;
-  required uint32 id = 2;
+  required fixed32 id = 2;
   optional uint32 regionport = 3;
   optional uint32 controllerport = 4;
   optional uint32 renderport = 5;
