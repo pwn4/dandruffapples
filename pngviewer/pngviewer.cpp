@@ -59,12 +59,23 @@ char clockip [40] = "127.0.0.1";
 
 int clockfd, listenfd, clientfd;
 TimestepUpdate timestep;
-RegionInfo regioninfo;
-MessageReader reader(clockfd);
+MessageReader* reader;
 MessageType type;
+	GIOChannel *ioch; //event handler
 size_t len;
 const void *buffer;
 
+struct connection{
+RegionInfo info;
+
+int fd;
+MessageReader reader;
+
+connection(int fd_, RegionInfo info_) : fd(fd_), reader(fd_), info(info_) {}
+
+};
+
+vector<connection*> region;
 
 
 //this function parses any minimal command line arguments and uses their values
@@ -134,24 +145,74 @@ on_expose_event(GtkWidget *widget,
 }
 
 
+//handler for region received messages
+gboolean io_regionmessage(GIOChannel *ioch, GIOCondition cond, gpointer data)
+{
+  connection * conn;
+  //get the reader for the handle
+  for(vector<connection*>::iterator i = region.begin();
+                i != region.end(); i++)
+    if((*i)->fd == g_io_channel_unix_get_fd(ioch))
+    {
+      conn = (*i);
+      break;
+    }
+  
+    
+  if(!(conn)->reader.doRead(&type, &len, &buffer))
+    return TRUE;
+  switch (type) {
+	  case MSG_REGIONRENDER:
+	  {
+      cout << "Received MSG_REGIONRENDER update!" << endl;
+	    break;
+	  }
+	  case MSG_TIMESTEPUPDATE:
+	  {
+	    break;
+    }
+	  default:
+      cerr << "Unexpected readable socket!" << type << endl;
+  }
+	
+	
+	
+  return TRUE;
+}
+
+
+//handler for clock received messages
 gboolean io_clockmessage(GIOChannel *ioch, GIOCondition cond, gpointer data)
 {
-  cout << "BBB" << flush;
-  if(!reader.doRead(&type, &len, &buffer))
-  {
-  cout << "AAA" << flush;
+  if(!reader->doRead(&type, &len, &buffer))
     return TRUE;
+  switch (type) {
+	  case MSG_REGIONINFO:
+	  {
+  		//we got regionserver information
+  		RegionInfo regioninfo;
+			regioninfo.ParseFromArray(buffer, len);
+			cout << "Received MSG_REGIONINFO update!" << regioninfo.address() << " " << regioninfo.port() << endl;
+			//connect to the server
+			struct in_addr addr;
+			addr.s_addr = regioninfo.address();
+			int fd = net::do_connect(addr, regioninfo.port());
+			net::set_blocking(fd, false);
+			//store the region server mapping
+			connection *newregion = new connection(fd, regioninfo);
+			region.push_back(newregion);
+			ioch = g_io_channel_unix_new(fd);
+			g_io_add_watch(ioch, G_IO_IN, io_regionmessage, NULL); //start watching it
+			cout << "Connected to region server!" << endl;
+			//update knowledge of the world
+      
+	    
+	    break;
+	  }
+	
+	  default:
+      cerr << "Unexpected readable socket!" << type << endl;
   }
-    
-  /*switch (type) {
-		case MSG_REGIONINFO:
-		{
-		  cout <<"BB";
-		}
-		
-		default:
-      cerr << "Unexpected readable socket!" << endl;
-	}*/
 	
 	
 	
@@ -169,6 +230,7 @@ int main(int argc, char* argv[])
   //connect to the clock server
   clockfd = net::do_connect(clockip, PNG_VIEWER_PORT);
   net::set_blocking(clockfd, false);
+  reader = new MessageReader(clockfd);
   cout << "Connected to Clock Server" << endl;
   
   //create the window object and init
@@ -185,7 +247,6 @@ int main(int argc, char* argv[])
 	      G_CALLBACK (destroy), NULL);
 	      
 	//link socket events
-	GIOChannel *ioch;
 	ioch = g_io_channel_unix_new(clockfd);
 	g_io_add_watch(ioch, G_IO_IN, io_clockmessage, NULL);
 
@@ -212,50 +273,4 @@ int main(int argc, char* argv[])
   
   return 0;
   
-  
-  /*
-  
-	TimestepUpdate timestep;
-  WorldInfo worldinfo;
-  RegionInfo regioninfo;
-  MessageReader reader(clockfd);
-  MessageType type;
-  size_t len;
-  const void *buffer;
-
-  try {
-		while(true) {
-		  for(bool complete = false; !complete;) {
-		    complete = reader.doRead(&type, &len, &buffer);
-		  }
-		  switch (type) {
-				case MSG_REGIONINFO:
-				{
-				//we got regionserver information
-					regioninfo.ParseFromArray(buffer, len);
-					cout << "Received MSG_REGIONINFO update!" << regioninfo.address() << " " << regioninfo.port() << endl;
-					struct in_addr addr;
-					addr.s_addr = regioninfo.address();
-					int fd = net::do_connect(addr, regioninfo.port());
-					cout << "Connected to region server!" << endl;
-					
-					break;
-				}
-				case MSG_REGIONRENDER:
-				{
-					cout << "Received MSG_REGIONRENDER update!" << endl;
-					break;
-				}
-				default:
-				{
-				  cout << "Unknown message!" << endl;
-				  break;
-				}
-		  }
-		}
-  } catch(EOFError e) {
-    cout << " clock server disconnected, shutting down." << endl;
-  } catch(SystemError e) {
-    cerr << " error performing network I/O: " << e.what() << endl;
-  }   */
 }
