@@ -159,15 +159,15 @@ struct connection {
 Blob handleWorldImage()
 {
 	Blob blob;
-	Image regionPiece("320x240", "white");
+	Image regionPiece("320x320", "white");
 	regionPiece.magick("png");
 
 	int x,y;
 
 	for( int i=0;i<10;i++ )
 	{
-		x=rand()%320;
-		y=rand()%240;
+		x=1 + rand()%318;
+		y=1 + rand()%318;
 
 		//make the pixel more visible by drawing more pixels around it
 		regionPiece.pixelColor(x, y, Color("black"));
