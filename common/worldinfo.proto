@@ -1,7 +1,9 @@
 message RegionInfo {
   required fixed32 address = 1;
-  required uint32 port = 2;
-  required uint32 id = 3;
+  required uint32 id = 2;
+  optional uint32 regionport = 3;
+  optional uint32 controllerport = 4;
+  optional uint32 renderport = 5;
   enum Position {
     TOP_LEFT = 0;
     TOP = 1;
@@ -12,9 +14,9 @@ message RegionInfo {
     BOTTOM_LEFT = 6;
     LEFT = 7;
   }
-  optional Position position = 4;
-  optional uint32 regionx = 5;
-  optional uint32 regiony = 6;
+  optional Position position = 6;
+  optional uint32 draw_x = 7;
+  optional uint32 draw_y = 8;
 }
 
 message RobotInfo {

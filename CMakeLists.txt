@@ -4,7 +4,6 @@ cmake_minimum_required(VERSION 2.8)
 
 find_package(PkgConfig)
 
-
 add_definitions(-Wall -Wextra)
 
 add_subdirectory(common)
