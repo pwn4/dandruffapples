@@ -413,27 +413,30 @@ void run() {
           cerr << "Internal error: Got unexpected readable event!" << endl;
           break;
         }     
-      }else if(events[i].events & EPOLLOUT) {
+      } else if(events[i].events & EPOLLOUT) {
         switch(c->type) {
+        case connection::CONTROLLER:
+        case connection::REGION:
         case connection::CLOCK:
+          // Perform write
           if(c->queue.doWrite()) {
-            //write data to the clock
+            // If the queue is empty, we don't care if this is writable
             event.events = EPOLLIN;
             event.data.ptr = c;
             epoll_ctl(epoll, EPOLL_CTL_MOD, c->fd, &event);
           }
           break;
         case connection::PNGVIEWER:
+        case connection::FILE:
+          // Perform write
           if(c->queue.doWrite()) {
-            // If the queue is empty, we don't care if this is writable
+            // If the queue is empty, we don't care if this is
+            // writable OR readable
             event.events = 0;
             event.data.ptr = c;
             epoll_ctl(epoll, EPOLL_CTL_MOD, c->fd, &event);
           }
           break;
-        case connection::CONTROLLER:
-        case connection::REGION:
-
         default:
           cerr << "Unexpected writable socket!" << endl;
           break;
