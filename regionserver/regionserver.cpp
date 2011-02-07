@@ -156,8 +156,9 @@ struct connection {
   connection(int fd_, Type type_) : type(type_), fd(fd_), reader(fd_), queue(fd_) {}
 };
 
-Image handleWorldImage()
+Blob handleWorldImage()
 {
+	Blob blob;
 	Image regionPiece("320x240", "white");
 	regionPiece.magick("png");
 
@@ -175,8 +176,9 @@ Image handleWorldImage()
 		regionPiece.pixelColor(x, y+1, Color("black"));
 		regionPiece.pixelColor(x, y-1, Color("black"));
 	}
+	regionPiece.write(&blob);
 
-	return regionPiece;
+	return blob;
 }
 
 //the main function
@@ -277,8 +279,8 @@ void run() {
 
   PngFile png;
   //I think this is what we want
-  Image regionPiece=handleWorldImage();
-  png.set_png(&regionPiece, sizeof(regionPiece));
+  Blob blob=handleWorldImage();
+  png.set_png(blob.data(), blob.length());
 
   //server variables
   TimestepUpdate timestep;
