@@ -186,6 +186,7 @@ int main(int argc, char **argv) {
   size_t maxevents = 1 + server_count;
   struct epoll_event *events = new struct epoll_event[maxevents];
   size_t connected = 0, ready = 0;
+  RegionInfo regioninfo;
   TimestepDone tsdone;
   TimestepUpdate timestep;
   unsigned long long step = 0;
@@ -211,10 +212,51 @@ int main(int argc, char **argv) {
           MessageType type;
           size_t len;
           const void *buffer;
-          try {
+          try {          
             if(c->reader.doRead(&type, &len, &buffer)) {
+            switch(type) {
+            case MSG_TIMESTEPDONE:
+            {
               tsdone.ParseFromArray(buffer, len);
               ++ready;
+              break;
+            }
+            case MSG_REGIONINFO:
+            {
+              regioninfo.ParseFromArray(buffer, len);
+              //store the region's info
+              int regionId = -1;
+              for(size_t i = 0; i < (unsigned)worldinfo->region_size(); ++i) {
+                tr1::shared_ptr<RegionInfo> r(new RegionInfo(worldinfo->region(i)));
+                //update the region info
+                if(r->id() == c->fd)
+                {  
+                  regionId = i;
+                  break;
+                }
+              }
+              
+              if(regionId != -1)
+              {
+                tr1::shared_ptr<RegionInfo> r(new RegionInfo(worldinfo->region(regionId)));
+                
+                r->set_regionport(regioninfo.regionport());
+                r->set_renderport(regioninfo.renderport());
+                r->set_controllerport(regioninfo.controllerport());
+                
+                //TODO: actually change the value in the worldinfo object!!
+                
+                break;
+              }
+              
+              cerr << "Info from unknown region received!" << endl;
+              break;
+            }
+            
+              default:
+              cerr << "Unexpected readable socket message! Type:" << type << endl;
+            }
+              
             }
           } catch(EOFError e) {
             cerr << "Region server disconnected!  Shutting down." << endl;
@@ -284,11 +326,11 @@ int main(int argc, char **argv) {
 
           RegionInfo *r = worldinfo->add_region();
           r->set_address(((struct sockaddr_in*)&addr)->sin_addr.s_addr);
-          // TODO: Get this from handshake
+          //Get this from handshake. Default values for now
           r->set_regionport(REGIONS_PORT);
           r->set_renderport(PNG_VIEWER_PORT);
           r->set_controllerport(CONTROLLERS_PORT);
-          r->set_id(regionId++);
+          r->set_id(fd);
 
           tr1::shared_ptr<RegionInfo> cr(new RegionInfo(*r));
           cr->clear_regionport();
