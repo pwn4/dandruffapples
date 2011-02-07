@@ -357,7 +357,7 @@ int main(int argc, char **argv) {
           pngviewers.push_back(newconn);
 
           for(size_t i = 0; i < (unsigned)worldinfo->region_size(); ++i) {
-            newconn->queue.push(MSG_WORLDINFO, tr1::shared_ptr<RegionInfo>(new RegionInfo(worldinfo->region(i))));
+            newconn->queue.push(MSG_REGIONINFO, tr1::shared_ptr<RegionInfo>(new RegionInfo(worldinfo->region(i))));
           }
 
           event.events = EPOLLOUT;
