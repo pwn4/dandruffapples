@@ -13,6 +13,8 @@ message RegionInfo {
     LEFT = 7;
   }
   optional Position position = 4;
+  optional uint32 regionx = 5;
+  optional uint32 regiony = 6;
 }
 
 message RobotInfo {
