@@ -307,6 +307,14 @@ int main(int argc, char **argv) {
             event.data.ptr = *i;
             epoll_ctl(epoll, EPOLL_CTL_MOD, (*i)->fd, &event);
           }
+          for(vector<connection*>::iterator i = pngviewers.begin();
+              i != pngviewers.end(); ++i) {
+            (*i)->queue.push(MSG_REGIONINFO, p);
+            
+            event.events = EPOLLOUT;
+            event.data.ptr = *i;
+            epoll_ctl(epoll, EPOLL_CTL_MOD, (*i)->fd, &event);
+          }
 
           ++connected;
           break;
