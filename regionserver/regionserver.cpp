@@ -145,8 +145,7 @@ struct connection {
     CLOCK,
     CONTROLLER,
     REGION,
-    PNGVIEWER,
-    FILE
+    PNGVIEWER
   } type;
   int fd;
   MessageReader reader;
@@ -214,7 +213,6 @@ void run() {
   //create a new file for logging
   string logName=helper::getNewName("/tmp/antix_log");
   int logfd = open(logName.c_str(), O_WRONLY | O_CREAT, 0644 );
-  //net::set_blocking(logfd, false);
 
   if(logfd<0)
   {
@@ -238,7 +236,6 @@ void run() {
   connection clockconn(clockfd, connection::CLOCK),
     controllerconn(controllerfd, connection::CONTROLLER_LISTEN),
     regionconn(regionfd, connection::REGION_LISTEN),
-    logconn(logfd, connection::FILE),
     pngconn(pngfd, connection::PNGVIEWER_LISTEN);
   
   //epoll setup
@@ -284,18 +281,6 @@ void run() {
     close(logfd);
     exit(1);
   }
-  /*
-  event.events = EPOLLOUT;
-  event.data.ptr = &logconn;
-  if(0 > epoll_ctl(epoll, EPOLL_CTL_ADD, logfd, &event)) {
-    perror("Failed to add log handle to epoll");
-    close(controllerfd);
-    close(regionfd);
-    close(pngfd);
-    close(clockfd);
-    close(logfd);
-    exit(1);
-  }*/
 
   //handle logging to file initializations
   PuckStack puckstack;
@@ -309,6 +294,7 @@ void run() {
   Blob blob;
 
   //server variables
+  MessageWriter logWriter(logfd);
   TimestepUpdate timestep;
   TimestepDone tsdone;
   WorldInfo worldinfo;
@@ -408,20 +394,22 @@ void run() {
                 }
               }
 
-              /*for(int i = 0;i <100; i++) {
-            	 msg_ptr serverrobot_ptr(new ServerRobot(serverrobot));
-            	 logconn.queue.push(MSG_SERVERROBOT, serverrobot_ptr);
-                 event.events = EPOLLOUT;
-                 event.data.ptr = &logconn;
-                 epoll_ctl(epoll, EPOLL_CTL_MOD, logconn.fd, &event);
+              //This code is dangerous and will destroy the timeframes per second rate.
+              //I got less than 20 tfps ( running two regionservers ) on my dual core with the cpu usage being the bottleneck.
+              //This is only with the assumption that we have 10000 robots and 100 pucks per region server.
+              /*
+              for(int i = 0;i <10000; i++) {
+            	  logWriter.init(MSG_SERVERROBOT, serverrobot);
+            	  for(bool complete = false; !complete;) {
+            	    complete = logWriter.doWrite();;
+            	  }
                }
 
               for(int i = 0;i <100; i++) {
-            	 msg_ptr puckstack_ptr(new PuckStack(puckstack));
-            	 logconn.queue.push(MSG_PUCKSTACK, puckstack_ptr);
-                 event.events = EPOLLOUT;
-                 event.data.ptr = &logconn;
-                 epoll_ctl(epoll, EPOLL_CTL_MOD, logconn.fd, &event);
+            	  logWriter.init(MSG_PUCKSTACK, puckstack);
+            	  for(bool complete = false; !complete;) {
+            	    complete = logWriter.doWrite();;
+            	  }
                }*/
 
               //Respond with done message
@@ -486,16 +474,6 @@ void run() {
           break;
         case connection::PNGVIEWER:
         
-          break;
-        case connection::FILE:
-          // Perform write
-          if(c->queue.doWrite()) {
-            // If the queue is empty, we don't care if this is
-            // writable OR readable
-            event.events = 0;
-            event.data.ptr = c;
-            epoll_ctl(epoll, EPOLL_CTL_MOD, c->fd, &event);
-          }
           break;
         default:
           cerr << "Unexpected writable socket!" << endl;
