@@ -67,6 +67,14 @@ namespace net {
     }
 
   int do_connect(const char *address, int port) {
+    struct in_addr binary_addr;
+    if(0 == inet_pton(AF_INET, address, &binary_addr)) {
+      return 0;
+    }
+    return do_connect(binary_addr, port);
+  }
+
+  int do_connect(struct in_addr address, int port) {
     int fd = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
     if(0 > fd) {
         return fd;
@@ -77,10 +85,7 @@ namespace net {
     memset(&sockaddr, 0, sizeof(struct sockaddr_in));
     sockaddr.sin_family = AF_INET;
     sockaddr.sin_port = htons(port);
-    if(0 == inet_pton(AF_INET, address, &sockaddr.sin_addr)) {
-      close(fd);
-      return 0;
-    }
+    sockaddr.sin_addr = address;
     
     // Initiate connection
     if(0 > connect(fd, (struct sockaddr *)&sockaddr, sizeof(struct sockaddr_in))) {     
