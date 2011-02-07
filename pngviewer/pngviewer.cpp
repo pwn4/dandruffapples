@@ -54,10 +54,18 @@ using namespace std;
 
 //variable declarations
 char configFileName [30] = "config";
-int clockfd, listenfd, clientfd;
-
-//Config variables
+int windowWidth = 900, windowHeight = 900;
 char clockip [40] = "127.0.0.1";
+
+int clockfd, listenfd, clientfd;
+TimestepUpdate timestep;
+RegionInfo regioninfo;
+MessageReader reader(clockfd);
+MessageType type;
+size_t len;
+const void *buffer;
+
+
 
 //this function parses any minimal command line arguments and uses their values
 void parseArguments(int argc, char* argv[])
@@ -108,21 +116,46 @@ on_expose_event(GtkWidget *widget,
     GdkEventExpose *event,
     gpointer data)
 {
+  //Test drawing function
+  cairo_surface_t *image;
 
-        cairo_surface_t *image;
+  image = cairo_image_surface_create_from_png("rose.png");
 
-        image = cairo_image_surface_create_from_png("rose.png");
+  cairo_t *cr;
 
-        cairo_t *cr;
+  cr = gdk_cairo_create (widget->window);
 
-        cr = gdk_cairo_create (widget->window);
+  cairo_set_source_surface(cr, image, 10, 10);
+  cairo_paint(cr);
 
-        cairo_set_source_surface(cr, image, 10, 10);
-        cairo_paint(cr);
+  cairo_destroy(cr);
 
-        cairo_destroy(cr);
+  return FALSE;
+}
 
-        return FALSE;
+
+gboolean io_clockmessage(GIOChannel *ioch, GIOCondition cond, gpointer data)
+{
+  cout << "BBB" << flush;
+  if(!reader.doRead(&type, &len, &buffer))
+  {
+  cout << "AAA" << flush;
+    return TRUE;
+  }
+    
+  /*switch (type) {
+		case MSG_REGIONINFO:
+		{
+		  cout <<"BB";
+		}
+		
+		default:
+      cerr << "Unexpected readable socket!" << endl;
+	}*/
+	
+	
+	
+  return TRUE;
 }
 
 
@@ -135,6 +168,7 @@ int main(int argc, char* argv[])
   
   //connect to the clock server
   clockfd = net::do_connect(clockip, PNG_VIEWER_PORT);
+  net::set_blocking(clockfd, false);
   cout << "Connected to Clock Server" << endl;
   
   //create the window object and init
@@ -149,13 +183,20 @@ int main(int argc, char* argv[])
 	      G_CALLBACK (delete_event), NULL);
   g_signal_connect (window, "destroy",
 	      G_CALLBACK (destroy), NULL);
+	      
+	//link socket events
+	GIOChannel *ioch;
+	ioch = g_io_channel_unix_new(clockfd);
+	g_io_add_watch(ioch, G_IO_IN, io_clockmessage, NULL);
+
   
   //set the border width of the window.
   gtk_container_set_border_width (GTK_CONTAINER (window), 10);
  
+  //set some window params
   gtk_window_set_position(GTK_WINDOW(window), GTK_WIN_POS_CENTER);
   gtk_window_set_title(GTK_WINDOW(window), "PNGViewer");
-  gtk_window_set_default_size(GTK_WINDOW(window), 900, 900); 
+  gtk_window_set_default_size(GTK_WINDOW(window), windowWidth, windowHeight); 
   gtk_widget_set_app_paintable(window, TRUE);
 
   gtk_widget_show_all(window);
@@ -172,15 +213,8 @@ int main(int argc, char* argv[])
   return 0;
   
   
-  
-  
-
-  
-  
   /*
   
-  
-
 	TimestepUpdate timestep;
   WorldInfo worldinfo;
   RegionInfo regioninfo;
