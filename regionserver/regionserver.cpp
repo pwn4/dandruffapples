@@ -196,7 +196,7 @@ void run() {
   } else if(0 == clockfd) {
     cerr << " invalid address: " << clockip << endl;
     exit(1);;
-  }
+  }  
   cout << " done." << endl;
 
 
@@ -228,6 +228,8 @@ void run() {
     controllerconn(controllerfd, connection::CONTROLLER_LISTEN),
     regionconn(regionfd, connection::REGION_LISTEN),
     pngconn(pngfd, connection::PNGVIEWER_LISTEN);
+  
+  //epoll setup
   struct epoll_event event;
   event.events = EPOLLIN;
   event.data.ptr = &clockconn;
@@ -298,6 +300,19 @@ void run() {
   vector<connection*> pngviewers;
   vector<connection*> borderRegions;  
 
+  //send port listening info (IMPORTANT)
+  //add listening ports
+  RegionInfo r;
+  r.set_address(0);
+  r.set_id(0);
+  r.set_regionport(regionPort);
+  r.set_renderport(pngviewerPort);
+  r.set_controllerport(controllerPort);
+  msg_ptr info(new RegionInfo(r));
+  clockconn.queue.push(MSG_REGIONINFO, info);
+  event.events = EPOLLOUT;
+  event.data.ptr = &clockconn;
+  epoll_ctl(epoll, EPOLL_CTL_MOD, clockconn.fd, &event);
 
   #define MAX_EVENTS 128
   struct epoll_event events[MAX_EVENTS];
@@ -372,7 +387,7 @@ void run() {
 
               //Respond with done message
               msg_ptr update(new TimestepDone(tsdone));
-              c->queue.push(MSG_TIMESTEPUPDATE, update);
+              c->queue.push(MSG_TIMESTEPDONE, update);
                 event.events = EPOLLIN | EPOLLOUT;
                 event.data.ptr = c;
                 epoll_ctl(epoll, EPOLL_CTL_MOD, c->fd, &event);
@@ -416,7 +431,11 @@ void run() {
       } else if(events[i].events & EPOLLOUT) {
         switch(c->type) {
         case connection::CONTROLLER:
+        
+          break;
         case connection::REGION:
+        
+          break;
         case connection::CLOCK:
           // Perform write
           if(c->queue.doWrite()) {
@@ -427,6 +446,8 @@ void run() {
           }
           break;
         case connection::PNGVIEWER:
+        
+          break;
         case connection::FILE:
           // Perform write
           if(c->queue.doWrite()) {
