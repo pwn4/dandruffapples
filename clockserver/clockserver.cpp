@@ -255,16 +255,6 @@ int main(int argc, char **argv) {
               event.data.ptr = *i;
               epoll_ctl(epoll, EPOLL_CTL_MOD, (*i)->fd, &event);
             }
-            if(step % 10 == 0) {
-              // Send to PNG viewers
-              for(vector<connection*>::iterator i = pngviewers.begin();
-                  i != pngviewers.end(); ++i) {
-                (*i)->queue.push(MSG_TIMESTEPUPDATE, update);
-                event.events = EPOLLOUT;
-                event.data.ptr = *i;
-                epoll_ctl(epoll, EPOLL_CTL_MOD, (*i)->fd, &event);
-              }
-            }
           }
           break;
         }
