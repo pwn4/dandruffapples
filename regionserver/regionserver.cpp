@@ -30,7 +30,7 @@ This program communications with clients, controllers, PNGviewers, other regions
 #include "../common/puckstack.pb.h"
 #include "../common/messagewriter.h"
 #include "../common/worldinfo.pb.h"
-#include "../common/pngfile.pb.h"
+#include "../common/regionrender.pb.h"
 
 #include "../common/ports.h"
 #include "../common/messagereader.h"
@@ -277,10 +277,10 @@ void run() {
   puckstack.set_stacksize(1);
   serverrobot.set_id(2);
 
-  PngFile png;
+  RegionRender png;
   //I think this is what we want
   Blob blob=handleWorldImage();
-  png.set_png(blob.data(), blob.length());
+  png.set_image(blob.data(), blob.length());
 
   //server variables
   TimestepUpdate timestep;

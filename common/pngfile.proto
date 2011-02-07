@@ -1,3 +1,0 @@
-message PngFile {
-  required bytes png=1;
-}
