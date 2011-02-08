@@ -26,35 +26,17 @@ This program communications with controllers.
 #include "../common/messagereader.h"
 #include "../common/except.h"
 
+#include "../common/helper.h"
+
 using namespace std;
 
 /////////////////Variables and Declarations/////////////////
-char configFileName [30] = "config";
+const char *configFileName;
 
 //Config variables
 vector<string> controllerips; //controller IPs 
 
 ////////////////////////////////////////////////////////////
-
-
-//this function parses any minimal command line arguments and uses their values
-void parseArguments(int argc, char* argv[])
-{
-	//loop through the arguments
-	for(int i = 0; i < argc; i++)
-	{
-		//if it's a configuration file name...
-		if(strcmp(argv[i], "-c") == 0)
-		{
-			strcpy(configFileName, argv[i+1]);
-		
-			printf("Using config file: %s\n", configFileName);
-			
-			i++; //increment the loop counter for one argument
-		}
-	}
-}
-
 
 //this function loads the config file so that the server parameters don't need to be added every time
 void loadConfigFile()
@@ -163,7 +145,9 @@ int main(int argc, char* argv[])
 	////////////////////////////////////////////////////
 	printf("Client Initializing ...\n");
 	
-	parseArguments(argc, argv);
+	helper::Config config(argc, argv);
+	configFileName=config.getArg("-c").c_str();
+	cout<<"Using config file: "<<configFileName<<endl;
 	
 	loadConfigFile();
 	////////////////////////////////////////////////////

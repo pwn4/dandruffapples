@@ -33,6 +33,7 @@ This program communications with clients, controllers, PNGviewers, other regions
 #include "../common/regionrender.pb.h"
 
 #include "../common/ports.h"
+#include "../common/messagewriter.h"
 #include "../common/messagereader.h"
 #include "../common/messagequeue.h"
 #include "../common/net.h"
@@ -41,8 +42,6 @@ This program communications with clients, controllers, PNGviewers, other regions
 #include "../common/timestep.pb.h"
 #include "../common/serverrobot.pb.h"
 #include "../common/puckstack.pb.h"
-#include "../common/messagewriter.h"
-#include "../common/messagereader.h"
 
 #include "../common/helper.h"
 #include <Magick++.h>
@@ -50,7 +49,7 @@ This program communications with clients, controllers, PNGviewers, other regions
 using namespace std;
 using namespace Magick;
 /////////////////Variables and Declarations/////////////////
-char configFileName [30] = "config";
+const char *configFileName;
 
 //Config variables
 char clockip [40] = "127.0.0.1";
@@ -60,25 +59,6 @@ int pngviewerPort = PNG_VIEWER_PORT;
 int regionPort = REGIONS_PORT;
 
 ////////////////////////////////////////////////////////////
-
-
-//this function parses any minimal command line arguments and uses their values
-void parseArguments(int argc, char* argv[])
-{
-	//loop through the arguments
-	for(int i = 0; i < argc; i++)
-	{
-		//if it's a configuration file name...
-		if(strcmp(argv[i], "-c") == 0)
-		{
-			strcpy(configFileName, argv[i+1]);
-		
-			printf("Using config file: %s\n", configFileName);
-			
-			i++; //increment the loop counter for one argument
-		}
-	}
-}
 
 void loadConfigFile()
 {
@@ -504,8 +484,10 @@ int main(int argc, char* argv[])
 	////////////////////////////////////////////////////
 	printf("Server Initializing ...\n");
 	
-	parseArguments(argc, argv);
-	
+	helper::Config config(argc, argv);
+	configFileName=config.getArg("-c").c_str();
+	cout<<"Using config file: "<<configFileName<<endl;
+
 	loadConfigFile();
 	////////////////////////////////////////////////////
 	

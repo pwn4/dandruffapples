@@ -53,7 +53,7 @@
 using namespace std;
 
 //variable declarations
-char configFileName [30] = "config";
+const char *configFileName;
 int windowWidth = 900, windowHeight = 900;
 char clockip [40] = "127.0.0.1";
 
@@ -76,26 +76,6 @@ connection(int fd_, RegionInfo info_) : fd(fd_), reader(fd_), info(info_) {}
 };
 
 vector<connection*> region;
-
-
-//this function parses any minimal command line arguments and uses their values
-void parseArguments(int argc, char* argv[])
-{
-	//loop through the arguments
-	for(int i = 0; i < argc; i++)
-	{
-		//if it's a configuration file name...
-		if(strcmp(argv[i], "-c") == 0)
-		{
-			strcpy(configFileName, argv[i+1]);
-            
-			printf("Using config file: %s\n", configFileName);
-			
-			i++; //increment the loop counter for one argument
-		}
-	}
-}
-
 
 void loadConfigFile()
 {
@@ -225,7 +205,9 @@ gboolean io_clockmessage(GIOChannel *ioch, GIOCondition cond, gpointer data)
 int main(int argc, char* argv[])
 {
   //parse command line arguments and load the config file
-	parseArguments(argc, argv);
+  helper::Config config(argc, argv);
+  configFileName=config.getArg("-c").c_str();
+  cout<<"Using config file: "<<configFileName<<endl;
   loadConfigFile();
   
   //connect to the clock server

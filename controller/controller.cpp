@@ -45,25 +45,6 @@ int clockfd, listenfd, clientfd;
 //Config variables
 char clockip [40] = "127.0.0.1";
 
-
-//this function parses any minimal command line arguments and uses their values
-void parseArguments(int argc, char* argv[])
-{
-	//loop through the arguments
-	for(int i = 0; i < argc; i++)
-	{
-		//if it's a configuration file name...
-		if(strcmp(argv[i], "-c") == 0)
-		{
-			strcpy(configFileName, argv[i+1]);
-		
-			printf("Using config file: %s\n", configFileName);
-			
-			i++; //increment the loop counter for one argument
-		}
-	}
-}
-
 //this function loads the config file so that the server parameters don't need to be added every time
 void loadConfigFile()
 {
