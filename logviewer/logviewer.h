@@ -50,6 +50,8 @@ public:
   static void updateGui();
   static void drawAll();
   static void draw(Robot* r);
+  static double distanceNormalize(double d);
+  static double angleNormalize(double a);
 };
 
 #endif //_LOGVIEWER_H_

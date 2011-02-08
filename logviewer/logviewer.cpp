@@ -2,10 +2,7 @@
 
 #include <GL/glut.h>
 #include <vector>
-#include <stdlib.h>
 #include <unistd.h>
-#include <set>
-#include <iostream>
 
 #include "logviewer.h"
 #include "robot.h"
@@ -55,7 +52,23 @@ void Logviewer::getInitialData() {
   }
 }
 
-void updateTimestep() {
+void Logviewer::updateTimestep() {
+  // 1. Parse ServerRobot and PuckStack messages for current timestep.
+  // 2. For all robots we did not receive a message for, calculate new
+  //    x,y coordinates based on current velocity.
+
+  // But until we get log files... let's make them DANCE!
+  double dx, dy;
+  Robot* bot = NULL;
+  for (int i = 0; i < robots.size(); i++) {
+    bot = robots.at(i);
+    bot->_velocity = 0.0001;
+    dx = bot->_velocity * cos(bot->_angle);
+    dy = bot->_velocity * sin(bot->_angle);
+    bot->_x = distanceNormalize(bot->_x + dx); 
+    bot->_y = distanceNormalize(bot->_y + dy); 
+  }
+  usleep(0.1);
   return;
 }
 
@@ -64,7 +77,7 @@ void updateTimestep() {
 
 static void idle_func( void )
 {
-  updateTimestep();
+  Logviewer::updateTimestep();
 }
 
 static void timer_func( int dummy )
@@ -247,3 +260,17 @@ void Logviewer::draw(Robot* r)
 	// shift out of local coordinate frame
   glPopMatrix();
 }
+
+/** Normalize a length to within 0 to worldsize. */
+double Logviewer::distanceNormalize(double d) {
+	while( d < 0 ) d += worldsize;
+	while( d > worldsize ) d -= worldsize;
+	return d; 
+} 
+
+/** Normalize an angle to within +/_ M_PI. */
+double Logviewer::angleNormalize(double a) {
+	while( a < -M_PI ) a += 2.0*M_PI;
+	while( a >  M_PI ) a -= 2.0*M_PI;	 
+	return a;
+}	 
