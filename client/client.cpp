@@ -146,7 +146,7 @@ int main(int argc, char* argv[])
 	printf("Client Initializing ...\n");
 	
 	helper::Config config(argc, argv);
-	configFileName=config.getArg("-c").c_str();
+	configFileName=(config.getArg("-c").length() == 0 ? "config" : config.getArg("-c").c_str());
 	cout<<"Using config file: "<<configFileName<<endl;
 	
 	loadConfigFile();
