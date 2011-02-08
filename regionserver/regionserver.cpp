@@ -394,23 +394,22 @@ void run() {
                 }
               }
 
-              //This code is dangerous and will destroy the timeframes per second rate.
-              //I got less than 20 tfps ( running two regionservers ) on my dual core with the cpu usage being the bottleneck.
-              //This is only with the assumption that we have 10000 robots and 100 pucks per region server.
-              /*
-              for(int i = 0;i <10000; i++) {
+              logWriter.init(MSG_TIMESTEPUPDATE, timestep);
+              logWriter.doWrite();
+
+              for(int i = 0;i <50; i++) {
             	  logWriter.init(MSG_SERVERROBOT, serverrobot);
             	  for(bool complete = false; !complete;) {
             	    complete = logWriter.doWrite();;
             	  }
                }
 
-              for(int i = 0;i <100; i++) {
+              for(int i = 0;i <25; i++) {
             	  logWriter.init(MSG_PUCKSTACK, puckstack);
             	  for(bool complete = false; !complete;) {
             	    complete = logWriter.doWrite();;
             	  }
-               }*/
+               }
 
               //Respond with done message
               msg_ptr update(new TimestepDone(tsdone));
