@@ -5,6 +5,7 @@
 #include <iostream>
 #include <vector>
 #include <tr1/memory>
+#include <math.h>
 
 #include <unistd.h>
 #include <fcntl.h>
@@ -92,7 +93,7 @@ struct connection {
 
 int main(int argc, char **argv) {
 	helper::Config config(argc, argv);
-	configFileName=config.getArg("-c").c_str();
+	configFileName=(config.getArg("-c").length() == 0 ? "config" : config.getArg("-c").c_str());
 	cout<<"Using config file: "<<configFileName<<endl;
 
   //loadConfigFile();
@@ -180,6 +181,11 @@ int main(int argc, char **argv) {
   time_t lastSecond = time(NULL);
   int timeSteps = 0;
   unsigned regionId = 0;
+  
+  long totalpersecond = 0, number = 0;
+  long values[1000];
+  long freeval = 0;
+  int second = 0;
 
   cout << "Listening for connections." << endl;
   while(true) {    
@@ -258,7 +264,21 @@ int main(int argc, char **argv) {
             //check if its time to output
             if(time(NULL) > lastSecond)
             {
-              cout << timeSteps << " timesteps/second." << endl;
+              cout << timeSteps << " timesteps/second. second: " << second++ << endl;
+              //do some stats calculations
+              totalpersecond += timeSteps;
+              number++;
+              values[freeval++] = (long)timeSteps;
+              long avg = (totalpersecond / number);
+              cout << avg << " timesteps/second on average" <<endl;
+              //calc std dev
+              long stddev =0;
+              for(int k = 0; k < freeval; k++)
+                stddev += (values[k] - avg)*(values[k] - avg);
+              stddev /= freeval;
+              stddev = sqrt(stddev);
+              cout << "Standard Deviation: " << stddev << endl << endl;
+              ////////////////////////////
               timeSteps = 0;
               lastSecond = time(NULL);
             }
