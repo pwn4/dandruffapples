@@ -13,7 +13,7 @@ CC = g++
 CXXFLAGS = -g -Wall -O3 $(GLUTFLAGS)
 LIBS =  -g -lm $(GLUTLIBS)
 
-SRC = robot.h robot.cpp home.h home.cpp logviewer.h logviewer.cpp puckstack.h puckstack.cpp  main.cpp
+SRC = robot.h robot.cpp home.h home.cpp logviewer.h logviewer.cpp puckstack.h puckstack.cpp gui.h gui.cpp main.cpp
 
 all: logviewer
 

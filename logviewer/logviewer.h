@@ -16,12 +16,6 @@ class Logviewer {
 private:
 
 public:
-  /** Convert radians to degrees. */
-  static double rtod( double r ){ return( r * 180.0 / M_PI ); }
-  /** Convert degrees to radians */
-  static double dtor( double d){ return( d * M_PI / 180.0 ); }
-
-
   // Entire world size
   int _worldLength;
   int _worldHeight;
@@ -39,19 +33,20 @@ public:
   static vector<Home*> homes;
   static vector<PuckStack*> puckStacks;
   
-
   // Methods
 
   Logviewer(int worldLength, int worldHeight);
   static void getInitialData(); 
   //void run();
   static void updateTimestep();
-  static void initGraphics(int argc, char* argv[]);
-  static void updateGui();
-  static void drawAll();
-  static void draw(Robot* r);
+
   static double distanceNormalize(double d);
   static double angleNormalize(double a);
+
+  /** Convert radians to degrees. */
+  static double rtod(double r);
+  /** Convert degrees to radians */
+  static double dtor(double d);
 };
 
 #endif //_LOGVIEWER_H_

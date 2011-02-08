@@ -3,6 +3,7 @@ main.cpp
 //////////////////////////////////////////////////////////////////////////////*/
 
 #include "logviewer.h"
+#include "gui.h"
 
 /*Home::Color colors[] = { Home::Color(1,0,0), 
 												 Home::Color(0,0.5,0), // darker green 
@@ -17,7 +18,9 @@ size_t color_count = 7;
 
 int main(int argc, char* argv[]) {
   // ** may not need world size
-  Logviewer logviewer(500.00, 500.00);
+  Logviewer* logviewer = new Logviewer(500.00, 500.00);
+  //Gui* gui = new Gui();
+  Gui::setLogviewer(logviewer);
 
   // configure global robot settings
   Logviewer::getInitialData();
@@ -37,8 +40,10 @@ int main(int argc, char* argv[]) {
   // and start the simulation running
   */
   //logviewer.run();
-  Logviewer::initGraphics(argc, argv);
-  Logviewer::updateGui();
+  //Logviewer::initGraphics(argc, argv);
+  //Logviewer::updateGui();
+  Gui::initGraphics(argc, argv);
+  Gui::updateGui(); // should call Logviewer::updateTimestep()
    
   
   // we'll probably never get here, but this keeps the compiler happy.
