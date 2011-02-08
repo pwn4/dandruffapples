@@ -27,6 +27,7 @@
 #include "../common/messagequeue.h"
 #include "../common/net.h"
 #include "../common/except.h"
+#include "../common/helper.h"
 
 #define ROBOT_LOOKUP_SIZE 100
 
@@ -39,7 +40,7 @@ struct server_client{
 
 //variable declarations
 server_client lookup[ROBOT_LOOKUP_SIZE];	//robot lookup table
-char configFileName [30] = "config";
+const char *configFileName;
 int clockfd, listenfd, clientfd;
 
 //Config variables
@@ -107,8 +108,12 @@ struct connection {
   connection(int fd_, Type type_) : type(type_), fd(fd_), reader(fd_), queue(fd_) {}
 };
 
-int main(/*int argc, char* argv[]*/)
+int main(int argc, char** argv)
 {
+  helper::Config config(argc, argv);
+	configFileName=(config.getArg("-c").length() == 0 ? "config" : config.getArg("-c").c_str());
+	loadConfigFile();
+
 	// Print a starting message
 	printf("--== Controller Server Software ==-\n");
 	
