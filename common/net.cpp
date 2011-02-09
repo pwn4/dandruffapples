@@ -13,9 +13,9 @@
 #include <sys/select.h>
 #include <fcntl.h>
 
-#include "../common/ports.h"
-#include "../common/timestep.pb.h"
-#include "../common/except.h"
+#include "ports.h"
+#include "timestep.pb.h"
+#include "except.h"
 
 using namespace std;
 

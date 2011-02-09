@@ -192,7 +192,7 @@ void getInputLogs(string inputDir, vector<Log> &inputLogsReader,
 int main(int argc, char **argv) {
 	string inputDir = "/tmp/input/", outputDir = "/tmp/output/";
 	ofstream debug;
-	debug.open("/tmp/output/debug.txt", ios::out);
+	debug.open("/tmp/logmerger_debug.txt", ios::out);
 
 	if (argc > 1) {
 		helper::Config config(argc, argv);
