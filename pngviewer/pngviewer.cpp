@@ -114,7 +114,7 @@ static gboolean on_expose_event(GtkWidget *widget, GdkEventExpose *event,
 //handler for region received messages
 gboolean io_regionmessage(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 	g_type_init();
-	MessageReader *reader = (MessageReader*)data;
+
 	regionConnection * regionConn;
 	//get the reader for the handle
 	for (vector<regionConnection*>::iterator i = regions.begin(); i != regions.end(); i++)
@@ -126,8 +126,6 @@ gboolean io_regionmessage(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 	for (bool complete = false; !complete;)
 		complete = regionConn->reader.doRead(&type, &len, &buffer);
 
-	for (bool complete = false; !complete;)
-		complete = reader->doRead(&type, &len, &buffer);
 	switch (type) {
 	case MSG_REGIONRENDER: {
 #ifdef DEBUG

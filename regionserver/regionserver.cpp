@@ -349,14 +349,12 @@ void run() {
                 blob = handleWorldImage();
                 png->set_image(blob.data(), blob.length());
                 png->set_timestep(timestep.timestep());
-                cout<<"starting to queue to png viewer"<<endl;
                 for(vector<helper::connection*>::iterator i = pngviewers.begin();
                     i != pngviewers.end(); ++i) {
                   (*i)->queue.push(MSG_REGIONRENDER, png);
                   event.events = EPOLLOUT;
                   event.data.ptr = *i;
                   epoll_ctl(epoll, EPOLL_CTL_MOD, (*i)->fd, &event);
-                  cout<<"queued to png viewer"<<endl;
                 }
               }
 #ifdef ENABLE_LOGGING
@@ -461,7 +459,6 @@ void run() {
           break;
         case helper::connection::PNGVIEWER:
             if(c->queue.doWrite()) {
-              // If the queue is empty, we don't care if this is writable
               event.events = 0;
               event.data.ptr = c;
               epoll_ctl(epoll, EPOLL_CTL_MOD, c->fd, &event);
