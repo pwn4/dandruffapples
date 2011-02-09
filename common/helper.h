@@ -11,6 +11,9 @@ using namespace std;
 
 namespace helper
 {
+	//comment to disable generation of debug for certain programs
+	#define DEBUG
+
 	template <class T>
 
 	string toString (const T&);
