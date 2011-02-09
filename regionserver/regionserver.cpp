@@ -92,7 +92,7 @@ void loadConfigFile()
 
 
 char *parse_port(char *input) {
-  size_t input_len = strlen(input);
+  signed int input_len = (int)strlen(input);
   char *port;
   
   for(port = input; *port != ':' && (port - input) < input_len; ++port);
@@ -162,6 +162,7 @@ Blob handleWorldImage()
 
 //the main function
 void run() {
+  srand(time(NULL));
 
   // Disregard SIGPIPE so we can handle things normally
   signal(SIGPIPE, SIG_IGN);
@@ -267,8 +268,6 @@ void run() {
   ServerRobot serverrobot;
   puckstack.set_x(1);
   puckstack.set_y(1);
-  puckstack.set_stacksize(1);
-  serverrobot.set_id(2);
 
   tr1::shared_ptr<RegionRender> png(new RegionRender());
   Blob blob;
@@ -374,10 +373,11 @@ void run() {
                 }
               }
 
-              /*logWriter.init(MSG_TIMESTEPUPDATE, timestep);
+              logWriter.init(MSG_TIMESTEPUPDATE, timestep);
               logWriter.doWrite();
 
               for(int i = 0;i <50; i++) {
+            	  serverrobot.set_id(rand()%1000+1);
             	  logWriter.init(MSG_SERVERROBOT, serverrobot);
             	  for(bool complete = false; !complete;) {
             	    complete = logWriter.doWrite();;
@@ -385,11 +385,12 @@ void run() {
                }
 
               for(int i = 0;i <25; i++) {
+            	  puckstack.set_stacksize(rand()%1000+1);
             	  logWriter.init(MSG_PUCKSTACK, puckstack);
             	  for(bool complete = false; !complete;) {
             	    complete = logWriter.doWrite();;
             	  }
-               }*/
+               }
 
               //Respond with done message
               msg_ptr update(new TimestepDone(tsdone));
