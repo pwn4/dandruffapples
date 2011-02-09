@@ -1,5 +1,3 @@
-add_definitions(-lGLU -lGL -lglut -lX11 -lXext -lXi)
-
 add_executable(logviewer
   gui.cpp
   home.cpp
