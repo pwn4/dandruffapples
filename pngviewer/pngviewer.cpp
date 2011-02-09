@@ -51,6 +51,7 @@
 #include <cairo.h>
 
 using namespace std;
+using namespace Magick;
 
 struct regionConnection : helper::connection{
 	RegionInfo info;
@@ -128,9 +129,18 @@ gboolean io_regionmessage(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 
 	switch (type) {
 	case MSG_REGIONRENDER: {
+		RegionRender render;
+		render.ParseFromArray(buffer, len);
+		Blob blob((void*)render.image().c_str(), render.image().length());
+
 #ifdef DEBUG
-		debug << "Received MSG_REGIONRENDER update!" << endl;
+		debug << "Received MSG_REGIONRENDER update and the timestep is # "<<render.timestep()<<endl;
 #endif
+
+		Image image;
+		image.read(blob);
+		image.write("/tmp/tmp.png");
+
 		break;
 	}
 	default:{
