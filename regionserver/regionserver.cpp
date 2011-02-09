@@ -192,7 +192,7 @@ void run() {
   net::set_blocking(pngfd, false);
 
   //create a new file for logging
-  string logName=helper::getNewName("/tmp/antix_log");
+  string logName=helper::getNewName("/tmp/"+helper::defaultLogName);
   int logfd = open(logName.c_str(), O_WRONLY | O_CREAT, 0644 );
 
   if(logfd<0)

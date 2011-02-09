@@ -46,7 +46,7 @@ struct Log {
 	}
 };
 
-string defaultLogName = "antix_log";
+
 
 //get the time frame of a log with the minimum time frame
 uint64_t getNextTimeFrame(vector<Log> &inputLogsReader)
@@ -166,7 +166,7 @@ void getInputLogs(string inputDir, vector<Log> &inputLogsReader,
 	while ((dirp = readdir(dp)) != NULL) {
 		fileName = string(dirp->d_name);
 
-		if (fileName.find(defaultLogName) != string::npos) {
+		if (fileName.find(helper::defaultLogName) != string::npos) {
 			tmp = inputDir + fileName;
 			fd = open(tmp.c_str(), O_RDONLY);
 
@@ -206,7 +206,7 @@ int main(int argc, char **argv) {
 			outputDir = "/tmp/output/";
 	}
 
-	string mergedLog = helper::getNewName(outputDir + defaultLogName);
+	string mergedLog = helper::getNewName(outputDir + helper::defaultLogName);
 	int mergedLogFd = open(mergedLog.c_str(), O_WRONLY | O_CREAT, 0644);
 #ifdef DEBUG
 	debug << "Reading logs from: " << inputDir << endl << "Writing logs to: "

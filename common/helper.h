@@ -9,25 +9,25 @@
 
 using namespace std;
 
-namespace helper
-{
-	//comment to disable generation of debug for certain programs
-	#define DEBUG
+//comment to disable generation of debug for certain programs
+#define DEBUG
 
-	template <class T>
+namespace helper {
+template<class T>
 
-	string toString (const T&);
-	string getNewName(string);
+string toString(const T&);
+string getNewName(string);
 
-	class Config
-	{
-		public:
-			Config(int,char**);
-			string getArg(string);
-		private:
-			map<string, string> parsedConfig;
+class Config {
+public:
+	Config(int, char**);
+	string getArg(string);
+private:
+	map<string, string> parsedConfig;
 
-	} ;
+};
+
+const string defaultLogName = "antix_log";
 }
 
 #endif
