@@ -242,7 +242,6 @@ int main(int argc, char **argv) {
                 epoll_ctl(epoll, EPOLL_CTL_MOD, (*i)->fd, &event);
               }
               
-              cerr << "Info from unknown region received!" << endl;
               break;
             }
             
