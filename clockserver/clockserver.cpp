@@ -38,32 +38,16 @@ unsigned server_count = 1;
 //this function loads the config file so that the server parameters don't need to be added every time
 void loadConfigFile()
 {
-	//open the config file
-	FILE * fileHandle;
-	fileHandle = fopen (configFileName,"r");
-  if(0 > fileHandle) {
-    perror("Couldn't open config file");
-    return;
-  }
-	
-	char *buffer = NULL, *endptr = NULL;
-  size_t len;
-  while(0 < getdelim(&buffer, &len, ' ', fileHandle)) {	
-    if(!strcmp(buffer, "NUMSERVERS ")) {
-      if(0 > getdelim(&buffer, &len, '\n', fileHandle)) {
-        cerr << "Couldn't read value for NUMSERVERS from config file." << endl;
-        break;
-      }
-      server_count = strtol(buffer, &endptr, 10);
-      if(endptr == buffer) {
-        cerr << "Value for NUMSERVERS in config file is not a number!" << endl;
-        break;
-      }
-      printf("NUMSERVERS: %d\n", server_count);
-    }
-  }
-		
-  fclose(fileHandle);
+	conf configuration = parseconf(configFileName);
+	char tmp[40] ;
+
+	//number of region servers required
+	if (configuration.find("NUMSERVERS") == configuration.end()) {
+		cerr << "Config file is missing an entry!" << endl;
+		exit(1);
+	}
+	strcpy(tmp, configuration["NUMSERVERS"].c_str());
+	server_count = atoi(tmp);
 }
 
 struct connection {

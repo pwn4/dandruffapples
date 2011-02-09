@@ -1,5 +1,5 @@
 /*
- * Sort files found inside the input dir, sort them by time frame, merge them into one file and write the result to output dir.
+ * Sort files found inside the input dir by time frame, merge them into one file and write the result to output dir.
  *
  * Input Dir:
  * 				default: /tmp/input/

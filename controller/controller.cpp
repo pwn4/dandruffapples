@@ -25,6 +25,7 @@
 #include "../common/ports.h"
 #include "../common/messagereader.h"
 #include "../common/messagequeue.h"
+#include "../common/parseconf.h"
 #include "../common/net.h"
 #include "../common/except.h"
 #include "../common/helper.h"
@@ -49,32 +50,14 @@ char clockip [40] = "127.0.0.1";
 //this function loads the config file so that the server parameters don't need to be added every time
 void loadConfigFile()
 {
-	//open the config file
-	FILE * fileHandle;
-	fileHandle = fopen (configFileName,"r");
-	
-	//create a read buffer. No line should be longer than 200 chars long.
-	char readBuffer [200];
-	char * token;
-	
-	if (fileHandle != NULL)
-	{
-		while(fgets (readBuffer , sizeof(readBuffer) , fileHandle) != 0)
-		{	
-			token = strtok(readBuffer, " \n");
-			
-			//if it's a REGION WIDTH definition...
-			if(strcmp(token, "CLOCKIP") == 0){
-				token = strtok(NULL, " \n");
-				strcpy(clockip, token);
-				printf("Using clockserver IP: %s\n", clockip);
-			}
-			
-		}
-		
-		fclose (fileHandle);
-	}else
-		printf("Error: Cannot open config file %s\n", configFileName);
+	conf configuration = parseconf(configFileName);
+
+	//clock ip address
+	if (configuration.find("CLOCKIP") == configuration.end()) {
+		cerr << "Config file is missing an entry!" << endl;
+		exit(1);
+	}
+	strcpy(clockip, configuration["CLOCKIP"].c_str());
 }
 
 
