@@ -261,7 +261,7 @@ void run() {
   tsdone.set_done(true);
   WorldInfo worldinfo;
   RegionInfo regioninfo;
-  AreaEngine* regionarea = new AreaEngine(4, 2000, 4);
+  AreaEngine* regionarea = new AreaEngine(4, 2000, 4, 10, 360);
   regionarea->AddRobot(10, 2, 3.3, 0);
   regionarea->AddRobot(12, 1, 3.5, 0);
     
