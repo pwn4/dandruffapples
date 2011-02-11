@@ -19,7 +19,7 @@ Index AreaEngine::getRobotIndices(double x, double y){
 }
 
 //constructor
-AreaEngine::AreaEngine(int robotSize, int regionSize, int maxMemory) {
+AreaEngine::AreaEngine(int robotSize, int regionSize, int minElementSize) {
   //format of constructor call:
   //robotDiameter:puckDiameter, regionSideLength:puckDiameter
   //maximum number of bytes to allocation for a[][] elements (1GB?)
@@ -33,15 +33,19 @@ AreaEngine::AreaEngine(int robotSize, int regionSize, int maxMemory) {
   {
     throw SystemError("RegionSize not a multiple of RobotSize.");
   }
+  if((regionSize/minElementSize)*minElementSize != regionSize)
+  {
+    throw SystemError("RegionSize not a multiple of minElementSize.");
+  }
   
   //create the arrays
   puckArray = new int*[regionRatio];
   for(int i = 0; i < regionRatio; i++)
     puckArray[i] = new int[regionRatio];
-  regionBounds = max(regionRatio/robotRatio, robotRatio) + 2; //add two for the overlaps in regions
-  robotArray = new int*[regionBounds];
+  regionBounds = max(regionRatio/robotRatio, regionRatio/minElementSize) + 2; //add two for the overlaps in regions
+  robotArray = new ArrayObject*[regionBounds];
   for(int i = 0; i < regionBounds; i++)
-    robotArray[i] = new int[regionBounds];
+    robotArray[i] = new ArrayObject[regionBounds];
   
 }
 
