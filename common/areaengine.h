@@ -75,10 +75,11 @@ public:
   
   bool Collides(double x1, double y1, double x2, double y2);
   
+  void AddRobot(RobotObject * oldRobot);
   RobotObject* AddRobot(int robotId, double newx, double newy, int atStep);
   RobotObject* AddRobot(int robotId, double newx, double newy, double newvx, double newvy, int atStep);
   
-  bool RemoveRobot(int robotId, int xInd, int yInd);
+  bool RemoveRobot(int robotId, int xInd, int yInd, bool freeMem);
   
   AreaEngine(int robotSize, int regionSize, int minElementSize, double viewDistance, double viewAngle);
   ~AreaEngine();
