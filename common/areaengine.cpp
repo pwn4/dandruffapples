@@ -27,6 +27,7 @@ AreaEngine::AreaEngine(int robotSize, int regionSize, int minElementSize) {
 
   robotRatio = robotSize;
   regionRatio = regionSize;
+  curStep = 0;
   
   //create our storage array with element size determined by our parameters
   //ensure regionSize can be split nicely
@@ -63,16 +64,26 @@ AreaEngine::~AreaEngine() {
   delete[] robotArray;
 }
 
-//add a robot to the system. returns the robotobject that is created for convenience
-//overload
-RobotObject* AreaEngine::AddRobot(int robotId, double newx, double newy){
-  return AreaEngine::AddRobot(robotId, newx, newy, 0, 0);
+
+void AreaEngine::Step(){
+  //O(n*c) for some nice, small constant. Can we improve this with a collision library? Let's benchmark and find out
+  
+  
 }
 
-RobotObject* AreaEngine::AddRobot(int robotId, double newx, double newy, double newvx, double newvy){
+//add a robot to the system. returns the robotobject that is created for convenience
+//overload
+RobotObject* AreaEngine::AddRobot(int robotId, double newx, double newy, int atStep){
+  return AreaEngine::AddRobot(robotId, newx, newy, 0, 0, atStep);
+}
+
+RobotObject* AreaEngine::AddRobot(int robotId, double newx, double newy, double newvx, double newvy, int atStep){
   //O(1) insertion
   Index robotIndices = getRobotIndices(newx, newy);
-  RobotObject* newRobot = new RobotObject(robotId, newx, newy, newvx, newvy, robotIndices);
+  RobotObject* newRobot = new RobotObject(robotId, newx, newy, newvx, newvy, robotIndices, atStep);
+  
+  //add the robot to our robots vector (used for timestepping)
+  robots[robotId] = newRobot;
   
   //find where it belongs in a[][] and add it
   ArrayObject *element = &robotArray[robotIndices.x][robotIndices.y];
