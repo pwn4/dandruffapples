@@ -278,10 +278,12 @@ void run() {
   MessageWriter logWriter(logfd);
   TimestepUpdate timestep;
   TimestepDone tsdone;
+  tsdone.set_done(true);
   WorldInfo worldinfo;
   RegionInfo regioninfo;
   AreaEngine* regionarea = new AreaEngine(4, 2000, 4);
-  tsdone.set_done(true);
+  regionarea->AddRobot(10, 11.5, 12.5);
+  //regionarea->RemoveRobot(10, 2, 3);
   
   MessageWriter writer(clockfd);
   MessageReader reader(clockfd);
