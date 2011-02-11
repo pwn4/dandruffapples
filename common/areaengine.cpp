@@ -64,11 +64,29 @@ AreaEngine::~AreaEngine() {
   delete[] robotArray;
 }
 
+bool AreaEngine::Collides(double x1, double y1, double x2, double y2){
+  return false;
+}
 
 void AreaEngine::Step(){
   //O(n*c) for some nice, small constant. Can we improve this with a collision library? Let's benchmark and find out
   
   curStep++;
+  //iterate through our region's robots and simulate them
+  for(int i = 0; i < robots.size(); i++)
+  {
+    //only simulate if its behind in the step. This fixes the case where a robot was just pushed from a neighbor
+    if(robots[i]->lastStep < curStep)
+    {
+      RobotObject * curRobot = robots[i];
+      
+      //this is the big one. This is the O(N^2) terror. Thankfully, in the worst case (current implementation)
+      //it runs (viewingdist*360degrees)/robotsize.
+      //So it's really not all that bad. Benchmarks! Will improve later, too.
+      
+    }
+  }
+
 }
 
 //add a robot to the system. returns the robotobject that is created for convenience
