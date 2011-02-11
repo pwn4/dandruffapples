@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <stdlib.h>
 #include <time.h>
+#include <math.h>
 
 using namespace std;
 
@@ -70,20 +71,24 @@ AreaEngine::~AreaEngine() {
   delete[] robotArray;
 }
 
+//this method checks if two robots at (x1,y1) and (x2,y2) are in collision
 bool AreaEngine::Collides(double x1, double y1, double x2, double y2){
+  if(sqrt((x1-x2)*(x1-x2) + (y1-y2)*(y1-y2)) <= robotRatio)
+    return true;
   return false;
 }
 
 void AreaEngine::Step(){
   //O(n*c) for some nice, small constant. Can we improve this with a collision library? Let's benchmark and find out
-  
   curStep++;
   //iterate through our region's robots and simulate them
   for(int i = 0; i < robots.size(); i++)
   {
-    //only simulate if its behind in the step. This fixes the case where a robot was just pushed from a neighbor
-    if(robots[i]->lastStep < curStep)
-    {
+    //only check if its behind in the step. This fixes the case where a robot was just pushed from a neighbor
+    //if(robots[i]->lastStep < curStep)
+    //{
+    //don't check this. addrobot should only be pushed at the end of a timestep.
+    
       RobotObject * curRobot = robots[i];
       
       //this is the big one. This is the O(N^2) terror. Thankfully, in the worst case (current implementation)
@@ -103,7 +108,7 @@ void AreaEngine::Step(){
 
           RobotObject *otherRobot = element->robots;
           //check it if its first
-          while(otherRobot != NULL){
+          while(otherRobot != NULL){         
             if(curRobot->id != otherRobot->id && AreaEngine::Collides(curRobot->x+curRobot->vx, curRobot->y+curRobot->vy, otherRobot->x+otherRobot->vx, otherRobot->y+otherRobot->vy))
             {
               //they would have collided. Set their speeds to zero. Lock their speed by updating the current timestamp
@@ -111,6 +116,10 @@ void AreaEngine::Step(){
               curRobot->vy = 0;
               otherRobot->vx = 0;
               otherRobot->vy = 0;
+              
+              //comment out these two lines to prevent everything from stopping on collision
+              cout << "WORLDS COLLIDE! (Ie two robots have collided)" << endl;
+              //exit(1);
               
               //the lastCollision time_t variable is checked by setVelocity is called
               curRobot->lastCollision = time(NULL);
@@ -120,12 +129,49 @@ void AreaEngine::Step(){
             otherRobot = otherRobot->nextRobot;
           }
         }
+    //}
+  }
+  
+  //here is where the sight code will go. LOL they're blind robots for now
+
+  //move the robots, now that we know they won't collide
+  for(int i = 0; i < robots.size(); i++)
+  {
+    RobotObject * curRobot = robots[i];
+    curRobot->x += curRobot->vx;
+    curRobot->y += curRobot->vy;
+    //check if the robot moves through a[][]
+    Index oldIndices = curRobot->arrayLocation;
+    curRobot->arrayLocation = getRobotIndices(curRobot->x, curRobot->y);
+    if(curRobot->arrayLocation.x != oldIndices.x || curRobot->arrayLocation.y != oldIndices.y)
+    {
+      //the robot moved, so...
+      /*cout << "MOVING " << curRobot->id << " TO (" << curRobot->arrayLocation.x << ", " << 
+      curRobot->arrayLocation.y << ") FROM (" << oldIndices.x << ", " << oldIndices.y << ")" << endl;*/
+      AreaEngine::AddRobot(curRobot);
+      AreaEngine::RemoveRobot(curRobot->id, oldIndices.x, oldIndices.y, false);
     }
   }
 }
 
 //add a robot to the system. returns the robotobject that is created for convenience
 //overload
+void AreaEngine::AddRobot(RobotObject * oldRobot){
+  
+  //find where it belongs in a[][] and add it
+  ArrayObject *element = &robotArray[oldRobot->arrayLocation.x][oldRobot->arrayLocation.y];
+  //check if the area is empty first
+  if(element->lastRobot == NULL)
+  {
+    element->robots = oldRobot;
+    element->lastRobot = oldRobot;
+  }else{
+    element->lastRobot->nextRobot = oldRobot;
+    element->lastRobot = oldRobot;
+  }
+
+}
+
 RobotObject* AreaEngine::AddRobot(int robotId, double newx, double newy, int atStep){
   return AreaEngine::AddRobot(robotId, newx, newy, 0, 0, atStep);
 }
@@ -154,7 +200,7 @@ RobotObject* AreaEngine::AddRobot(int robotId, double newx, double newy, double 
 }
 
 //remove a robot with id robotId from the a[xInd][yInd] array element. cleanup. returns true if a robot was deleted
-bool AreaEngine::RemoveRobot(int robotId, int xInd, int yInd){
+bool AreaEngine::RemoveRobot(int robotId, int xInd, int yInd, bool freeMem){
   //O(1) Deletion. Would be O(m), but m (robots in area) is bounded by a constant, so actually O(1)
 
   ArrayObject element = robotArray[xInd][yInd];
@@ -167,7 +213,8 @@ bool AreaEngine::RemoveRobot(int robotId, int xInd, int yInd){
   if(curRobot->id == robotId)
   {
     element.robots = curRobot->nextRobot;
-    delete curRobot;
+    if(freeMem)
+      delete curRobot;
     return true;
   }
   RobotObject * lastRobot = curRobot;
@@ -177,7 +224,8 @@ bool AreaEngine::RemoveRobot(int robotId, int xInd, int yInd){
     if(curRobot->id == robotId){
       //we've found it. Stitch up the list and return
       lastRobot->nextRobot = curRobot->nextRobot;
-      delete curRobot;
+      if(freeMem)
+        delete curRobot;
       return true;
     }
   }
