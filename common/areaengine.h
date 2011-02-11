@@ -3,6 +3,8 @@
 
 #include <cstddef>
 #include <vector>
+#include <stdlib.h>
+#include <time.h>
 
 using namespace std;
 
@@ -35,11 +37,12 @@ struct RobotObject{
   double vx, vy;
   bool holdingPuck;
   Index arrayLocation;
+  time_t lastCollision;
   
   RobotObject * nextRobot;
   
-  RobotObject(int newid, double newx, double newy, Index aLoc, int curStep) : id(newid), lastStep(curStep), x(newx), y(newy), vx(0), vy(0), arrayLocation(aLoc) {}
-  RobotObject(int newid, double newx, double newy, double newvx, double newvy, Index aLoc, int curStep) : id(newid), lastStep(curStep), x(newx), y(newy), vx(newvx), vy(newvy), arrayLocation(aLoc) {}
+  RobotObject(int newid, double newx, double newy, Index aLoc, int curStep) : id(newid), lastStep(curStep), x(newx), y(newy), vx(0), vy(0), arrayLocation(aLoc), lastCollision(time(NULL)), nextRobot(NULL) {}
+  RobotObject(int newid, double newx, double newy, double newvx, double newvy, Index aLoc, int curStep) : id(newid), lastStep(curStep), x(newx), y(newy), vx(newvx), vy(newvy), arrayLocation(aLoc), lastCollision(time(NULL)), nextRobot(NULL) {}
 };
 
 struct ArrayObject{
@@ -56,7 +59,9 @@ class AreaEngine {
 protected:
 int robotRatio, regionRatio;    //robotDiameter:puckDiameter, regionSideLength:puckDiameter
 int regionBounds;
-int elementSize;
+int elementSize;  //in pucks
+double viewDist, viewAng;
+int coolDown; //cooldown before being able to change velocities
 int** puckArray;
 ArrayObject** robotArray;
 vector<RobotObject*> robots;
@@ -75,7 +80,7 @@ public:
   
   bool RemoveRobot(int robotId, int xInd, int yInd);
   
-  AreaEngine(int robotSize, int regionSize, int minElementSize);
+  AreaEngine(int robotSize, int regionSize, int minElementSize, double viewDistance, double viewAngle);
   ~AreaEngine();
 
 };
