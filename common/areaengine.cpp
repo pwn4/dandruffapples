@@ -68,7 +68,7 @@ AreaEngine::~AreaEngine() {
 void AreaEngine::Step(){
   //O(n*c) for some nice, small constant. Can we improve this with a collision library? Let's benchmark and find out
   
-  
+  curStep++;
 }
 
 //add a robot to the system. returns the robotobject that is created for convenience
@@ -81,9 +81,9 @@ RobotObject* AreaEngine::AddRobot(int robotId, double newx, double newy, double 
   //O(1) insertion
   Index robotIndices = getRobotIndices(newx, newy);
   RobotObject* newRobot = new RobotObject(robotId, newx, newy, newvx, newvy, robotIndices, atStep);
-  
+
   //add the robot to our robots vector (used for timestepping)
-  robots[robotId] = newRobot;
+  robots.push_back(newRobot);
   
   //find where it belongs in a[][] and add it
   ArrayObject *element = &robotArray[robotIndices.x][robotIndices.y];
