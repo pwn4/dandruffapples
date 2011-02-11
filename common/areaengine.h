@@ -53,12 +53,16 @@ class AreaEngine {
 protected:
 int robotRatio, regionRatio;    //robotDiameter:puckDiameter, regionSideLength:puckDiameter
 int regionBounds;
+int elementSize;
 int** puckArray;
 ArrayObject** robotArray;
   
 public:
   Index getRobotIndices(double x, double y);
+  
+  RobotObject* AddRobot(int robotId, double newx, double newy);
   RobotObject* AddRobot(int robotId, double newx, double newy, double newvx, double newvy);
+  
   bool RemoveRobot(int robotId, int xInd, int yInd);
   AreaEngine(int robotSize, int regionSize, int minElementSize);
   ~AreaEngine();
