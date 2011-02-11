@@ -261,9 +261,11 @@ void run() {
   tsdone.set_done(true);
   WorldInfo worldinfo;
   RegionInfo regioninfo;
-  AreaEngine* regionarea = new AreaEngine(4, 2000, 4, 10, 360);
-  regionarea->AddRobot(10, 2, 3.3, 0);
-  regionarea->AddRobot(12, 1, 3.5, 0);
+  AreaEngine* regionarea = new AreaEngine(4, 2000, 16, 10, 360);
+  //create two test robots who are destined for destruction with each other.
+  //as it is programmed right now, the engine throws an error on collision (for fun testing)
+  regionarea->AddRobot(10, 0, 1, 0.1, 0, 0);
+  regionarea->AddRobot(12, 15.8, 1, -0.1, 0, 0);
     
   MessageWriter writer(clockfd);
   MessageReader reader(clockfd);
