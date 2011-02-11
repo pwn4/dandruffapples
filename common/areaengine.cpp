@@ -22,7 +22,7 @@ Index AreaEngine::getRobotIndices(double x, double y){
 AreaEngine::AreaEngine(int robotSize, int regionSize, int minElementSize) {
   //format of constructor call:
   //robotDiameter:puckDiameter, regionSideLength:puckDiameter
-  //maximum number of bytes to allocation for a[][] elements (1GB?)
+  //min a[][] element size in terms of pucks
 
   robotRatio = robotSize;
   regionRatio = regionSize;
@@ -60,23 +60,54 @@ AreaEngine::~AreaEngine() {
 }
 
 //add a robot to the system. returns the robotobject that is created for convenience
-RobotObject AreaEngine::AddRobot(double newx, double newy, double newvx, double newvy){
+RobotObject* AreaEngine::AddRobot(int robotId, double newx, double newy, double newvx, double newvy){
   //O(1) insertion
   Index robotIndices = getRobotIndices(newx, newy);
-  RobotObject newRobot (newx, newy, newvx, newvy, robotIndices);
+  RobotObject* newRobot = new RobotObject(robotId, newx, newy, newvx, newvy, robotIndices);
   
   //find where it belongs in a[][] and add it
   ArrayObject element = robotArray[robotIndices.x][robotIndices.y];
   //check if the area is empty first
   if(element.lastRobot == NULL)
   {
-    element.robots = &(newRobot);
-    element.lastRobot = &(newRobot);
+    element.robots = newRobot;
+    element.lastRobot = newRobot;
   }else{
-    element.lastRobot->nextRobot = &(newRobot);
-    element.lastRobot = &(newRobot);
+    element.lastRobot->nextRobot = newRobot;
+    element.lastRobot = newRobot;
   }
-  
   
   return newRobot;
 }
+
+//remove a robot with id robotId from the a[xInd][yInd] array element. cleanup. returns true if a robot was deleted
+bool AreaEngine::RemoveRobot(int robotId, int xInd, int yInd){
+  //O(1) Deletion. Would be O(m), but m (robots in area) is bounded by a constant, so actually O(1)
+
+  ArrayObject element = robotArray[xInd][yInd];
+  //check if the area is empty first
+  if(element.robots == NULL)
+    return false;
+  RobotObject *curRobot = element.robots;
+  //check it if its first
+  if(curRobot->id == robotId)
+  {
+    element.robots = curRobot->nextRobot;
+    delete curRobot;
+    return true;
+  }
+  RobotObject * lastRobot = curRobot;
+  curRobot = lastRobot->nextRobot;
+  
+  while(curRobot != NULL){
+    if(curRobot->id == robotId){
+      //we've found it. Stitch up the list and return
+      lastRobot->nextRobot = curRobot->nextRobot;
+      delete curRobot;
+      return true;
+    }
+  }
+  
+  return false;
+}
+
