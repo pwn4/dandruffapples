@@ -29,13 +29,14 @@ struct PuckStackObject{
 
 struct RobotObject{
   Index arrayLocation;
+  int id;
   double x, y;
   double vx, vy;
   
   RobotObject * nextRobot;
   
-  RobotObject(double newx, double newy, Index aLoc) : x(newx), y(newy), vx(0), vy(0) {arrayLocation = aLoc;}
-  RobotObject(double newx, double newy, double newvx, double newvy, Index aLoc) : x(newx), y(newy), vx(newvx), vy(newvy) {arrayLocation = aLoc;}
+  RobotObject(int newid, double newx, double newy, Index aLoc) : id(newid), x(newx), y(newy), vx(0), vy(0) {arrayLocation = aLoc;}
+  RobotObject(int newid, double newx, double newy, double newvx, double newvy, Index aLoc) : id(newid), x(newx), y(newy), vx(newvx), vy(newvy) {arrayLocation = aLoc;}
 };
 
 struct ArrayObject{
@@ -57,7 +58,8 @@ ArrayObject** robotArray;
   
 public:
   Index getRobotIndices(double x, double y);
-  RobotObject AddRobot(double newx, double newy, double newvx, double newvy);
+  RobotObject* AddRobot(int robotId, double newx, double newy, double newvx, double newvy);
+  bool RemoveRobot(int robotId, int xInd, int yInd);
   AreaEngine(int robotSize, int regionSize, int minElementSize);
   ~AreaEngine();
 
