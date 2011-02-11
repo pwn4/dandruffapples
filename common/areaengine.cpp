@@ -2,6 +2,10 @@
 #include "except.h"
 #include <algorithm>
 #include <iostream>
+#include <limits.h>
+#include <algorithm>
+#include <stdlib.h>
+#include <time.h>
 
 using namespace std;
 
@@ -16,11 +20,11 @@ using namespace std;
 //their own region
 
 Index AreaEngine::getRobotIndices(double x, double y){
-  return Index((int)(x/elementSize), (int)(y/elementSize));
+  return Index((int)(max(x, 0.0)/elementSize), (int)(max(y, 0.0)/elementSize));
 }
 
 //constructor
-AreaEngine::AreaEngine(int robotSize, int regionSize, int minElementSize) {
+AreaEngine::AreaEngine(int robotSize, int regionSize, int minElementSize, double viewDistance, double viewAngle) {
   //format of constructor call:
   //robotDiameter:puckDiameter, regionSideLength:puckDiameter
   //min a[][] element size in terms of pucks
@@ -28,6 +32,8 @@ AreaEngine::AreaEngine(int robotSize, int regionSize, int minElementSize) {
   robotRatio = robotSize;
   regionRatio = regionSize;
   curStep = 0;
+  viewDist = viewDistance;
+  viewAng = viewAngle;
   
   //create our storage array with element size determined by our parameters
   //ensure regionSize can be split nicely
@@ -84,9 +90,38 @@ void AreaEngine::Step(){
       //it runs (viewingdist*360degrees)/robotsize.
       //So it's really not all that bad. Benchmarks! Will improve later, too.
       
+      //collisions first - just check, and zero velocities if they would have collided
+      //calculate the bounds of the a[][] elements we need to check
+      Index topLeft = getRobotIndices(curRobot->x-viewDist, curRobot->y-viewDist);
+      Index botRight = getRobotIndices(curRobot->x+viewDist, curRobot->y+viewDist);
+
+      for(int j = topLeft.x; j <= botRight.x; j++)
+        for(int k = topLeft.y; k <= botRight.y; k++)
+        {
+          //we now have an a[][] element to check. Iterate through the robots in it
+          ArrayObject * element = &robotArray[j][k];
+
+          RobotObject *otherRobot = element->robots;
+          //check it if its first
+          while(otherRobot != NULL){
+            if(curRobot->id != otherRobot->id && AreaEngine::Collides(curRobot->x+curRobot->vx, curRobot->y+curRobot->vy, otherRobot->x+otherRobot->vx, otherRobot->y+otherRobot->vy))
+            {
+              //they would have collided. Set their speeds to zero. Lock their speed by updating the current timestamp
+              curRobot->vx = 0;
+              curRobot->vy = 0;
+              otherRobot->vx = 0;
+              otherRobot->vy = 0;
+              
+              //the lastCollision time_t variable is checked by setVelocity is called
+              curRobot->lastCollision = time(NULL);
+              otherRobot->lastCollision = curRobot->lastCollision;
+              
+            }
+            otherRobot = otherRobot->nextRobot;
+          }
+        }
     }
   }
-
 }
 
 //add a robot to the system. returns the robotobject that is created for convenience
