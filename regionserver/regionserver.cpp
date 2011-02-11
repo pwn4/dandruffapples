@@ -341,8 +341,9 @@ void run() {
             case MSG_TIMESTEPUPDATE:
             {
               timestep.ParseFromArray(buffer, len);
-              
-              timeSteps++;
+
+              regionarea->Step();
+              timeSteps++;  //Note: only use this for this temp stat taking. use regionarea->curStep for syncing
 
               if(timestep.timestep() % 200 == 0) {
                 // Only generate an image for one in 200 timesteps
