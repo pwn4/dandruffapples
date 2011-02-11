@@ -28,20 +28,24 @@ struct PuckStackObject{
 };
 
 struct RobotObject{
+  Index arrayLocation;
   double x, y;
   double vx, vy;
   
   RobotObject * nextRobot;
   
-  RobotObject(double newx, double newy) : x(newx), y(newy), vx(0), vy(0) {}
-  RobotObject(double newx, double newy, double newvx, double newvy) : x(newx), y(newy), vx(newvx), vy(newvy) {}
+  RobotObject(double newx, double newy, Index aLoc) : x(newx), y(newy), vx(0), vy(0) {arrayLocation = aLoc;}
+  RobotObject(double newx, double newy, double newvx, double newvy, Index aLoc) : x(newx), y(newy), vx(newvx), vy(newvy) {arrayLocation = aLoc;}
 };
 
 struct ArrayObject{
   PuckStackObject * pucks;
   RobotObject * robots;
   
-  ArrayObject() : pucks(NULL), robots(NULL) {}
+  RobotObject * lastRobot;
+  PuckStackObject * lastPuckStack;
+  
+  ArrayObject() : pucks(NULL), robots(NULL), lastRobot(NULL), lastPuckStack(NULL) {}
 };
 
 class AreaEngine {
