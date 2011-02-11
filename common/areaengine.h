@@ -1,6 +1,9 @@
 #ifndef _AREAENGINE_H_
 #define _AREAENGINE_H_
 
+#include <cstddef>
+
+
 #define TOP_LEFT 0
 #define TOP 1
 #define TOP_RIGHT 2
@@ -34,17 +37,24 @@ struct RobotObject{
   RobotObject(double newx, double newy, double newvx, double newvy) : x(newx), y(newy), vx(newvx), vy(newvy) {}
 };
 
+struct ArrayObject{
+  PuckStackObject * pucks;
+  RobotObject * robots;
+  
+  ArrayObject() : pucks(NULL), robots(NULL) {}
+};
+
 class AreaEngine {
 protected:
 int robotRatio, regionRatio;    //robotDiameter:puckDiameter, regionSideLength:puckDiameter
 int regionBounds;
 int** puckArray;
-int** robotArray;
+ArrayObject** robotArray;
   
 public:
   Index getRobotIndices(double x, double y);
   RobotObject AddRobot(double newx, double newy, double newvx, double newvy);
-  AreaEngine(int robotSize, int regionSize, int maxMemory);
+  AreaEngine(int robotSize, int regionSize, int minElementSize);
   ~AreaEngine();
 
 };
