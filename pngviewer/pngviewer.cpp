@@ -8,6 +8,7 @@
 #include <cstring>
 #include <cerrno>
 #include <tr1/memory>
+#include <fstream>
 
 #include <unistd.h>
 #include <sys/socket.h>
@@ -51,39 +52,32 @@
 
 using namespace std;
 
-//variable declarations
-const char *configFileName;
-int windowWidth = 900, windowHeight = 900;
-char clockip[40] = "127.0.0.1";
-int clockfd, listenfd, clientfd;
-TimestepUpdate timestep;
-MessageReader* reader;
-MessageType type;
-GIOChannel *ioch; //event handler
-size_t len;
-const void *buffer;
-
-struct connection {
-	int fd;
-	MessageReader reader;
+struct regionConnection : helper::connection{
 	RegionInfo info;
 
-	connection(int fd_, RegionInfo info_) :
-		fd(fd_), reader(fd_), info(info_) {
-	}
+	regionConnection (int fd, RegionInfo info_) : helper::connection(fd), info(info_) {}
 
 };
 
-vector<connection*> region;
+//variable declarations
+TimestepUpdate timestep;
+GIOChannel *ioch; //event handler
+MessageType type;
+size_t len;
+const void *buffer;
+ofstream debug;
+vector<regionConnection*> regions;
 
-void loadConfigFile() {
+void loadConfigFile(const char *configFileName, char* clockip) {
 	//load the config file
 
 	conf configuration = parseconf(configFileName);
 
 	//clock ip address
 	if (configuration.find("CLOCKIP") == configuration.end()) {
-		cerr << "Config file is missing an entry!" << endl;
+#ifdef DEBUG
+		debug << "Config file is missing an entry!" << endl;
+#endif
 		exit(1);
 	}
 	strcpy(clockip, configuration["CLOCKIP"].c_str());
@@ -119,29 +113,32 @@ static gboolean on_expose_event(GtkWidget *widget, GdkEventExpose *event,
 
 //handler for region received messages
 gboolean io_regionmessage(GIOChannel *ioch, GIOCondition cond, gpointer data) {
-	cout << g_io_channel_unix_get_fd(ioch) << endl;
-	connection * conn;
+	g_type_init();
+
+	regionConnection * regionConn;
 	//get the reader for the handle
-	for (vector<connection*>::iterator i = region.begin(); i != region.end(); i++)
+	for (vector<regionConnection*>::iterator i = regions.begin(); i != regions.end(); i++)
 		if ((*i)->fd == g_io_channel_unix_get_fd(ioch)) {
-			conn = (*i);
+			regionConn = (*i);
 			break;
 		}
 
-	if (!(conn)->reader.doRead(&type, &len, &buffer))
-		return TRUE;
+	for (bool complete = false; !complete;)
+		complete = regionConn->reader.doRead(&type, &len, &buffer);
+
 	switch (type) {
 	case MSG_REGIONRENDER: {
-		cout << "Received MSG_REGIONRENDER update!" << endl;
+#ifdef DEBUG
+		debug << "Received MSG_REGIONRENDER update!" << endl;
+#endif
 		break;
 	}
-	case MSG_TIMESTEPUPDATE: {
-		//cout << "WWWTTF" << endl;
-		break;
-	}
-	default:
-		cerr << "Unexpected readable socket from region! Type:" << type << "|"
+	default:{
+#ifdef DEBUG
+		debug << "Unexpected readable socket from region! Type:" << type << "|"
 				<< MSG_REGIONRENDER << endl;
+#endif
+	}
 	}
 
 	return TRUE;
@@ -149,35 +146,47 @@ gboolean io_regionmessage(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 
 //handler for clock received messages
 gboolean io_clockmessage(GIOChannel *ioch, GIOCondition cond, gpointer data) {
-	if (!reader->doRead(&type, &len, &buffer))
-		return TRUE;
+	g_type_init();
+	MessageReader *clockReader = (MessageReader*)data;
+
+	for (bool complete = false; !complete;)
+		complete = clockReader->doRead(&type, &len, &buffer);
+
 	switch (type) {
 	case MSG_REGIONINFO: {
 		//we got regionserver information
 		RegionInfo regioninfo;
 		regioninfo.ParseFromArray(buffer, len);
-		cout << "Received MSG_REGIONINFO update! " << regioninfo.address()
+#ifdef DEBUG
+		debug << "Received MSG_REGIONINFO update! " << regioninfo.address()
 				<< " " << regioninfo.renderport() << endl;
+#endif
 		//connect to the server
 		struct in_addr addr;
 		addr.s_addr = regioninfo.address();
-		int fd = net::do_connect(addr, regioninfo.renderport());
-		net::set_blocking(fd, false);
-		//store the region server mapping
-		connection *newregion = new connection(fd, regioninfo);
-		region.push_back(newregion);
-		GIOChannel *nioch;
-		nioch = g_io_channel_unix_new(fd);
-		g_io_add_watch(nioch, G_IO_IN, io_regionmessage, NULL); //start watching it
-		cout << "Connected to region server!" << endl;
-		//update knowledge of the world
+		int regionFd = net::do_connect(addr, regioninfo.renderport());
+		net::set_blocking(regionFd, false);
 
+		if( regionFd<0 ){
+#ifdef DEBUG
+			debug << "Critical Error: Failed to connect to a region server: "<<addr.s_addr<< endl;
+#endif
+			exit(1);
+		}
+		//store the region server mapping
+		regionConnection *newregion = new regionConnection(regionFd, regioninfo);
+		regions.push_back(newregion);
+		g_io_add_watch(g_io_channel_unix_new(regionFd), G_IO_IN, io_regionmessage, NULL);
+#ifdef DEBUG
+		debug << "Connected to region server: "<<addr.s_addr<< endl;
+#endif
+		//update knowledge of the world
 
 		break;
 	}
 
 	default:
-		cerr << "Unexpected readable socket from clock! Type:" << type << endl;
+		cerr << "Unexpected readable message type from clock! Type:" << type << endl;
 	}
 
 	return TRUE;
@@ -185,23 +194,37 @@ gboolean io_clockmessage(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 
 //main method
 int main(int argc, char* argv[]) {
-	//parse command line arguments and load the config file
+	g_type_init();
+	char clockip[40];
+	GtkWidget *window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
 	helper::Config config(argc, argv);
-	configFileName = (config.getArg("-c").length() == 0 ? "config"
+	const char *configFileName = (config.getArg("-c").length() == 0 ? "config"
 			: config.getArg("-c").c_str());
-	cout << "Using config file: " << configFileName << endl;
-	loadConfigFile();
+	int clockfd;
+	int windowWidth = 900, windowHeight = 900;
+	debug.open("/tmp/pngviewer_debug.txt", ios::out);
+#ifdef DEBUG
+	debug << "Using config file: " << configFileName << endl;
+#endif
+	loadConfigFile(configFileName, clockip);
 
 	//connect to the clock server
 	clockfd = net::do_connect(clockip, PNG_VIEWER_PORT);
 	net::set_blocking(clockfd, false);
-	reader = new MessageReader(clockfd);
-	cout << "Connected to Clock Server " << clockfd << endl;
 
+	if( clockfd<0 ){
+#ifdef DEBUG
+		debug << "Critical Error: Failed to connect to the clock server: "<<clockip<< endl;
+#endif
+		exit(1);
+	}
+
+	MessageReader clockReader(clockfd);
+#ifdef DEBUG
+	debug << "Connected to Clock Server "<< clockip<< endl;
+#endif
 	//create the window object and init
-	GtkWidget *window;
 	gtk_init(&argc, &argv);
-	window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
 
 	//link window events
 	g_signal_connect(window, "expose-event",
@@ -211,9 +234,7 @@ int main(int argc, char* argv[]) {
 	g_signal_connect (window, "destroy",
 			G_CALLBACK (destroy), NULL);
 
-	//link socket events
-	ioch = g_io_channel_unix_new(clockfd);
-	g_io_add_watch(ioch, G_IO_IN, io_clockmessage, NULL);
+	g_io_add_watch(g_io_channel_unix_new(clockfd), G_IO_IN, io_clockmessage, (gpointer)&clockReader);
 
 	//set the border width of the window.
 	gtk_container_set_border_width(GTK_CONTAINER (window), 10);
@@ -224,15 +245,16 @@ int main(int argc, char* argv[]) {
 	gtk_window_set_default_size(GTK_WINDOW(window), windowWidth, windowHeight);
 	gtk_widget_set_app_paintable(window, TRUE);
 
-	gtk_widget_show_all(window);
+	//gtk_widget_show_all(window);
 
 	gtk_main();
 
 	//show the window
-	gtk_widget_show(window);
+	//gtk_widget_show(window);
 
 	gtk_main();
 
-	return 0;
+	debug.close();
 
+	return 0;
 }

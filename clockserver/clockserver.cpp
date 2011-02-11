@@ -50,31 +50,6 @@ void loadConfigFile()
 	server_count = atoi(tmp);
 }
 
-struct connection {
-  enum Type {
-    UNSPECIFIED,
-    REGION_LISTEN,
-    CONTROLLER_LISTEN,
-    PNG_LISTEN,
-    PNG_VIEWER,
-    REGION,
-    CONTROLLER
-  } type;
-  
-  enum State {
-    INIT,
-    RUN
-  } state;
-  
-  int fd;
-  in_addr_t addr;
-  MessageReader reader;
-  MessageQueue queue;
-
-  connection(int fd_) : type(UNSPECIFIED), state(INIT), fd(fd_), reader(fd_), queue(fd_) {}
-  connection(int fd_, Type type_) : type(type_), state(INIT), fd(fd_), reader(fd_), queue(fd_) {}
-};
-
 int main(int argc, char **argv) {
 	helper::Config config(argc, argv);
 	configFileName=(config.getArg("-c").length() == 0 ? "config" : config.getArg("-c").c_str());
@@ -127,9 +102,9 @@ int main(int argc, char **argv) {
   }
 
   struct epoll_event event;
-  connection listenconn(sock, connection::REGION_LISTEN),
-    controllerlistenconn(controllerSock, connection::CONTROLLER_LISTEN),
-    pnglistenconn(pngSock, connection::PNG_LISTEN);
+  helper::connection listenconn(sock, helper::connection::REGION_LISTEN),
+    controllerlistenconn(controllerSock, helper::connection::CONTROLLER_LISTEN),
+    pnglistenconn(pngSock, helper::connection::PNGVIEWER_LISTEN);
   event.events = EPOLLIN;
   event.data.ptr = &listenconn;
   if(0 > epoll_ctl(epoll, EPOLL_CTL_ADD, sock, &event)) {
@@ -153,7 +128,7 @@ int main(int argc, char **argv) {
     return 1;
   }
   
-  vector<connection*> regions, controllers, pngviewers;
+  vector<helper::connection*> regions, controllers, pngviewers;
   size_t maxevents = 1 + server_count;
   struct epoll_event *events = new struct epoll_event[maxevents];
   size_t connected = 0, ready = 0;
@@ -180,10 +155,10 @@ int main(int argc, char **argv) {
     }
 
     for(size_t i = 0; i < (unsigned)eventcount; ++i) {
-      connection *c = (connection*)events[i].data.ptr;
+    	helper::connection *c = (helper::connection*)events[i].data.ptr;
       if(events[i].events & EPOLLIN) {
         switch(c->type) {
-        case connection::REGION:
+        case helper::connection::REGION:
         {
           MessageType type;
           size_t len;
@@ -206,7 +181,7 @@ int main(int argc, char **argv) {
               tr1::shared_ptr<RegionInfo> cr(new RegionInfo(*r));
               cr->clear_regionport();
               cr->clear_renderport();
-              for(vector<connection*>::iterator i = controllers.begin();
+              for(vector<helper::connection*>::iterator i = controllers.begin();
                   i != controllers.end(); ++i) {
                 (*i)->queue.push(MSG_REGIONINFO, cr);
 
@@ -217,7 +192,7 @@ int main(int argc, char **argv) {
               tr1::shared_ptr<RegionInfo> pr(new RegionInfo(*r));
               pr->clear_regionport();
               pr->clear_controllerport();
-              for(vector<connection*>::iterator i = pngviewers.begin();
+              for(vector<helper::connection*>::iterator i = pngviewers.begin();
                   i != pngviewers.end(); ++i) {
                 (*i)->queue.push(MSG_REGIONINFO, pr);
             
@@ -272,7 +247,7 @@ int main(int argc, char **argv) {
             timestep.set_timestep(step++);
             msg_ptr update(new TimestepUpdate(timestep));
             // Send to regions
-            for(vector<connection*>::iterator i = regions.begin();
+            for(vector<helper::connection*>::iterator i = regions.begin();
                 i != regions.end(); ++i) {
               (*i)->queue.push(MSG_TIMESTEPUPDATE, update);
               event.events = EPOLLOUT;
@@ -280,7 +255,7 @@ int main(int argc, char **argv) {
               epoll_ctl(epoll, EPOLL_CTL_MOD, (*i)->fd, &event);
             }
             // Send to controllers
-            for(vector<connection*>::iterator i = controllers.begin();
+            for(vector<helper::connection*>::iterator i = controllers.begin();
                 i != controllers.end(); ++i) {
               (*i)->queue.push(MSG_TIMESTEPUPDATE, update);
               event.events = EPOLLOUT;
@@ -291,7 +266,7 @@ int main(int argc, char **argv) {
           break;
         }
 
-        case connection::REGION_LISTEN:
+        case helper::connection::REGION_LISTEN:
         {
           // Accept a new region server
           struct sockaddr_storage addr;
@@ -302,7 +277,7 @@ int main(int argc, char **argv) {
           }
           net::set_blocking(fd, false);
 
-          connection *newconn = new connection(fd, connection::REGION);
+          helper::connection *newconn = new helper::connection(fd, helper::connection::REGION);
           newconn->addr = ((struct sockaddr_in*)&addr)->sin_addr.s_addr;
           regions.push_back(newconn);
 
@@ -319,7 +294,7 @@ int main(int argc, char **argv) {
           break;
         }
 
-        case connection::CONTROLLER_LISTEN:
+        case helper::connection::CONTROLLER_LISTEN:
         {
           // Accept a new controller
           struct sockaddr_storage addr;
@@ -330,7 +305,7 @@ int main(int argc, char **argv) {
           }
           net::set_blocking(fd, false);
 
-          connection *newconn = new connection(fd, connection::CONTROLLER);
+          helper::connection *newconn = new helper::connection(fd, helper::connection::CONTROLLER);
           newconn->addr = ((struct sockaddr_in*)&addr)->sin_addr.s_addr;
           controllers.push_back(newconn);
           
@@ -346,7 +321,7 @@ int main(int argc, char **argv) {
           cout << "Got controller connection." << endl;
           break;
         }
-        case connection::PNG_LISTEN:
+        case helper::connection::PNGVIEWER_LISTEN:
         {
           // Accept a new pngviewer
           struct sockaddr_storage addr;
@@ -357,7 +332,7 @@ int main(int argc, char **argv) {
           }
           net::set_blocking(fd, false);
 
-          connection *newconn = new connection(fd, connection::PNG_VIEWER);
+          helper::connection *newconn = new helper::connection(fd, helper::connection::PNGVIEWER);
           newconn->addr = ((struct sockaddr_in*)&addr)->sin_addr.s_addr;
           pngviewers.push_back(newconn);
 
@@ -385,8 +360,8 @@ int main(int argc, char **argv) {
         }
       } else if(events[i].events & EPOLLOUT) {
         switch(c->type) {
-        case connection::PNG_VIEWER:
-        case connection::CONTROLLER:
+        case helper::connection::PNGVIEWER:
+        case helper::connection::CONTROLLER:
           if(c->queue.doWrite()) {
             // If the queue is empty, we don't care if this is writable
             event.events = 0;
@@ -394,7 +369,7 @@ int main(int argc, char **argv) {
             epoll_ctl(epoll, EPOLL_CTL_MOD, c->fd, &event);
           }
           break;
-        case connection::REGION:
+        case helper::connection::REGION:
           if(c->queue.doWrite()) {
             // We're done writing for this server
             event.events = EPOLLIN;
@@ -413,12 +388,12 @@ int main(int argc, char **argv) {
 
   // Clean up
   close(epoll);
-  for(vector<connection*>::iterator i = controllers.begin();
+  for(vector<helper::connection*>::iterator i = controllers.begin();
       i != controllers.end(); ++i) {
     shutdown((*i)->fd, SHUT_RDWR);
     close((*i)->fd);
   }
-  for(vector<connection*>::iterator i = regions.begin();
+  for(vector<helper::connection*>::iterator i = regions.begin();
       i != regions.end(); ++i) {
     shutdown((*i)->fd, SHUT_RDWR);
     close((*i)->fd);
