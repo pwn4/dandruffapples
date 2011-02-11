@@ -36,6 +36,11 @@ AreaEngine::AreaEngine(int xdisp, int ydisp, int robotSize, int regionSize, int 
 }
 
 AreaEngine::~AreaEngine() {
-
+  for(int i = 0; i < regionRatio; i++)
+    delete[] puckArray[i];
+  for(int i = 0; i < regionBounds; i++)
+    delete[] robotArray[i];
+  delete[] puckArray;
+  delete[] robotArray;
 }
 
