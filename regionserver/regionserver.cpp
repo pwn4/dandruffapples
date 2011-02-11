@@ -280,7 +280,7 @@ void run() {
   TimestepDone tsdone;
   WorldInfo worldinfo;
   RegionInfo regioninfo;
-  AreaEngine* regionarea = new AreaEngine(0, 0, 4, 2000, pow(2, 30));
+  AreaEngine* regionarea = new AreaEngine(4, 2000, pow(2, 30));
   tsdone.set_done(true);
   
   MessageWriter writer(clockfd);
