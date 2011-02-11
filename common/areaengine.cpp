@@ -61,10 +61,21 @@ AreaEngine::~AreaEngine() {
 
 //add a robot to the system. returns the robotobject that is created for convenience
 RobotObject AreaEngine::AddRobot(double newx, double newy, double newvx, double newvy){
-  RobotObject newRobot (newx, newy, newvx, newvy);
+  //O(1) insertion
+  Index robotIndices = getRobotIndices(newx, newy);
+  RobotObject newRobot (newx, newy, newvx, newvy, robotIndices);
   
   //find where it belongs in a[][] and add it
-  
+  ArrayObject element = robotArray[robotIndices.x][robotIndices.y];
+  //check if the area is empty first
+  if(element.lastRobot == NULL)
+  {
+    element.robots = &(newRobot);
+    element.lastRobot = &(newRobot);
+  }else{
+    element.lastRobot->nextRobot = &(newRobot);
+    element.lastRobot = &(newRobot);
+  }
   
   
   return newRobot;
