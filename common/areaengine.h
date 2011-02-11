@@ -30,16 +30,16 @@ struct PuckStackObject{
 };
 
 struct RobotObject{
-  Index arrayLocation;
   int id, lastStep;
   double x, y;
   double vx, vy;
   bool holdingPuck;
+  Index arrayLocation;
   
   RobotObject * nextRobot;
   
-  RobotObject(int newid, double newx, double newy, Index aLoc, int curStep) : id(newid), lastStep(curStep), x(newx), y(newy), vx(0), vy(0) {arrayLocation = aLoc;}
-  RobotObject(int newid, double newx, double newy, double newvx, double newvy, Index aLoc, int curStep) : id(newid), lastStep(curStep), x(newx), y(newy), vx(newvx), vy(newvy) {arrayLocation = aLoc;}
+  RobotObject(int newid, double newx, double newy, Index aLoc, int curStep) : id(newid), lastStep(curStep), x(newx), y(newy), vx(0), vy(0), arrayLocation(aLoc) {}
+  RobotObject(int newid, double newx, double newy, double newvx, double newvy, Index aLoc, int curStep) : id(newid), lastStep(curStep), x(newx), y(newy), vx(newvx), vy(newvy), arrayLocation(aLoc) {}
 };
 
 struct ArrayObject{
@@ -57,12 +57,13 @@ protected:
 int robotRatio, regionRatio;    //robotDiameter:puckDiameter, regionSideLength:puckDiameter
 int regionBounds;
 int elementSize;
-int curStep;
 int** puckArray;
 ArrayObject** robotArray;
 vector<RobotObject*> robots;
   
 public:
+  int curStep;
+  
   Index getRobotIndices(double x, double y);
   
   void Step();
