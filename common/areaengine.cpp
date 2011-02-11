@@ -1,6 +1,7 @@
 #include "areaengine.h"
 #include "except.h"
 #include <algorithm>
+#include <iostream>
 
 using namespace std;
 
@@ -15,7 +16,7 @@ using namespace std;
 //their own region
 
 Index AreaEngine::getRobotIndices(double x, double y){
-  return Index((int)(x/regionBounds), (int)(y/regionBounds));
+  return Index((int)(x/elementSize), (int)(y/elementSize));
 }
 
 //constructor
@@ -42,7 +43,10 @@ AreaEngine::AreaEngine(int robotSize, int regionSize, int minElementSize) {
   puckArray = new int*[regionRatio];
   for(int i = 0; i < regionRatio; i++)
     puckArray[i] = new int[regionRatio];
-  regionBounds = max(regionRatio/robotRatio, regionRatio/minElementSize) + 2; //add two for the overlaps in regions
+  regionBounds = max(regionRatio/robotRatio, regionRatio/minElementSize); 
+  elementSize = regionRatio/regionBounds;
+  //add two for the overlaps in regions
+  regionRatio += 2;
   robotArray = new ArrayObject*[regionBounds];
   for(int i = 0; i < regionBounds; i++)
     robotArray[i] = new ArrayObject[regionBounds];
@@ -60,21 +64,26 @@ AreaEngine::~AreaEngine() {
 }
 
 //add a robot to the system. returns the robotobject that is created for convenience
+//overload
+RobotObject* AreaEngine::AddRobot(int robotId, double newx, double newy){
+  return AreaEngine::AddRobot(robotId, newx, newy, 0, 0);
+}
+
 RobotObject* AreaEngine::AddRobot(int robotId, double newx, double newy, double newvx, double newvy){
   //O(1) insertion
   Index robotIndices = getRobotIndices(newx, newy);
   RobotObject* newRobot = new RobotObject(robotId, newx, newy, newvx, newvy, robotIndices);
   
   //find where it belongs in a[][] and add it
-  ArrayObject element = robotArray[robotIndices.x][robotIndices.y];
+  ArrayObject *element = &robotArray[robotIndices.x][robotIndices.y];
   //check if the area is empty first
-  if(element.lastRobot == NULL)
+  if(element->lastRobot == NULL)
   {
-    element.robots = newRobot;
-    element.lastRobot = newRobot;
+    element->robots = newRobot;
+    element->lastRobot = newRobot;
   }else{
-    element.lastRobot->nextRobot = newRobot;
-    element.lastRobot = newRobot;
+    element->lastRobot->nextRobot = newRobot;
+    element->lastRobot = newRobot;
   }
   
   return newRobot;
@@ -88,6 +97,7 @@ bool AreaEngine::RemoveRobot(int robotId, int xInd, int yInd){
   //check if the area is empty first
   if(element.robots == NULL)
     return false;
+
   RobotObject *curRobot = element.robots;
   //check it if its first
   if(curRobot->id == robotId)
