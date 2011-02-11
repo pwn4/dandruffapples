@@ -374,7 +374,7 @@ void run() {
                 }
               }
 
-              /*logWriter.init(MSG_TIMESTEPUPDATE, timestep);
+              logWriter.init(MSG_TIMESTEPUPDATE, timestep);
               logWriter.doWrite();
 
               for(int i = 0;i <50; i++) {
@@ -389,7 +389,7 @@ void run() {
             	  for(bool complete = false; !complete;) {
             	    complete = logWriter.doWrite();;
             	  }
-               }*/
+               }
 
               //Respond with done message
               msg_ptr update(new TimestepDone(tsdone));
