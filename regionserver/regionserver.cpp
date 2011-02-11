@@ -282,9 +282,9 @@ void run() {
   WorldInfo worldinfo;
   RegionInfo regioninfo;
   AreaEngine* regionarea = new AreaEngine(4, 2000, 4);
-  regionarea->AddRobot(10, 11.5, 12.5);
-  //regionarea->RemoveRobot(10, 2, 3);
-  
+  regionarea->AddRobot(10, 2, 3.3, 0);
+  regionarea->AddRobot(12, 1, 3.5, 0);
+    
   MessageWriter writer(clockfd);
   MessageReader reader(clockfd);
   int timeSteps = 0;
