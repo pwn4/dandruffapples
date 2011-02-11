@@ -68,6 +68,8 @@ public:
   
   void Step();
   
+  bool Collides(double x1, double y1, double x2, double y2);
+  
   RobotObject* AddRobot(int robotId, double newx, double newy, int atStep);
   RobotObject* AddRobot(int robotId, double newx, double newy, double newvx, double newvy, int atStep);
   
