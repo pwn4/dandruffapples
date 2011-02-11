@@ -21,6 +21,7 @@ This program communications with clients, controllers, PNGviewers, other regions
 #include <string>
 #include <string.h>
 #include <stdlib.h>
+#include <math.h>
 
 #include <google/protobuf/message_lite.h>
 
@@ -42,6 +43,7 @@ This program communications with clients, controllers, PNGviewers, other regions
 #include "../common/timestep.pb.h"
 #include "../common/serverrobot.pb.h"
 #include "../common/puckstack.pb.h"
+#include "../common/areaengine.h"
 
 #include "../common/helper.h"
 #include <Magick++.h>
@@ -278,6 +280,7 @@ void run() {
   TimestepDone tsdone;
   WorldInfo worldinfo;
   RegionInfo regioninfo;
+  AreaEngine* regionarea = new AreaEngine(0, 0, 4, 2000, pow(2, 30));
   tsdone.set_done(true);
   
   MessageWriter writer(clockfd);
