@@ -33,6 +33,26 @@ using namespace std;
 /////////////////Variables and Declarations/////////////////
 const char *configFileName;
 
+//Game world variables
+// TODO: organize/move variables out of client.cpp 
+int currentTimestep;
+int firstRobot; // offset, lets us control robots 600-1000, for example
+int firstTeam; // lowest teamid we control
+int numTeams; // this client computer controls this number of teams.
+int numRobots; // number of robots per team
+
+struct OwnRobot {
+  float x;
+  float y;
+  float velocity;
+  float angle;
+  bool hasPuck;
+  bool hasCollided;  
+};
+
+OwnRobot* ownRobots; 
+
+
 //Config variables
 vector<string> controllerips; //controller IPs 
 
@@ -61,8 +81,17 @@ void loadConfigFile()
 				string newcontrollerip = token;
 				controllerips.push_back(newcontrollerip);
 				printf("Storing controller IP: %s\n", newcontrollerip.c_str());
-			}
-			
+			} else if (strcmp(token, "FIRSTTEAM") == 0) {
+				token = strtok(NULL, " \n");
+        firstTeam = strtol(token, NULL, 10);
+        cout << "First team ID #" << firstTeam << endl;
+			} else if (strcmp(token, "LASTTEAM") == 0) {
+        int lastTeam;
+				token = strtok(NULL, " \n");
+        lastTeam = strtol(token, NULL, 10);
+        numTeams = lastTeam - firstTeam + 1;
+        cout << "Number of teams: " << numTeams << endl;
+      }
 		}
 		
 		fclose (fileHandle);
