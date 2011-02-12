@@ -15,6 +15,7 @@ This program communications with controllers.
 #include <sys/select.h>
 #include <sys/epoll.h>
 
+#include <pthread.h>
 #include <stdio.h>
 #include <string>
 #include <string.h>
@@ -22,9 +23,10 @@ This program communications with controllers.
 
 #include "../common/ports.h"
 #include "../common/clientrobot.pb.h"
+#include "../common/serverrobot.pb.h"
 #include "../common/timestep.pb.h"
 #include "../common/net.h"
-#include "../common/messagewriter.h"
+#include "../common/messagequeue.h"
 #include "../common/messagereader.h"
 #include "../common/except.h"
 
@@ -37,11 +39,13 @@ const char *configFileName;
 
 //Game world variables
 // TODO: organize/move variables out of client.cpp 
-int currentTimestep;
+int currentTimestep = 0;
 int firstRobot; // offset, lets us control robots 600-1000, for example
 int firstTeam; // lowest teamid we control
 int numTeams; // this client computer controls this number of teams.
 int numRobots; // number of robots per team
+helper::connection* theController;
+int epoll;
 
 struct OwnRobot {
   float x;
@@ -101,6 +105,39 @@ void loadConfigFile()
 		printf("Error: Cannot open config file %s\n", configFileName);
 }
 
+void *artificialIntelligence(void *threadid) {
+  while (currentTimestep < 1) {
+    // do nothing until simulation starts
+    sched_yield();
+  }
+
+  struct epoll_event event; 
+  ClientRobot clientRobot;
+  int id = 1337;
+  float velocity = 0.1;
+  float angle = 3.0;
+
+
+  // Make robot #1337 do something every 5 seconds 
+  while (true) {
+    cout << "AI thread creating ClientRobot message at timestep "
+         << currentTimestep << endl; 
+    clientRobot.set_id(id);
+    clientRobot.set_velocity(velocity);
+    clientRobot.set_angle(angle);
+    msg_ptr update(new ClientRobot(clientRobot));
+
+    theController->queue.push(MSG_CLIENTROBOT, update);
+    event.events = EPOLLIN | EPOLLOUT; 
+    event.data.ptr = theController;
+    epoll_ctl(epoll, EPOLL_CTL_MOD, theController->fd, &event);
+
+    sched_yield(); // Let the other thread read and write
+    sleep(5); // delay this thread for 5 seconds
+  }
+
+  pthread_exit(0);
+}
 
 void run() {
   int controllerfd = -1;
@@ -120,7 +157,7 @@ void run() {
 
   cout << " connected." << endl;
   
-  int epoll = epoll_create(1);
+  epoll = epoll_create(1); // defined as a gobal variable
   if (epoll < 0) {
     perror("Failed to create epoll handle");
     close(controllerfd);
@@ -128,9 +165,10 @@ void run() {
   }
   helper::connection controllerconn(controllerfd, 
                                     helper::connection::CONTROLLER);
+  theController = &controllerconn; // Allows other thread to access. Fix later.
 
   //epoll setup
-  struct epoll_event event;
+  struct epoll_event event; 
   event.events = EPOLLIN;
   event.data.ptr = &controllerconn;
   if (0 > epoll_ctl(epoll, EPOLL_CTL_ADD, controllerfd, &event)) {
@@ -147,6 +185,10 @@ void run() {
 
   // Create thread: client robot calculations
   // parent thread: continue in while loop, looking for updates
+  pthread_t aiThread;
+
+
+  pthread_create(&aiThread, NULL, artificialIntelligence, NULL);
 
   try {
     while(true) {
