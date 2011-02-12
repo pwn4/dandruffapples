@@ -97,8 +97,8 @@ void AreaEngine::Step(){
       
       //collisions first - just check, and zero velocities if they would have collided
       //calculate the bounds of the a[][] elements we need to check
-      Index topLeft = getRobotIndices(curRobot->x-viewDist, curRobot->y-viewDist);
-      Index botRight = getRobotIndices(curRobot->x+viewDist, curRobot->y+viewDist);
+      Index topLeft = getRobotIndices(curRobot->x-robotRatio, curRobot->y-robotRatio);
+      Index botRight = getRobotIndices(curRobot->x+robotRatio, curRobot->y+robotRatio);
 
       for(int j = topLeft.x; j <= botRight.x; j++)
         for(int k = topLeft.y; k <= botRight.y; k++)
