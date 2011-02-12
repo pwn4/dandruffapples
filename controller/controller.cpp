@@ -18,6 +18,7 @@
 
 #include <google/protobuf/message_lite.h>
 
+#include "../common/clientrobot.pb.h"
 #include "../common/timestep.pb.h"
 #include "../common/worldinfo.pb.h"
 
@@ -131,6 +132,7 @@ int main(int argc, char** argv)
   TimestepUpdate timestep;
   WorldInfo worldinfo;
   RegionInfo regioninfo;
+  ClientRobot clientrobot;
 //  MessageReader reader(clockfd);
   vector<connection*> clients;
 
@@ -192,6 +194,21 @@ int main(int argc, char** argv)
 				case connection::CLIENT:
 				//client is sending clientRobot instructions
         {
+          MessageType type;
+          size_t len;
+          const void *buffer;
+          if(c->reader.doRead(&type, &len, &buffer)) {
+            switch(type) {
+            case MSG_CLIENTROBOT:
+              clientrobot.ParseFromArray(buffer, len);
+              cout << "Received client robot with ID #" << clientrobot.id() 
+                   << endl;
+              break;
+            default:
+              cerr << "Unexpected readable socket from client!" << endl;
+              break;
+            }
+          }
 					break;
 				}
 				

@@ -13,6 +13,7 @@ This program communications with controllers.
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <sys/select.h>
+#include <sys/epoll.h>
 
 #include <stdio.h>
 #include <string>
@@ -20,6 +21,7 @@ This program communications with controllers.
 #include <stdlib.h>
 
 #include "../common/ports.h"
+#include "../common/clientrobot.pb.h"
 #include "../common/timestep.pb.h"
 #include "../common/net.h"
 #include "../common/messagewriter.h"
@@ -114,44 +116,105 @@ void run() {
     }
     currentController = rand() % controllerips.size();
   }
+  //net::set_blocking(controllerfd, false);
 
   cout << " connected." << endl;
+  
+  int epoll = epoll_create(1);
+  if (epoll < 0) {
+    perror("Failed to create epoll handle");
+    close(controllerfd);
+    exit(1);
+  }
+  helper::connection controllerconn(controllerfd, 
+                                    helper::connection::CONTROLLER);
+
+  //epoll setup
+  struct epoll_event event;
+  event.events = EPOLLIN;
+  event.data.ptr = &controllerconn;
+  if (0 > epoll_ctl(epoll, EPOLL_CTL_ADD, controllerfd, &event)) {
+    perror("Failed to add controller socket to epoll");
+    close(controllerfd);
+    exit(1);
+  }
 
   TimestepUpdate timestep;
-  MessageReader reader(controllerfd);
-  MessageType type;
-  size_t len;
-  const void *buffer;
+  ClientRobot clientRobot;
+
+  #define MAX_EVENTS 128
+  struct epoll_event events[MAX_EVENTS];
 
   // Create thread: client robot calculations
   // parent thread: continue in while loop, looking for updates
 
   try {
-    //cout << "Notifying clock server that our init's complete..." << flush;
     while(true) {
-      //for(bool complete = false; !complete;) {
-      //  complete = writer.doWrite();
-      //}
-      //cout << " done." << endl;
-      
-      //cout << "Waiting for timestep..." << flush;
-      for(bool complete = false; !complete;) {
-        complete = reader.doRead(&type, &len, &buffer);
-      }
+      int eventcount = epoll_wait(epoll, events, MAX_EVENTS, -1);
 
-      switch (type) {
-      case MSG_TIMESTEPUPDATE:
-        timestep.ParseFromArray(buffer, len);
-        cout << "Client received timestep #" << timestep.timestep() << endl; 
-        // update timestep global variable
-        break;
-      case MSG_SERVERROBOT:
-        cout << "Received ServerRobot update!" << endl;
-        // update robot position global variables
-        break;
-      default:
-        cout << "Unknown message!" << endl;
-        break;
+      for(size_t i = 0; i < (unsigned)eventcount; i++) {
+        helper::connection *c = (helper::connection*)events[i].data.ptr;
+        if(events[i].events & EPOLLIN) {
+          switch(c->type) {
+          case helper::connection::CONTROLLER:
+            // this should be the only type of messages
+            MessageType type;
+            size_t len;
+            const void *buffer;
+            if(c->reader.doRead(&type, &len, &buffer)) {
+              switch(type) {
+              case MSG_TIMESTEPUPDATE:
+                timestep.ParseFromArray(buffer, len);
+                currentTimestep = timestep.timestep();
+
+                if (currentTimestep % 10000 == 0) {
+                  cout << "Generating ClientRobot message at timestep " 
+                       << currentTimestep << endl;
+                  // Test something every 10000 timesteps
+                  int id = 0;
+                  float velocity = 0.1;
+                  float angle = 3.0;
+                  clientRobot.set_id(id);
+                  clientRobot.set_velocity(velocity);
+                  clientRobot.set_angle(angle);
+                  msg_ptr update(new ClientRobot(clientRobot));
+
+                  c->queue.push(MSG_CLIENTROBOT, update);
+                  event.events = EPOLLIN | EPOLLOUT; // just EPOLLOUT?
+                  event.data.ptr = c;
+                  epoll_ctl(epoll, EPOLL_CTL_MOD, c->fd, &event);
+                }
+                break;
+              case MSG_SERVERROBOT:
+                cout << "Received ServerRobot update!" << endl;
+                // update robot position global variables
+                break;
+              default:
+                cout << "Unknown message!" << endl;
+                break;
+              }
+            }
+            break;
+          default:
+            cerr << "Internal error: Got unexpected readable event of type " << c->type << endl;
+            break;
+          }
+        } else if(events[i].events & EPOLLOUT) {
+          switch(c->type) {
+          case helper::connection::CONTROLLER:
+            if(c->queue.doWrite()) {
+              cout << "Sending ClientRobot message at timestep " 
+                   << currentTimestep << endl;
+              event.events = EPOLLIN;
+              event.data.ptr = c;
+              epoll_ctl(epoll, EPOLL_CTL_MOD, c->fd, &event);
+            }
+            break;
+          default:
+            cerr << "Internal error: Got unexpected readable event of type " << c->type << endl;
+            break;
+          }
+        }
       }
     }
   } catch(EOFError e) {
