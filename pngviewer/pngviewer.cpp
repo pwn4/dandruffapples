@@ -53,11 +53,11 @@
 using namespace std;
 using namespace Magick;
 
-struct regionConnection: helper::connection {
+struct regionConnection: net::connection {
 	RegionInfo info;
 
 	regionConnection(int fd, RegionInfo info_) :
-		helper::connection(fd), info(info_) {
+		net::connection(fd), info(info_) {
 	}
 
 };

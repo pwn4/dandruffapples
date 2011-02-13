@@ -196,10 +196,10 @@ void run() {
   }
   
   // Add clock and client sockets to epoll
-  helper::connection clockconn(clockfd, helper::connection::CLOCK),
-    controllerconn(controllerfd, helper::connection::CONTROLLER_LISTEN),
-    regionconn(regionfd, helper::connection::REGION_LISTEN),
-    pngconn(pngfd, helper::connection::PNGVIEWER_LISTEN);
+  net::connection clockconn(clockfd, net::connection::CLOCK),
+    controllerconn(controllerfd, net::connection::CONTROLLER_LISTEN),
+    regionconn(regionfd, net::connection::REGION_LISTEN),
+    pngconn(pngfd, net::connection::PNGVIEWER_LISTEN);
   
   //epoll setup
   struct epoll_event event;
@@ -271,9 +271,9 @@ void run() {
   MessageReader reader(clockfd);
   int timeSteps = 0;
   time_t lastSecond = time(NULL);
-  vector<helper::connection*> controllers;
-  vector<helper::connection*> pngviewers;
-  vector<helper::connection*> borderRegions;
+  vector<net::connection*> controllers;
+  vector<net::connection*> pngviewers;
+  vector<net::connection*> borderRegions;
 
   //send port listening info (IMPORTANT)
   //add listening ports
@@ -316,10 +316,10 @@ void run() {
 
     //check our events that were triggered
     for(size_t i = 0; i < (unsigned)eventcount; i++) {
-    	helper::connection *c = (helper::connection*)events[i].data.ptr;
+    	net::connection *c = (net::connection*)events[i].data.ptr;
       if(events[i].events & EPOLLIN) {
         switch(c->type) {
-        case helper::connection::CLOCK:
+        case net::connection::CLOCK:
         {
           //we get a message from the clock server
           MessageType type;
@@ -351,7 +351,7 @@ void run() {
                 blob = handleWorldImage();
                 png.set_image(blob.data(), blob.length());
                 png.set_timestep(timestep.timestep());
-                for(vector<helper::connection*>::iterator i = pngviewers.begin();
+                for(vector<net::connection*>::iterator i = pngviewers.begin();
                     i != pngviewers.end(); ++i) {
                   (*i)->queue.push(MSG_REGIONRENDER, png);
                   event.events = EPOLLOUT;
@@ -391,39 +391,36 @@ void run() {
             }
           }
         }
-        case helper::connection::CONTROLLER:
+        case net::connection::CONTROLLER:
         {
           
           break;
         }
-        case helper::connection::REGION:
+        case net::connection::REGION:
         {
         
           break;
         }
-        case helper::connection::REGION_LISTEN:
+        case net::connection::REGION_LISTEN:
         {
         
           break;
         }
-        case helper::connection::CONTROLLER_LISTEN:
+        case net::connection::CONTROLLER_LISTEN:
         {
         
           break;
         }
-        case helper::connection::PNGVIEWER_LISTEN:
+        case net::connection::PNGVIEWER_LISTEN:
         {
             // Accept a new pngviewer
-            struct sockaddr_storage addr;
-            socklen_t addr_size = sizeof(addr);
-            int fd = accept(c->fd, (struct sockaddr*)&addr, &addr_size);
+            int fd = accept(c->fd, NULL, NULL);
             if(fd < 0) {
               throw SystemError("Failed to accept png viewer");
             }
             net::set_blocking(fd, false);
 
-            helper::connection *newconn = new helper::connection(fd, helper::connection::PNGVIEWER);
-            newconn->addr = ((struct sockaddr_in*)&addr)->sin_addr.s_addr;
+            net::connection *newconn = new net::connection(fd, net::connection::PNGVIEWER);
             pngviewers.push_back(newconn);
 
             event.events = EPOLLOUT;
@@ -443,13 +440,13 @@ void run() {
         }     
       } else if(events[i].events & EPOLLOUT) {
         switch(c->type) {
-        case helper::connection::CONTROLLER:
+        case net::connection::CONTROLLER:
         
           break;
-        case helper::connection::REGION:
+        case net::connection::REGION:
         
           break;
-        case helper::connection::CLOCK:
+        case net::connection::CLOCK:
           // Perform write
           if(c->queue.doWrite()) {
             // If the queue is empty, we don't care if this is writable
@@ -458,7 +455,7 @@ void run() {
             epoll_ctl(epoll, EPOLL_CTL_MOD, c->fd, &event);
           }
           break;
-        case helper::connection::PNGVIEWER:
+        case net::connection::PNGVIEWER:
             if(c->queue.doWrite()) {
               event.events = 0;
               event.data.ptr = c;

@@ -200,7 +200,7 @@ int main(int argc, char** argv)
             case MSG_CLIENTROBOT:
               clientrobot.ParseFromArray(buffer, len);
               cout << "Received client robot with ID #" << clientrobot.id() 
-                   << endl;
+                   << endl;              
               break;
             default:
               cerr << "Unexpected readable socket from client!" << endl;
