@@ -29,7 +29,6 @@ add_library(common
   messagequeue.cpp
   parseconf.cpp
   helper.cpp
-  areaengine.cpp
   )
 
 target_link_libraries(common ${PROTOBUF_LIBRARY} ${CMAKE_THREAD_LIBS_INIT})
