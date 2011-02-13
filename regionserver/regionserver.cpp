@@ -42,7 +42,8 @@ This program communications with clients, controllers, PNGviewers, other regions
 #include "../common/timestep.pb.h"
 #include "../common/serverrobot.pb.h"
 #include "../common/puckstack.pb.h"
-#include "../common/areaengine.h"
+
+#include "areaengine.h"
 
 #include "../common/helper.h"
 #include <Magick++.h>
