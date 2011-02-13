@@ -106,9 +106,8 @@ void AreaEngine::Step(){
   
   //some worker variables
   Index topLeft, botRight;
-  set<int>::iterator setIterator;
-  set<int> *nowSaw;
-  set<int> *lastSaw;
+  map<int, bool>::iterator setIterator;
+  map<int, bool> *nowSaw;
   timeval tim;
 
   
@@ -174,23 +173,14 @@ void AreaEngine::Step(){
       AreaEngine::RemoveRobot(curRobot->id, oldIndices.x, oldIndices.y, false);
     }
   }
-
-long checksum = 0;
-int count = 0;
+  
   //check for sight. Theoretically runs in O(n^2)+O(n)+O(m). In reality, runs O((viewdist*360degrees/robotsize)*robotsinregion)+O(2*(viewdist*360degrees/robotsize))
   //THIS IS THE BOTTLENECK RIGHT NOW
   for(int i = 0; i < robots.size(); i++)
   {
   
     RobotObject * curRobot = robots[i];
-    int checks = 0;
-    
-    //swap the last and next sets, then clear the next
-    set<int> * tmpswap;
-    tmpswap = curRobot->lastSeen;
-    curRobot->lastSeen = curRobot->nowSeen;
-    curRobot->nowSeen = tmpswap;
-    curRobot->nowSeen->clear();
+    nowSaw = curRobot->lastSeen;
     
     //may make this better. don't need to check full 360 degrees if we only see a cone
     topLeft = getRobotIndices(curRobot->x-viewDist, curRobot->y-viewDist);
@@ -205,42 +195,28 @@ int count = 0;
           RobotObject *otherRobot = element->robots;
           //check its elements
           while(otherRobot != NULL) {    
-            //count the check
-            checks++;   
-            if(curRobot->id != otherRobot->id && AreaEngine::Sees(curRobot->x, curRobot->y, otherRobot->x, otherRobot->y))
-              curRobot->nowSeen->insert(otherRobot->id);
+            if(curRobot->id != otherRobot->id && AreaEngine::Sees(curRobot->x, curRobot->y, otherRobot->x, otherRobot->y)){
+              //instead of forming nowSeen and lastSeen, and then comparing. Do that shit on the FLY.
+              //first, that which we hadn't seen but now do
+              if(nowSaw->find(otherRobot->id) == nowSaw->end())
+              {
+                nowSaw->insert(pair<int, bool>(otherRobot->id, true));
+                //TODO: add network code... send to curRobot that it now sees *setIterator
+              }
+              //curRobot->nowSeen->insert(pair<int, bool>(otherRobot->id, true));
+            }else{
+            //then, that which we did see, but now don't
+              if(nowSaw->find(otherRobot->id) != nowSaw->end())
+              {
+                nowSaw->erase(otherRobot->id);
+                //TODO: add network code... send to curRobot that it now sees *setIterator
+              }
+            }
 
             otherRobot = otherRobot->nextRobot;
           }
-          
         }
-    
-    //EQUALLY SLOW IN LOOP
-    nowSaw = curRobot->nowSeen;
-    lastSaw = curRobot->lastSeen;
-    //we now take the differences between the two sets, and broadcast them
-    //first, that which we hadn't seen but now do
-    for(setIterator = nowSaw->begin(); setIterator != nowSaw->end(); setIterator++)
-    {
-      if(lastSaw->find(*setIterator) == lastSaw->end())
-      {
-        //TODO: add network code... send to curRobot that it now sees *setIterator
-      }  
-    }
-    //then, that which we did see, but now don't
-    for(setIterator = lastSaw->begin(); setIterator != lastSaw->end(); setIterator++)
-    {
-      if(nowSaw->find(*setIterator) == lastSaw->end())
-      {
-        //TODO: add network code... send to curRobot that it no longer sees *setIterator
-      }  
-    }
-    
-    checksum += checks;
-    count++;
   }
-  if(curStep % 100 == 0)
-    cout << (checksum/count) << " checks per robot" << endl;
     
 }
 
