@@ -22,7 +22,19 @@ using namespace std;
 //their own region
 
 Index AreaEngine::getRobotIndices(double x, double y){    
-  return Index((int)(min(max(x, 0.0)/elementSize, (double)regionBounds-1.0)), (int)(min(max(y, 0.0)/elementSize, (double)regionBounds-1.0)));
+  Index rtn (x/elementSize, y/elementSize);
+  
+  if(rtn.x < 0)
+    rtn.x = 0;
+  if(rtn.y < 0)
+    rtn.y = 0;
+    
+  if(rtn.x >= regionBounds)
+    rtn.x = regionBounds-1;
+  if(rtn.y >= regionBounds)
+    rtn.y = regionBounds-1;
+    
+  return rtn;
 }
 
 //constructor
@@ -163,12 +175,15 @@ void AreaEngine::Step(){
     }
   }
 
+long checksum = 0;
+int count = 0;
   //check for sight. Theoretically runs in O(n^2)+O(n)+O(m). In reality, runs O((viewdist*360degrees/robotsize)*robotsinregion)+O(2*(viewdist*360degrees/robotsize))
   //THIS IS THE BOTTLENECK RIGHT NOW
   for(int i = 0; i < robots.size(); i++)
   {
   
     RobotObject * curRobot = robots[i];
+    int checks = 0;
     
     //swap the last and next sets, then clear the next
     set<int> * tmpswap;
@@ -189,7 +204,9 @@ void AreaEngine::Step(){
 
           RobotObject *otherRobot = element->robots;
           //check its elements
-          while(otherRobot != NULL) {       
+          while(otherRobot != NULL) {    
+            //count the check
+            checks++;   
             if(curRobot->id != otherRobot->id && AreaEngine::Sees(curRobot->x, curRobot->y, otherRobot->x, otherRobot->y))
               curRobot->nowSeen->insert(otherRobot->id);
 
@@ -218,14 +235,12 @@ void AreaEngine::Step(){
         //TODO: add network code... send to curRobot that it no longer sees *setIterator
       }  
     }
+    
+    checksum += checks;
+    count++;
   }
-  
-    //debug for performance checking
-  /*if(curStep % 4 == 0)
-  {
-    gettimeofday(&tim, NULL);
-    cout << "4) " << tim.tv_usec << endl;
-  }*/
+  if(curStep % 100 == 0)
+    cout << (checksum/count) << " checks per robot" << endl;
     
 }
 
