@@ -93,7 +93,7 @@ void Gui::drawAll() {
 	
 	glColor3f( 1,1,1 ); // green
 	glBegin( GL_POINTS );
-	FOR_EACH( p, _logviewer->puckStacks )
+	FOR_EACH( p, _logviewer->pucks )
 		glVertex2f( (*p)->_x, (*p)->_y );
 	glEnd();
 }

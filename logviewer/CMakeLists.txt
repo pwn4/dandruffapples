@@ -3,7 +3,7 @@ add_executable(logviewer
   home.cpp
   logviewer.cpp
   main.cpp
-  puckstack.cpp
+  puck.cpp
   robot.cpp
   )
 

@@ -3,17 +3,39 @@
 #include <GL/glut.h>
 #include <vector>
 #include <unistd.h>
+#include <stdio.h>
+#include <iostream>
+#include <string>
+//#include <stdlib.h>
+//#include <cstdio>
+//#include <cstdlib>
+//#include <fstream>
+//#include <sys/socket.h>
+#include <sys/fcntl.h>
 
 #include "logviewer.h"
 #include "robot.h"
 #include "home.h"
-#include "puckstack.h"
+#include "puck.h"
+
+#include "../common/messagereader.h"
+#include "../common/timestep.pb.h"
+#include "../common/serverrobot.pb.h"
+#include "../common/puckstack.pb.h"
+#include "../common/types.h"
+
+using namespace std;
 
 int Logviewer::winsize = 600;
 double Logviewer::worldsize = 1.0;
 vector<Robot*> Logviewer::robots;
 vector<Home*> Logviewer::homes;
-vector<PuckStack*> Logviewer::puckStacks;
+vector<Puck*> Logviewer::pucks;
+
+MessageReader *reader; 
+TimestepUpdate timestep;
+ServerRobot serverrobot;
+PuckStack puckstack;
 
 Logviewer::Logviewer(int worldLength, int worldHeight) 
   : _worldLength(worldLength), _worldHeight(worldHeight) {
@@ -25,18 +47,28 @@ Logviewer::Logviewer(int worldLength, int worldHeight)
 }
 
 void Logviewer::getInitialData() {
-  // from config file?
-  // Hardcode for now...
+  // Load log file
+  int fd = 0;
+  string filename = "antix_log";
 
+  fd = open(filename.c_str(), O_RDONLY);
+  if (fd < 0) {
+    cerr << "Unable to open test log file!" << endl;
+    exit(1);
+  }
+
+  reader = new MessageReader(fd);
+
+  // Hardcode robot/puck info below this point 
   // determine which indexes correspond with which robots
   int robotsPerTeam = 5;
   int teams = 3;
-  int pucks = 20;
+  int numPucks = 20;
 
   // Now parse initial world data to assign robots to vector
   Robot* tempRobot = NULL;
   Home* tempHome = NULL;
-  PuckStack* tempPuckStack = NULL;
+  Puck* tempPuck = NULL;
   for (int i = 0; i < teams; i++) {
     tempHome = new Home(1.0 / (i + 2), 1.0 / (i + 2), 0.2, i);
     Logviewer::homes.push_back(tempHome);
@@ -46,17 +78,51 @@ void Logviewer::getInitialData() {
     }
   }
 
-  for (int i = 0; i < pucks; i++) {
-    tempPuckStack = new PuckStack(1.0 / (i + 2), 0.5, 1);
-    puckStacks.push_back(tempPuckStack);
+  for (int i = 0; i < numPucks; i++) {
+    tempPuck = new Puck(1.0 / (i + 2), 0.5, 1);
+    pucks.push_back(tempPuck);
   }
 }
 
 void Logviewer::updateTimestep() {
-  // 1. Parse ServerRobot and PuckStack messages for current timestep.
-  // 2. For all robots we did not receive a message for, calculate new
-  //    x,y coordinates based on current velocity.
+  bool keepGoing = true;
 
+  MessageType type;
+  size_t len;
+  const void* buffer;
+
+  while(keepGoing) {
+    if (reader->doRead(&type, &len, &buffer)) {
+      usleep(0.2);
+      switch(type) {
+      case MSG_TIMESTEPUPDATE:
+        timestep.ParseFromArray(buffer, len);
+        cout << "got timestep " << timestep.timestep() << endl;
+        keepGoing = false;
+        break;
+      case MSG_SERVERROBOT:
+        serverrobot.ParseFromArray(buffer, len);
+        cout << "got serverrobot " << serverrobot.id(); 
+        if (serverrobot.has_x()) {
+          cout << " at x=" << serverrobot.x() << endl;
+        } else {
+          cout << " with no position data\n";
+        }
+        break;
+      case MSG_PUCKSTACK:
+        puckstack.ParseFromArray(buffer, len);
+        cout << "got puckstack size " << puckstack.stacksize() 
+             << " at x=" << puckstack.x() << endl;
+        break;
+      default:
+        cerr << "Unknown message!" << endl;
+        break;
+      }
+    }
+  }
+
+
+/*
   // But until we get log files... let's make them DANCE!
   double dx, dy;
   Robot* bot = NULL;
@@ -69,6 +135,8 @@ void Logviewer::updateTimestep() {
     bot->_y = distanceNormalize(bot->_y + dy); 
   }
   usleep(0.1);
+  return;
+*/
   return;
 }
 
