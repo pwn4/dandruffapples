@@ -1,5 +1,6 @@
 add_executable(regionserver
   regionserver.cpp
+  areaengine.cpp
   )
 
 find_package(ImageMagick COMPONENTS Magick++ REQUIRED)
