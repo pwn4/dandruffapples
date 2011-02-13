@@ -19,6 +19,7 @@ namespace net {
       REGION_LISTEN,
       CONTROLLER_LISTEN,
       PNGVIEWER_LISTEN,
+      CLIENT_LISTEN,
       CLOCK,
       CONTROLLER,
       REGION,

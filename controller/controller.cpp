@@ -15,12 +15,9 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include <google/protobuf/message_lite.h>
-
 #include "../common/clientrobot.pb.h"
 #include "../common/timestep.pb.h"
 #include "../common/worldinfo.pb.h"
-
 
 #include "../common/ports.h"
 #include "../common/messagereader.h"
@@ -75,22 +72,6 @@ void clientClaim(int rid, int *fd){
 	lookup[rid].client = fd;
 }
 
-struct connection {
-  enum Type {
-    UNSPECIFIED,
-    LISTEN,
-    CLOCK,
-    CLIENT,
-    REGION
-  } type;
-  int fd;
-  MessageReader reader;
-  MessageQueue queue;
-
-  connection(int fd_) : type(UNSPECIFIED), fd(fd_), reader(fd_), queue(fd_) {}
-  connection(int fd_, Type type_) : type(type_), fd(fd_), reader(fd_), queue(fd_) {}
-};
-
 int main(int argc, char** argv)
 {
   helper::Config config(argc, argv);
@@ -109,8 +90,8 @@ int main(int argc, char** argv)
   int epoll = epoll_create(1000);
 
   // Add clock and client sockets to epoll
-  connection clockconn(clockfd, connection::CLOCK),
-    listenconn(listenfd, connection::LISTEN);
+  net::connection clockconn(clockfd, net::connection::CLOCK),
+    listenconn(listenfd, net::connection::CLIENT_LISTEN);
   struct epoll_event event;
   event.events = EPOLLIN;
   event.data.ptr = &clockconn;
@@ -133,7 +114,7 @@ int main(int argc, char** argv)
   RegionInfo regioninfo;
   ClientRobot clientrobot;
 //  MessageReader reader(clockfd);
-  vector<connection*> clients;
+  vector<net::connection*> clients;
 
   #define MAX_EVENTS 128
   struct epoll_event events[MAX_EVENTS];
@@ -145,10 +126,10 @@ int main(int argc, char** argv)
     }
 
     for(size_t i = 0; i < (unsigned)eventcount; ++i) {
-      connection *c = (connection*)events[i].data.ptr;
+      net::connection *c = (net::connection*)events[i].data.ptr;
       if(events[i].events & EPOLLIN) {
         switch(c->type) {
-        case connection::CLOCK:
+        case net::connection::CLOCK:
         {
           MessageType type;
           size_t len;
@@ -173,7 +154,7 @@ int main(int argc, char** argv)
               timestep.ParseFromArray(buffer, len);
 
               // Enqueue update to all clients
-              for(vector<connection*>::iterator i = clients.begin();
+              for(vector<net::connection*>::iterator i = clients.begin();
                   i != clients.end(); ++i) {
                 (*i)->queue.push(MSG_TIMESTEPUPDATE, timestep);
                 event.events = EPOLLIN | EPOLLOUT;
@@ -189,7 +170,7 @@ int main(int argc, char** argv)
           break;
         }
         
-				case connection::CLIENT:
+				case net::connection::CLIENT:
 				//client is sending clientRobot instructions
         {
           MessageType type;
@@ -210,13 +191,13 @@ int main(int argc, char** argv)
 					break;
 				}
 				
-				case connection::REGION:
+				case net::connection::REGION:
 				//region servers are sending serverRobot instructions
         {
 					break;
 				}
 				
-        case connection::LISTEN:
+        case net::connection::CLIENT_LISTEN:
 				//for client connections
         {
           int fd = accept(c->fd, NULL, NULL);
@@ -225,7 +206,7 @@ int main(int argc, char** argv)
           }
           net::set_blocking(fd, false);
 
-          connection *newconn = new connection(fd, connection::CLIENT);
+          net::connection *newconn = new net::connection(fd, net::connection::CLIENT);
           clients.push_back(newconn);
 
           event.events = EPOLLIN;
@@ -244,7 +225,7 @@ int main(int argc, char** argv)
       } else if(events[i].events & EPOLLOUT) {
 				//ready to write
         switch(c->type) {
-        case connection::CLIENT:
+        case net::connection::CLIENT:
         {
           if(c->queue.doWrite()) {
             event.events = EPOLLIN;
