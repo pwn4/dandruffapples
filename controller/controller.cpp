@@ -16,9 +16,11 @@
 #include <stdlib.h>
 
 #include "../common/clientrobot.pb.h"
+#include "../common/serverrobot.pb.h"
 #include "../common/timestep.pb.h"
 #include "../common/worldinfo.pb.h"
 #include "../common/claimteam.pb.h"
+#include "../common/claim.pb.h"
 
 #include "../common/ports.h"
 #include "../common/messagereader.h"
@@ -40,13 +42,14 @@ public:
 	ClientConnection(int id_, int epoll, int flags, int fd, Type type) : net::EpollConnection(epoll, flags, fd, type), id(id_) {}
 };
 
-struct server_client{
-	int *server;
-	int *client;
+
+struct lookup_pair {
+  net::EpollConnection *server;
+  net::EpollConnection *client;
 };
 
-//variable declarations
-server_client lookup[ROBOT_LOOKUP_SIZE];	//robot lookup table
+lookup_pair robots[ROBOT_LOOKUP_SIZE];
+
 const char *configFileName;
 int clockfd, listenfd, clientfd;
 
@@ -64,21 +67,6 @@ void loadConfigFile()
 		exit(1);
 	}
 	strcpy(clockip, configuration["CLOCKIP"].c_str());
-}
-
-
-//Server claims robot
-//rid: robot id
-//fd:  socket file descriptor
-void serverClaim(int rid, int *fd){
-	lookup[rid].server = fd;
-}
-
-//Client claims robot
-//rid: robot id
-//fd:  socket file descriptor
-void clientClaim(int rid, int *fd){
-	lookup[rid].client = fd;
 }
 
 int main(int argc, char** argv)
@@ -107,7 +95,9 @@ int main(int argc, char** argv)
   WorldInfo worldinfo;
   RegionInfo regioninfo;
   ClientRobot clientrobot;
+  ServerRobot serverrobot;
   ClaimTeam claimteam;
+  Claim claimrobot;
   vector<ClientConnection*> clients;
 
   #define MAX_EVENTS 128
@@ -160,6 +150,7 @@ int main(int argc, char** argv)
                 cout << "Client " << client << " granted team " << claimteam.id()
                      << "." << endl;
                 // TODO: Send list of robots to client
+                // TODO: Update lookup table
               } else {
                 cout << "Client " << client << "'s request for team "
                      << claimteam.id() << " was rejected." << endl;
@@ -186,12 +177,19 @@ int main(int argc, char** argv)
           if(c->reader.doRead(&type, &len, &buffer)) {
             switch(type) {
             case MSG_CLIENTROBOT:
+            {
+              // Forward to the correct server
               clientrobot.ParseFromArray(buffer, len);
-              cout << "Received client robot with ID #" << clientrobot.id() 
-                   << endl;              
+              net::EpollConnection *server = robots[clientrobot.id()].server;
+              cout << "Received client robot with ID #" << clientrobot.id()
+                   << endl;
+              server->queue.push(MSG_CLIENTROBOT, clientrobot);
+              server->set_writing(true);
               break;
+            }
 
             case MSG_CLAIMTEAM:
+              // Forward to the clock
               claimteam.ParseFromArray(buffer, len);
               clockconn.queue.push(MSG_CLAIMTEAM, claimteam);
               clockconn.set_writing(true);
@@ -206,8 +204,35 @@ int main(int argc, char** argv)
 				}
 				
 				case net::connection::REGION:
-				//region servers are sending serverRobot instructions
         {
+          MessageType type;
+          size_t len;
+          const void *buffer;
+          if(c->reader.doRead(&type, &len, &buffer)) {
+            switch(type) {
+            case MSG_SERVERROBOT:
+            {
+              serverrobot.ParseFromArray(buffer, len);
+              // Forward to the correct client
+              net::EpollConnection *client = robots[serverrobot.id()].server;
+              cout << "Received server robot with ID #" << serverrobot.id()
+                   << endl;
+              client->queue.push(MSG_SERVERROBOT, serverrobot);
+              client->set_writing(true);
+              break;
+            }
+
+            case MSG_CLAIM:
+              // Update lookup table
+              claimrobot.ParseFromArray(buffer, len);
+              robots[claimrobot.id()].server = c;
+              break;
+
+            default:
+              cerr << "Unexpected readable socket from client!" << endl;
+              break;
+            }
+          }
 					break;
 				}
 				
