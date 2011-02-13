@@ -11,6 +11,7 @@ enum MessageType {
   MSG_CLIENTROBOT,
   MSG_PUCKSTACK,
   MSG_CLAIMTEAM,
+  MSG_CLAIM,
   MSG_MAX
 };
 

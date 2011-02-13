@@ -44,7 +44,7 @@ int firstRobot; // offset, lets us control robots 600-1000, for example
 int firstTeam; // lowest teamid we control
 int numTeams; // this client computer controls this number of teams.
 int numRobots; // number of robots per team
-net::connection* theController;
+net::EpollConnection* theController;
 int epoll;
 
 struct OwnRobot {
@@ -162,19 +162,9 @@ void run() {
     close(controllerfd);
     exit(1);
   }
-  net::connection controllerconn(controllerfd, 
-                                    net::connection::CONTROLLER);
+  net::EpollConnection controllerconn(epoll, EPOLLIN, controllerfd, 
+                                 net::connection::CONTROLLER);
   theController = &controllerconn; // Allows other thread to access. Fix later.
-
-  //epoll setup
-  struct epoll_event event; 
-  event.events = EPOLLIN;
-  event.data.ptr = &controllerconn;
-  if (0 > epoll_ctl(epoll, EPOLL_CTL_ADD, controllerfd, &event)) {
-    perror("Failed to add controller socket to epoll");
-    close(controllerfd);
-    exit(1);
-  }
 
   TimestepUpdate timestep;
   ClientRobot clientRobot;
@@ -194,7 +184,7 @@ void run() {
       int eventcount = epoll_wait(epoll, events, MAX_EVENTS, -1);
 
       for(size_t i = 0; i < (unsigned)eventcount; i++) {
-        net::connection *c = (net::connection*)events[i].data.ptr;
+        net::EpollConnection *c = (net::EpollConnection*)events[i].data.ptr;
         if(events[i].events & EPOLLIN) {
           switch(c->type) {
           case net::connection::CONTROLLER:
@@ -220,9 +210,7 @@ void run() {
                   clientRobot.set_angle(angle);
 
                   c->queue.push(MSG_CLIENTROBOT, clientRobot);
-                  event.events = EPOLLIN | EPOLLOUT; // just EPOLLOUT?
-                  event.data.ptr = c;
-                  epoll_ctl(epoll, EPOLL_CTL_MOD, c->fd, &event);
+                  c->set_writing(true);
                 }
                 break;
               case MSG_SERVERROBOT:
@@ -243,11 +231,9 @@ void run() {
           switch(c->type) {
           case net::connection::CONTROLLER:
             if(c->queue.doWrite()) {
-              cout << "Sending ClientRobot message at timestep " 
+              cout << "Sent ClientRobot message at timestep " 
                    << currentTimestep << endl;
-              event.events = EPOLLIN;
-              event.data.ptr = c;
-              epoll_ctl(epoll, EPOLL_CTL_MOD, c->fd, &event);
+              c->set_writing(false);
             }
             break;
           default:

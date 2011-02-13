@@ -15,12 +15,12 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include <google/protobuf/message_lite.h>
-
 #include "../common/clientrobot.pb.h"
+#include "../common/serverrobot.pb.h"
 #include "../common/timestep.pb.h"
 #include "../common/worldinfo.pb.h"
-
+#include "../common/claimteam.pb.h"
+#include "../common/claim.pb.h"
 
 #include "../common/ports.h"
 #include "../common/messagereader.h"
@@ -34,13 +34,22 @@
 
 using namespace std;
 
-struct server_client{
-	int *server;
-	int *client;
+
+class ClientConnection : public net::EpollConnection {
+public:
+	size_t id;
+
+	ClientConnection(int id_, int epoll, int flags, int fd, Type type) : net::EpollConnection(epoll, flags, fd, type), id(id_) {}
 };
 
-//variable declarations
-server_client lookup[ROBOT_LOOKUP_SIZE];	//robot lookup table
+
+struct lookup_pair {
+  net::EpollConnection *server;
+  net::EpollConnection *client;
+};
+
+lookup_pair robots[ROBOT_LOOKUP_SIZE];
+
 const char *configFileName;
 int clockfd, listenfd, clientfd;
 
@@ -60,39 +69,9 @@ void loadConfigFile()
 	strcpy(clockip, configuration["CLOCKIP"].c_str());
 }
 
-
-//Server claims robot
-//rid: robot id
-//fd:  socket file descriptor
-void serverClaim(int rid, int *fd){
-	lookup[rid].server = fd;
-}
-
-//Client claims robot
-//rid: robot id
-//fd:  socket file descriptor
-void clientClaim(int rid, int *fd){
-	lookup[rid].client = fd;
-}
-
-struct connection {
-  enum Type {
-    UNSPECIFIED,
-    LISTEN,
-    CLOCK,
-    CLIENT,
-    REGION
-  } type;
-  int fd;
-  MessageReader reader;
-  MessageQueue queue;
-
-  connection(int fd_) : type(UNSPECIFIED), fd(fd_), reader(fd_), queue(fd_) {}
-  connection(int fd_, Type type_) : type(type_), fd(fd_), reader(fd_), queue(fd_) {}
-};
-
 int main(int argc, char** argv)
 {
+  size_t clientcount = 0;
   helper::Config config(argc, argv);
 	configFileName=(config.getArg("-c").length() == 0 ? "config" : config.getArg("-c").c_str());
 	loadConfigFile();
@@ -109,31 +88,17 @@ int main(int argc, char** argv)
   int epoll = epoll_create(1000);
 
   // Add clock and client sockets to epoll
-  connection clockconn(clockfd, connection::CLOCK),
-    listenconn(listenfd, connection::LISTEN);
-  struct epoll_event event;
-  event.events = EPOLLIN;
-  event.data.ptr = &clockconn;
-  if(0 > epoll_ctl(epoll, EPOLL_CTL_ADD, clockfd, &event)) {
-    perror("Failed to add clock socket to epoll");
-    close(clockfd);
-    close(listenfd);
-    return 1;
-  }
-  event.data.ptr = &listenconn;
-  if(0 > epoll_ctl(epoll, EPOLL_CTL_ADD, listenfd, &event)) {
-    perror("Failed to add listen socket to epoll");
-    close(clockfd);
-    close(listenfd);
-    return 1;
-  }
+  net::EpollConnection clockconn(epoll, EPOLLIN, clockfd, net::connection::CLOCK),
+    listenconn(epoll, EPOLLIN, listenfd, net::connection::CLIENT_LISTEN);
 
   TimestepUpdate timestep;
   WorldInfo worldinfo;
   RegionInfo regioninfo;
   ClientRobot clientrobot;
-//  MessageReader reader(clockfd);
-  vector<connection*> clients;
+  ServerRobot serverrobot;
+  ClaimTeam claimteam;
+  Claim claimrobot;
+  vector<ClientConnection*> clients;
 
   #define MAX_EVENTS 128
   struct epoll_event events[MAX_EVENTS];
@@ -145,10 +110,10 @@ int main(int argc, char** argv)
     }
 
     for(size_t i = 0; i < (unsigned)eventcount; ++i) {
-      connection *c = (connection*)events[i].data.ptr;
+      net::EpollConnection *c = (net::EpollConnection*)events[i].data.ptr;
       if(events[i].events & EPOLLIN) {
         switch(c->type) {
-        case connection::CLOCK:
+        case net::connection::CLOCK:
         {
           MessageType type;
           size_t len;
@@ -156,32 +121,47 @@ int main(int argc, char** argv)
           if(c->reader.doRead(&type, &len, &buffer)) {
             switch(type) {
             case MSG_WORLDINFO:
-            {
               worldinfo.ParseFromArray(buffer, len);
               cout << "Got world info." << endl;
               break;
-            }
+
             case MSG_REGIONINFO:
-            {
 							//should add connections to region servers
               regioninfo.ParseFromArray(buffer, len);
               cout << "Got region info." << endl;
               break;
-            }
+
             case MSG_TIMESTEPUPDATE:
-            {
               timestep.ParseFromArray(buffer, len);
 
               // Enqueue update to all clients
-              for(vector<connection*>::iterator i = clients.begin();
+              for(vector<ClientConnection*>::iterator i = clients.begin();
                   i != clients.end(); ++i) {
                 (*i)->queue.push(MSG_TIMESTEPUPDATE, timestep);
-                event.events = EPOLLIN | EPOLLOUT;
-                event.data.ptr = *i;
-                epoll_ctl(epoll, EPOLL_CTL_MOD, (*i)->fd, &event);
+                (*i)->set_writing(true);
+              }
+              break;
+
+            case MSG_CLAIMTEAM:
+            {
+              claimteam.ParseFromArray(buffer, len);
+              unsigned client = claimteam.clientid();
+              if(claimteam.granted()) {
+                cout << "Client " << client << " granted team " << claimteam.id()
+                     << "." << endl;
+                // TODO: Send list of robots to client
+                // TODO: Update lookup table
+              } else {
+                cout << "Client " << client << "'s request for team "
+                     << claimteam.id() << " was rejected." << endl;
+                // Notify client of rejection
+                claimteam.clear_clientid();
+                clients[client]->queue.push(MSG_CLAIMTEAM, claimteam);
+                clients[client]->set_writing(true);
               }
               break;
             }
+
             default:
               cerr << "Unexpected readable socket!" << endl;
             }
@@ -189,8 +169,7 @@ int main(int argc, char** argv)
           break;
         }
         
-				case connection::CLIENT:
-				//client is sending clientRobot instructions
+				case net::connection::CLIENT:
         {
           MessageType type;
           size_t len;
@@ -198,10 +177,24 @@ int main(int argc, char** argv)
           if(c->reader.doRead(&type, &len, &buffer)) {
             switch(type) {
             case MSG_CLIENTROBOT:
+            {
+              // Forward to the correct server
               clientrobot.ParseFromArray(buffer, len);
-              cout << "Received client robot with ID #" << clientrobot.id() 
-                   << endl;              
+              net::EpollConnection *server = robots[clientrobot.id()].server;
+              cout << "Received client robot with ID #" << clientrobot.id()
+                   << endl;
+              server->queue.push(MSG_CLIENTROBOT, clientrobot);
+              server->set_writing(true);
               break;
+            }
+
+            case MSG_CLAIMTEAM:
+              // Forward to the clock
+              claimteam.ParseFromArray(buffer, len);
+              clockconn.queue.push(MSG_CLAIMTEAM, claimteam);
+              clockconn.set_writing(true);
+              break;
+
             default:
               cerr << "Unexpected readable socket from client!" << endl;
               break;
@@ -210,13 +203,40 @@ int main(int argc, char** argv)
 					break;
 				}
 				
-				case connection::REGION:
-				//region servers are sending serverRobot instructions
+				case net::connection::REGION:
         {
+          MessageType type;
+          size_t len;
+          const void *buffer;
+          if(c->reader.doRead(&type, &len, &buffer)) {
+            switch(type) {
+            case MSG_SERVERROBOT:
+            {
+              serverrobot.ParseFromArray(buffer, len);
+              // Forward to the correct client
+              net::EpollConnection *client = robots[serverrobot.id()].server;
+              cout << "Received server robot with ID #" << serverrobot.id()
+                   << endl;
+              client->queue.push(MSG_SERVERROBOT, serverrobot);
+              client->set_writing(true);
+              break;
+            }
+
+            case MSG_CLAIM:
+              // Update lookup table
+              claimrobot.ParseFromArray(buffer, len);
+              robots[claimrobot.id()].server = c;
+              break;
+
+            default:
+              cerr << "Unexpected readable socket from client!" << endl;
+              break;
+            }
+          }
 					break;
 				}
 				
-        case connection::LISTEN:
+        case net::connection::CLIENT_LISTEN:
 				//for client connections
         {
           int fd = accept(c->fd, NULL, NULL);
@@ -225,31 +245,21 @@ int main(int argc, char** argv)
           }
           net::set_blocking(fd, false);
 
-          connection *newconn = new connection(fd, connection::CLIENT);
+          ClientConnection *newconn = new ClientConnection(clientcount++, epoll, EPOLLIN, fd, net::connection::CLIENT);
           clients.push_back(newconn);
 
-          event.events = EPOLLIN;
-          event.data.ptr = newconn;
-          if(0 > epoll_ctl(epoll, EPOLL_CTL_ADD, fd, &event)) {
-            perror("Failed to add client connection to epoll");
-            return 1;
-          }
           break;
         }
         default:
-					close(c->fd);	//supposed to handle when clients disconnect
-          cerr << "Unexpected readable socket!, Did client disconnect?" << endl;
-          break;
+          cerr << "Unexpected readable socket!" << endl;
         }
       } else if(events[i].events & EPOLLOUT) {
 				//ready to write
         switch(c->type) {
-        case connection::CLIENT:
+        case net::connection::CLIENT:
         {
           if(c->queue.doWrite()) {
-            event.events = EPOLLIN;
-            event.data.ptr = c;
-            epoll_ctl(epoll, EPOLL_CTL_MOD, c->fd, &event);
+            c->set_writing(false);
           }
           break;
         }

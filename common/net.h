@@ -2,6 +2,7 @@
 #define _NET_H_
 
 #include <netinet/in.h>
+#include <sys/epoll.h>
 
 #include "messagequeue.h"
 #include "messagereader.h"
@@ -19,6 +20,7 @@ namespace net {
       REGION_LISTEN,
       CONTROLLER_LISTEN,
       PNGVIEWER_LISTEN,
+      CLIENT_LISTEN,
       CLOCK,
       CONTROLLER,
       REGION,
@@ -30,12 +32,22 @@ namespace net {
     MessageReader reader;
     MessageQueue queue;
 
-    connection(int fd_) :
-      type(UNSPECIFIED), fd(fd_), reader(fd_), queue(fd_) {
-    }
-    connection(int fd_, Type type_) :
-      type(type_), fd(fd_), reader(fd_), queue(fd_) {
-    }
+    connection(int fd_) : type(UNSPECIFIED), fd(fd_), reader(fd_), queue(fd_) {}
+    connection(int fd_, Type type_) : type(type_), fd(fd_), reader(fd_), queue(fd_) {}
+  };
+
+  class EpollConnection : public connection {
+  protected:
+    bool reading, writing;
+    int epoll;
+    struct epoll_event event;
+
+  public:
+    EpollConnection(int epoll, int flags_, int fd_);
+    EpollConnection(int epoll, int flags_, int fd_, Type type_);
+
+    void set_reading(bool state);
+    void set_writing(bool state);
   };
 }
 
