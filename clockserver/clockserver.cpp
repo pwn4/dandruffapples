@@ -16,6 +16,7 @@
 
 #include "../common/timestep.pb.h"
 #include "../common/worldinfo.pb.h"
+#include "../common/claimteam.pb.h"
 
 #include "../common/except.h"
 #include "../common/ports.h"
@@ -70,11 +71,14 @@ int main(int argc, char **argv) {
   }
   server_count = strtol(configuration["NUMSERVERS"].c_str(), NULL, 10);
 
+  bool *teamclaimed;
   {                             // Create initial world state
     unsigned teams = atoi(configuration["TEAMS"].c_str());
     unsigned robots_per_team = atoi(configuration["ROBOTS_PER_TEAM"].c_str());
     unsigned id = 0, region = 0;
+    teamclaimed = new bool[teams];
     for(unsigned team = 0; team < teams; ++team) {
+      teamclaimed[team] = false;
       for(unsigned robot = 0; robot < robots_per_team; ++robot) {
         RobotInfo *i = worldinfo.add_robot();
         i->set_id(id);
@@ -139,6 +143,7 @@ int main(int argc, char **argv) {
   RegionInfo regioninfo;
   TimestepDone tsdone;
   TimestepUpdate timestep;
+  ClaimTeam claimteam;
   unsigned long long step = 0;
   timestep.set_timestep(step++);
   time_t lastSecond = time(NULL);
@@ -167,7 +172,7 @@ int main(int argc, char **argv) {
           MessageType type;
           size_t len;
           const void *buffer;
-          try {          
+          try {
             if(c->reader.doRead(&type, &len, &buffer)) {
             switch(type) {
             case MSG_TIMESTEPDONE:
@@ -260,6 +265,45 @@ int main(int argc, char **argv) {
               event.data.ptr = *i;
               epoll_ctl(epoll, EPOLL_CTL_MOD, (*i)->fd, &event);
             }
+          }
+          break;
+        }
+
+        case RegionConnection::CONTROLLER:
+        {
+          MessageType type;
+          size_t len;
+          const void *buffer;
+          try {
+            if(c->reader.doRead(&type, &len, &buffer)) {
+              switch(type) {
+              case MSG_CLAIMTEAM:
+              {
+                claimteam.ParseFromArray(buffer, len);
+                unsigned id = claimteam.id();
+                if(teamclaimed[id]) {
+                  cout << "Team " << id << " was already claimed!" << endl;
+                  claimteam.set_granted(false);
+                } else {
+                  cout << "Team " << id << " has been claimed." << endl;
+                  claimteam.set_granted(true);
+                }
+                c->queue.push(MSG_CLAIMTEAM, claimteam);
+                break;
+              }
+            
+              default:
+                cerr << "Unexpected message from controller!" << endl;
+              }
+              
+            }
+          } catch(EOFError e) {
+            cerr << "Region server disconnected!  Shutting down." << endl;
+            return 1;
+          } catch(SystemError e) {
+            cerr << "Error reading from region server: "
+                 << e.what() << ".  Shutting down." << endl;
+            return 1;
           }
           break;
         }
@@ -395,6 +439,8 @@ int main(int argc, char **argv) {
   }
   close(sock);
   close(controllerSock);
+
+delete[] teamclaimed;
 
   return 0;
 }
