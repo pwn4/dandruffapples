@@ -44,7 +44,7 @@ int firstRobot; // offset, lets us control robots 600-1000, for example
 int firstTeam; // lowest teamid we control
 int numTeams; // this client computer controls this number of teams.
 int numRobots; // number of robots per team
-helper::connection* theController;
+net::connection* theController;
 int epoll;
 
 struct OwnRobot {
@@ -162,8 +162,8 @@ void run() {
     close(controllerfd);
     exit(1);
   }
-  helper::connection controllerconn(controllerfd, 
-                                    helper::connection::CONTROLLER);
+  net::connection controllerconn(controllerfd, 
+                                    net::connection::CONTROLLER);
   theController = &controllerconn; // Allows other thread to access. Fix later.
 
   //epoll setup
@@ -194,10 +194,10 @@ void run() {
       int eventcount = epoll_wait(epoll, events, MAX_EVENTS, -1);
 
       for(size_t i = 0; i < (unsigned)eventcount; i++) {
-        helper::connection *c = (helper::connection*)events[i].data.ptr;
+        net::connection *c = (net::connection*)events[i].data.ptr;
         if(events[i].events & EPOLLIN) {
           switch(c->type) {
-          case helper::connection::CONTROLLER:
+          case net::connection::CONTROLLER:
             // this should be the only type of messages
             MessageType type;
             size_t len;
@@ -241,7 +241,7 @@ void run() {
           }
         } else if(events[i].events & EPOLLOUT) {
           switch(c->type) {
-          case helper::connection::CONTROLLER:
+          case net::connection::CONTROLLER:
             if(c->queue.doWrite()) {
               cout << "Sending ClientRobot message at timestep " 
                    << currentTimestep << endl;
