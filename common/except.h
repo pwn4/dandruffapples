@@ -6,7 +6,6 @@
 #include <cstring>
 #include <string>
 
-// TODO: Store errno
 class SystemError : public std::runtime_error {
 protected:
   int _number;
@@ -22,6 +21,11 @@ public:
 class EOFError : public std::runtime_error {
 public:
   EOFError() : runtime_error("End of file") {}
+};
+
+class UninitializedMessageError : public std::runtime_error {
+public:
+  UninitializedMessageError() : runtime_error("Attempted to write an uninitialized message!") {}
 };
 
 #endif

@@ -3,7 +3,6 @@
 #include <cstdio>
 #include <cstring>
 #include <cerrno>
-#include <tr1/memory>
 
 #include <unistd.h>
 #include <sys/socket.h>
@@ -174,10 +173,9 @@ int main(int argc, char** argv)
               timestep.ParseFromArray(buffer, len);
 
               // Enqueue update to all clients
-              msg_ptr update(new TimestepUpdate(timestep));
               for(vector<connection*>::iterator i = clients.begin();
                   i != clients.end(); ++i) {
-                (*i)->queue.push(MSG_TIMESTEPUPDATE, update);
+                (*i)->queue.push(MSG_TIMESTEPUPDATE, timestep);
                 event.events = EPOLLIN | EPOLLOUT;
                 event.data.ptr = *i;
                 epoll_ctl(epoll, EPOLL_CTL_MOD, (*i)->fd, &event);

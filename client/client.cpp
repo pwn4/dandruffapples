@@ -125,9 +125,8 @@ void *artificialIntelligence(void *threadid) {
     clientRobot.set_id(id);
     clientRobot.set_velocity(velocity);
     clientRobot.set_angle(angle);
-    msg_ptr update(new ClientRobot(clientRobot));
 
-    theController->queue.push(MSG_CLIENTROBOT, update);
+    theController->queue.push(MSG_CLIENTROBOT, clientRobot);
     event.events = EPOLLIN | EPOLLOUT; 
     event.data.ptr = theController;
     epoll_ctl(epoll, EPOLL_CTL_MOD, theController->fd, &event);
@@ -219,9 +218,8 @@ void run() {
                   clientRobot.set_id(id);
                   clientRobot.set_velocity(velocity);
                   clientRobot.set_angle(angle);
-                  msg_ptr update(new ClientRobot(clientRobot));
 
-                  c->queue.push(MSG_CLIENTROBOT, update);
+                  c->queue.push(MSG_CLIENTROBOT, clientRobot);
                   event.events = EPOLLIN | EPOLLOUT; // just EPOLLOUT?
                   event.data.ptr = c;
                   epoll_ctl(epoll, EPOLL_CTL_MOD, c->fd, &event);
