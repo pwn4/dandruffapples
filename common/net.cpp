@@ -9,6 +9,7 @@
 #include <unistd.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <arpa/inet.h>
 #include <sys/select.h>
 #include <fcntl.h>
@@ -100,5 +101,12 @@ namespace net {
     return fd;
   }
 
-
+  int get_mss(int socket) {
+    int value;
+    socklen_t len = sizeof value;
+    if(0 > getsockopt(socket, IPPROTO_TCP, TCP_MAXSEG, &value, &len)) {
+      throw SystemError("Failed to determine maximum segment size on TCP socket");
+    }
+    return value;
+  }
 }

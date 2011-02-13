@@ -8,6 +8,7 @@ namespace net {
   int do_connect(const char *address, int port);
   int do_connect(struct in_addr address, int port);
   int do_listen(int port);
+  int get_mss(int socket);
 }
 
 #endif
