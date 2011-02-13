@@ -131,20 +131,17 @@ int main(int argc, char** argv)
           if(c->reader.doRead(&type, &len, &buffer)) {
             switch(type) {
             case MSG_WORLDINFO:
-            {
               worldinfo.ParseFromArray(buffer, len);
               cout << "Got world info." << endl;
               break;
-            }
+
             case MSG_REGIONINFO:
-            {
 							//should add connections to region servers
               regioninfo.ParseFromArray(buffer, len);
               cout << "Got region info." << endl;
               break;
-            }
+
             case MSG_TIMESTEPUPDATE:
-            {
               timestep.ParseFromArray(buffer, len);
 
               // Enqueue update to all clients
@@ -154,7 +151,26 @@ int main(int argc, char** argv)
                 (*i)->set_writing(true);
               }
               break;
+
+            case MSG_CLAIMTEAM:
+            {
+              claimteam.ParseFromArray(buffer, len);
+              unsigned client = claimteam.clientid();
+              if(claimteam.granted()) {
+                cout << "Client " << client << " granted team " << claimteam.id()
+                     << "." << endl;
+                // TODO: Send list of robots to client
+              } else {
+                cout << "Client " << client << "'s request for team "
+                     << claimteam.id() << " was rejected." << endl;
+                // Notify client of rejection
+                claimteam.clear_clientid();
+                clients[client]->queue.push(MSG_CLAIMTEAM, claimteam);
+                clients[client]->set_writing(true);
+              }
+              break;
             }
+
             default:
               cerr << "Unexpected readable socket!" << endl;
             }
