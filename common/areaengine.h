@@ -5,6 +5,7 @@
 #include <vector>
 #include <stdlib.h>
 #include <time.h>
+#include <set>
 
 using namespace std;
 
@@ -38,11 +39,13 @@ struct RobotObject{
   bool holdingPuck;
   Index arrayLocation;
   time_t lastCollision;
+  set<int> *lastSeen;
+  set<int> *nowSeen; //used for sight calculations
   
   RobotObject * nextRobot;
   
-  RobotObject(int newid, double newx, double newy, Index aLoc, int curStep) : id(newid), lastStep(curStep), x(newx), y(newy), vx(0), vy(0), arrayLocation(aLoc), lastCollision(time(NULL)), nextRobot(NULL) {}
-  RobotObject(int newid, double newx, double newy, double newvx, double newvy, Index aLoc, int curStep) : id(newid), lastStep(curStep), x(newx), y(newy), vx(newvx), vy(newvy), arrayLocation(aLoc), lastCollision(time(NULL)), nextRobot(NULL) {}
+  RobotObject(int newid, double newx, double newy, Index aLoc, int curStep) : id(newid), lastStep(curStep), x(newx), y(newy), vx(0), vy(0), arrayLocation(aLoc), lastCollision(time(NULL)), lastSeen(new set<int>), nowSeen(new set<int>), nextRobot(NULL) {}
+  RobotObject(int newid, double newx, double newy, double newvx, double newvy, Index aLoc, int curStep) : id(newid), lastStep(curStep), x(newx), y(newy), vx(newvx), vy(newvy), arrayLocation(aLoc), lastCollision(time(NULL)), lastSeen(new set<int>), nowSeen(new set<int>), nextRobot(NULL) {}
 };
 
 struct ArrayObject{
@@ -63,6 +66,7 @@ int elementSize;  //in pucks
 double viewDist, viewAng;
 int coolDown; //cooldown before being able to change velocities
 int** puckArray;
+double maxSpeed; //a bound on the speed of robots. Should be passed by the clock.
 ArrayObject** robotArray;
 vector<RobotObject*> robots;
   
@@ -73,6 +77,8 @@ public:
   
   void Step();
   
+  bool Sees(double x1, double y1, double x2, double y2);
+  
   bool Collides(double x1, double y1, double x2, double y2);
   
   void AddRobot(RobotObject * oldRobot);
@@ -81,7 +87,7 @@ public:
   
   bool RemoveRobot(int robotId, int xInd, int yInd, bool freeMem);
   
-  AreaEngine(int robotSize, int regionSize, int minElementSize, double viewDistance, double viewAngle);
+  AreaEngine(int robotSize, int regionSize, int minElementSize, double viewDistance, double viewAngle, double maxSpeed);
   ~AreaEngine();
 
 };
