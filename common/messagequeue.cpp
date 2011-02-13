@@ -91,7 +91,3 @@ bool MessageQueue::doWrite() {
   
   return false;
 }
-
-bool MessageQueue::writing() const {
-  return remaining();
-}

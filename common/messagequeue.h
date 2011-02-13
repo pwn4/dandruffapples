@@ -20,8 +20,6 @@ protected:
   size_t _bufsize, _appendpt, _writept;
   uint8_t *_buffer;
 
-  inline size_t remaining() const { return _appendpt - _writept; }
-
 public:
   MessageQueue(int fd, size_t prealloc = 256);
   MessageQueue(const MessageQueue&);
@@ -30,7 +28,8 @@ public:
   void push(MessageType typeTag, const google::protobuf::MessageLite &message);
 
   bool doWrite();
-  bool writing() const;
+  inline size_t remaining() const { return _appendpt - _writept; }
+  inline bool writing() const { return remaining(); }
 };
 
 #endif
