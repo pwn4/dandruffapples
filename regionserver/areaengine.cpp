@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <stdlib.h>
 #include <time.h>
+#include <sys/time.h>
 #include <math.h>
 
 using namespace std;
@@ -20,8 +21,8 @@ using namespace std;
 //for regionservers just to think of things in terms of
 //their own region
 
-Index AreaEngine::getRobotIndices(double x, double y){
-  return Index((int)(max(x, 0.0)/elementSize), (int)(max(y, 0.0)/elementSize));
+Index AreaEngine::getRobotIndices(double x, double y){    
+  return Index((int)(min(max(x, 0.0)/elementSize, (double)regionBounds-1.0)), (int)(min(max(y, 0.0)/elementSize, (double)regionBounds-1.0)));
 }
 
 //constructor
@@ -74,8 +75,8 @@ AreaEngine::~AreaEngine() {
 
 //this method checks if a robot at (x1,y1) sees a robot at (x2,y2)
 bool AreaEngine::Sees(double x1, double y1, double x2, double y2){
-return false;
-  if(sqrt((x1-x2)*(x1-x2) + (y1-y2)*(y1-y2)) <= robotRatio)
+//assumes robots can see from any part of themselves
+  if(sqrt((x1-x2)*(x1-x2) + (y1-y2)*(y1-y2)) <= (viewDist+robotRatio))
     return true;
   return false;
 }
@@ -96,6 +97,8 @@ void AreaEngine::Step(){
   set<int>::iterator setIterator;
   set<int> *nowSaw;
   set<int> *lastSaw;
+  timeval tim;
+
   
   //iterate through our region's robots and simulate them
   for(int i = 0; i < robots.size(); i++)
@@ -142,7 +145,7 @@ void AreaEngine::Step(){
         }
       }
   }
-
+    
   //move the robots, now that we know they won't collide
   for(int i = 0; i < robots.size(); i++)
   {
@@ -159,8 +162,9 @@ void AreaEngine::Step(){
       AreaEngine::RemoveRobot(curRobot->id, oldIndices.x, oldIndices.y, false);
     }
   }
-  
+
   //check for sight. Theoretically runs in O(n^2)+O(n)+O(m). In reality, runs O((viewdist*360degrees/robotsize)*robotsinregion)+O(2*(viewdist*360degrees/robotsize))
+  //THIS IS THE BOTTLENECK RIGHT NOW
   for(int i = 0; i < robots.size(); i++)
   {
   
@@ -179,21 +183,22 @@ void AreaEngine::Step(){
 
     for(int j = topLeft.x; j <= botRight.x; j++)
       for(int k = topLeft.y; k <= botRight.y; k++)
-      {
-        //we have an a[][] element again. Iterate through the robots in it
-        ArrayObject * element = &robotArray[j][k];
+        {
+          //we have an a[][] element again. Iterate through the robots in it
+          ArrayObject * element = &robotArray[j][k];
 
-        RobotObject *otherRobot = element->robots;
-        //check its elements
-        while(otherRobot != NULL) {       
-          if(curRobot->id != otherRobot->id && AreaEngine::Sees(curRobot->x, curRobot->y, otherRobot->x, otherRobot->y))
-            curRobot->nowSeen->insert(otherRobot->id);
+          RobotObject *otherRobot = element->robots;
+          //check its elements
+          while(otherRobot != NULL) {       
+            if(curRobot->id != otherRobot->id && AreaEngine::Sees(curRobot->x, curRobot->y, otherRobot->x, otherRobot->y))
+              curRobot->nowSeen->insert(otherRobot->id);
 
-          otherRobot = otherRobot->nextRobot;
+            otherRobot = otherRobot->nextRobot;
+          }
+          
         }
-        
-      }
     
+    //EQUALLY SLOW IN LOOP
     nowSaw = curRobot->nowSeen;
     lastSaw = curRobot->lastSeen;
     //we now take the differences between the two sets, and broadcast them
@@ -214,6 +219,14 @@ void AreaEngine::Step(){
       }  
     }
   }
+  
+    //debug for performance checking
+  /*if(curStep % 4 == 0)
+  {
+    gettimeofday(&tim, NULL);
+    cout << "4) " << tim.tv_usec << endl;
+  }*/
+    
 }
 
 //add a robot to the system. returns the robotobject that is created for convenience
