@@ -7,7 +7,6 @@ This program communications with clients, controllers, PNGviewers, other regions
 #include <cstdio>
 #include <cstring>
 #include <cerrno>
-#include <tr1/memory>
 
 #include <unistd.h>
 #include <sys/socket.h>
@@ -251,7 +250,7 @@ void run() {
   puckstack.set_x(1);
   puckstack.set_y(1);
 
-  tr1::shared_ptr<RegionRender> png(new RegionRender());
+  RegionRender png;
   Blob blob;
 
   //server variables
@@ -277,13 +276,12 @@ void run() {
 
   //send port listening info (IMPORTANT)
   //add listening ports
-  RegionInfo r;
-  r.set_address(0);
-  r.set_id(0);
-  r.set_regionport(regionPort);
-  r.set_renderport(pngviewerPort);
-  r.set_controllerport(controllerPort);
-  msg_ptr info(new RegionInfo(r));
+  RegionInfo info;
+  info.set_address(0);
+  info.set_id(0);
+  info.set_regionport(regionPort);
+  info.set_renderport(pngviewerPort);
+  info.set_controllerport(controllerPort);
   clockconn.queue.push(MSG_REGIONINFO, info);
   event.events = EPOLLOUT;
   event.data.ptr = &clockconn;
@@ -350,8 +348,8 @@ void run() {
               if(timestep.timestep() % 200 == 0) {
                 // Only generate an image for one in 200 timesteps
                 blob = handleWorldImage();
-                png->set_image(blob.data(), blob.length());
-                png->set_timestep(timestep.timestep());
+                png.set_image(blob.data(), blob.length());
+                png.set_timestep(timestep.timestep());
                 for(vector<helper::connection*>::iterator i = pngviewers.begin();
                     i != pngviewers.end(); ++i) {
                   (*i)->queue.push(MSG_REGIONRENDER, png);
@@ -381,8 +379,7 @@ void run() {
                }
 #endif
               //Respond with done message
-              msg_ptr update(new TimestepDone(tsdone));
-              c->queue.push(MSG_TIMESTEPDONE, update);
+              c->queue.push(MSG_TIMESTEPDONE, tsdone);
                 event.events = EPOLLIN | EPOLLOUT;
                 event.data.ptr = c;
                 epoll_ctl(epoll, EPOLL_CTL_MOD, c->fd, &event);

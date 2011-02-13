@@ -5,7 +5,7 @@
 #include <math.h>
 #include "robot.h"
 #include "home.h"
-#include "puckstack.h"
+#include "puck.h"
 
 #define VAR(V,init) __typeof(init) V=(init)
 #define FOR_EACH(I,C) for(VAR(I,(C).begin());I!=(C).end();I++)
@@ -31,7 +31,7 @@ public:
   // Robots, homes, and pucks
   static vector<Robot*> robots;
   static vector<Home*> homes;
-  static vector<PuckStack*> puckStacks;
+  static vector<Puck*> pucks;
   
   // Methods
 

@@ -4,7 +4,6 @@
 #include <cerrno>
 #include <iostream>
 #include <vector>
-#include <tr1/memory>
 #include <math.h>
 
 #include <unistd.h>
@@ -56,7 +55,7 @@ int main(int argc, char **argv) {
 	cout<<"Using config file: "<<configFileName<<endl;
 
   //loadConfigFile();
-  tr1::shared_ptr<WorldInfo> worldinfo(new WorldInfo());
+  WorldInfo worldinfo;
   conf configuration = parseconf(configFileName);
   if(configuration.find("NUMSERVERS") == configuration.end() ||
      configuration.find("TEAMS") == configuration.end() ||
@@ -72,7 +71,7 @@ int main(int argc, char **argv) {
     unsigned id = 0, region = 0;
     for(unsigned team = 0; team < teams; ++team) {
       for(unsigned robot = 0; robot < robots_per_team; ++robot) {
-        RobotInfo *i = worldinfo->add_robot();
+        RobotInfo *i = worldinfo.add_robot();
         i->set_id(id);
         i->set_region(region);
         i->set_team(team);
@@ -174,27 +173,22 @@ int main(int argc, char **argv) {
             }
             case MSG_REGIONINFO:
             {
-              RegionInfo *r = worldinfo->add_region();
-              r->ParseFromArray(buffer, len);
-              r->set_address(c->addr);
+              RegionInfo *region = worldinfo.add_region();
+              region->ParseFromArray(buffer, len);
+              region->set_address(c->addr);
 
-              tr1::shared_ptr<RegionInfo> cr(new RegionInfo(*r));
-              cr->clear_regionport();
-              cr->clear_renderport();
               for(vector<helper::connection*>::iterator i = controllers.begin();
                   i != controllers.end(); ++i) {
-                (*i)->queue.push(MSG_REGIONINFO, cr);
+                (*i)->queue.push(MSG_REGIONINFO, *region);
 
                 event.events = EPOLLOUT;
                 event.data.ptr = *i;
                 epoll_ctl(epoll, EPOLL_CTL_MOD, (*i)->fd, &event);
               }
-              tr1::shared_ptr<RegionInfo> pr(new RegionInfo(*r));
-              pr->clear_regionport();
-              pr->clear_controllerport();
+
               for(vector<helper::connection*>::iterator i = pngviewers.begin();
                   i != pngviewers.end(); ++i) {
-                (*i)->queue.push(MSG_REGIONINFO, pr);
+                (*i)->queue.push(MSG_REGIONINFO, *region);
             
                 event.events = EPOLLOUT;
                 event.data.ptr = *i;
@@ -245,11 +239,10 @@ int main(int argc, char **argv) {
             // All servers are ready, prepare to send next step
             ready = 0;
             timestep.set_timestep(step++);
-            msg_ptr update(new TimestepUpdate(timestep));
             // Send to regions
             for(vector<helper::connection*>::iterator i = regions.begin();
                 i != regions.end(); ++i) {
-              (*i)->queue.push(MSG_TIMESTEPUPDATE, update);
+              (*i)->queue.push(MSG_TIMESTEPUPDATE, timestep);
               event.events = EPOLLOUT;
               event.data.ptr = *i;
               epoll_ctl(epoll, EPOLL_CTL_MOD, (*i)->fd, &event);
@@ -257,7 +250,7 @@ int main(int argc, char **argv) {
             // Send to controllers
             for(vector<helper::connection*>::iterator i = controllers.begin();
                 i != controllers.end(); ++i) {
-              (*i)->queue.push(MSG_TIMESTEPUPDATE, update);
+              (*i)->queue.push(MSG_TIMESTEPUPDATE, timestep);
               event.events = EPOLLOUT;
               event.data.ptr = *i;
               epoll_ctl(epoll, EPOLL_CTL_MOD, (*i)->fd, &event);
@@ -336,11 +329,8 @@ int main(int argc, char **argv) {
           newconn->addr = ((struct sockaddr_in*)&addr)->sin_addr.s_addr;
           pngviewers.push_back(newconn);
 
-          for(size_t i = 0; i < (unsigned)worldinfo->region_size(); ++i) {
-            tr1::shared_ptr<RegionInfo> r(new RegionInfo(worldinfo->region(i)));
-            r->clear_regionport();
-            r->clear_controllerport();
-            newconn->queue.push(MSG_REGIONINFO, r);
+          for(size_t i = 0; i < (unsigned)worldinfo.region_size(); ++i) {
+            newconn->queue.push(MSG_REGIONINFO, worldinfo.region(i));
           }
 
           event.events = EPOLLOUT;

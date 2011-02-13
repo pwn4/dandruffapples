@@ -1,28 +1,35 @@
 #ifndef _MESSAGEQUEUE_H_
 #define _MESSAGEQUEUE_H_
 
-#include <queue>
-#include <utility>
-#include <tr1/memory>
+#include <stdexcept>
+
+#include <sys/types.h>
+#include <stdint.h>
+#include <cstdlib>
+#include <unistd.h>
+#include <cerrno>
+#include <arpa/inet.h>
 
 #include <google/protobuf/message_lite.h>
 
-#include "messagewriter.h"
-
-typedef std::tr1::shared_ptr<const google::protobuf::MessageLite> msg_ptr;
+#include "types.h"
 
 class MessageQueue {
 protected:
-  MessageWriter _writer;
-  std::queue<std::pair<MessageType, msg_ptr> > _waiting;
+  int _fd;
+  size_t _bufsize, _appendpt, _writept;
+  uint8_t *_buffer;
 
 public:
-  MessageQueue(int fd, size_t prealloc = 32);
+  MessageQueue(int fd, size_t prealloc = 256);
+  MessageQueue(const MessageQueue&);
+  ~MessageQueue();
 
-  void push(MessageType type, msg_ptr message);
+  void push(MessageType typeTag, const google::protobuf::MessageLite &message);
+
   bool doWrite();
-
-  bool empty() const;
+  inline size_t remaining() const { return _appendpt - _writept; }
+  inline bool writing() const { return remaining(); }
 };
 
 #endif
