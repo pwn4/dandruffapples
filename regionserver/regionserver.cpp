@@ -227,7 +227,7 @@ void run() {
   AreaEngine* regionarea = new AreaEngine(robotDiameter, regionSideLen, minElementSize, viewDistance, viewAngle, maxSpeed);
   //create robots for benchmarking!
   int numRobots = 0;
-  int wantRobots = 100;
+  int wantRobots = 1000;
   //regionarea->AddRobot(10, 0, 1, 0, 0, 0);
   //regionarea->AddRobot(12, 15.8, 1, 0, 0, 0);
   for(int i = robotDiameter; i < regionSideLen-(robotDiameter) && numRobots < wantRobots; i += 2*(robotDiameter))
