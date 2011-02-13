@@ -18,6 +18,7 @@
 #include "../common/clientrobot.pb.h"
 #include "../common/timestep.pb.h"
 #include "../common/worldinfo.pb.h"
+#include "../common/claimteam.pb.h"
 
 #include "../common/ports.h"
 #include "../common/messagereader.h"
@@ -90,31 +91,16 @@ int main(int argc, char** argv)
   int epoll = epoll_create(1000);
 
   // Add clock and client sockets to epoll
-  net::connection clockconn(clockfd, net::connection::CLOCK),
-    listenconn(listenfd, net::connection::CLIENT_LISTEN);
-  struct epoll_event event;
-  event.events = EPOLLIN;
-  event.data.ptr = &clockconn;
-  if(0 > epoll_ctl(epoll, EPOLL_CTL_ADD, clockfd, &event)) {
-    perror("Failed to add clock socket to epoll");
-    close(clockfd);
-    close(listenfd);
-    return 1;
-  }
-  event.data.ptr = &listenconn;
-  if(0 > epoll_ctl(epoll, EPOLL_CTL_ADD, listenfd, &event)) {
-    perror("Failed to add listen socket to epoll");
-    close(clockfd);
-    close(listenfd);
-    return 1;
-  }
+  net::EpollConnection clockconn(epoll, EPOLLIN, clockfd, net::connection::CLOCK),
+    listenconn(epoll, EPOLLIN, listenfd, net::connection::CLIENT_LISTEN);
 
   TimestepUpdate timestep;
   WorldInfo worldinfo;
   RegionInfo regioninfo;
   ClientRobot clientrobot;
+  ClaimTeam claimteam;
 //  MessageReader reader(clockfd);
-  vector<net::connection*> clients;
+  vector<net::EpollConnection*> clients;
 
   #define MAX_EVENTS 128
   struct epoll_event events[MAX_EVENTS];
@@ -126,7 +112,7 @@ int main(int argc, char** argv)
     }
 
     for(size_t i = 0; i < (unsigned)eventcount; ++i) {
-      net::connection *c = (net::connection*)events[i].data.ptr;
+      net::EpollConnection *c = (net::EpollConnection*)events[i].data.ptr;
       if(events[i].events & EPOLLIN) {
         switch(c->type) {
         case net::connection::CLOCK:
@@ -154,12 +140,10 @@ int main(int argc, char** argv)
               timestep.ParseFromArray(buffer, len);
 
               // Enqueue update to all clients
-              for(vector<net::connection*>::iterator i = clients.begin();
+              for(vector<net::EpollConnection*>::iterator i = clients.begin();
                   i != clients.end(); ++i) {
                 (*i)->queue.push(MSG_TIMESTEPUPDATE, timestep);
-                event.events = EPOLLIN | EPOLLOUT;
-                event.data.ptr = *i;
-                epoll_ctl(epoll, EPOLL_CTL_MOD, (*i)->fd, &event);
+                (*i)->set_writing(true);
               }
               break;
             }
@@ -171,7 +155,6 @@ int main(int argc, char** argv)
         }
         
 				case net::connection::CLIENT:
-				//client is sending clientRobot instructions
         {
           MessageType type;
           size_t len;
@@ -183,6 +166,13 @@ int main(int argc, char** argv)
               cout << "Received client robot with ID #" << clientrobot.id() 
                    << endl;              
               break;
+
+            case MSG_CLAIMTEAM:
+              claimteam.ParseFromArray(buffer, len);
+              clockconn.queue.push(MSG_CLAIMTEAM, claimteam);
+              clockconn.set_writing(true);
+              break;
+
             default:
               cerr << "Unexpected readable socket from client!" << endl;
               break;
@@ -206,15 +196,9 @@ int main(int argc, char** argv)
           }
           net::set_blocking(fd, false);
 
-          net::connection *newconn = new net::connection(fd, net::connection::CLIENT);
+          net::EpollConnection *newconn = new net::EpollConnection(epoll, EPOLLIN, fd, net::connection::CLIENT);
           clients.push_back(newconn);
 
-          event.events = EPOLLIN;
-          event.data.ptr = newconn;
-          if(0 > epoll_ctl(epoll, EPOLL_CTL_ADD, fd, &event)) {
-            perror("Failed to add client connection to epoll");
-            return 1;
-          }
           break;
         }
         default:
@@ -228,9 +212,7 @@ int main(int argc, char** argv)
         case net::connection::CLIENT:
         {
           if(c->queue.doWrite()) {
-            event.events = EPOLLIN;
-            event.data.ptr = c;
-            epoll_ctl(epoll, EPOLL_CTL_MOD, c->fd, &event);
+            c->set_writing(false);
           }
           break;
         }

@@ -109,4 +109,53 @@ namespace net {
     }
     return value;
   }
+
+  EpollConnection::EpollConnection(int epoll_, int flags_, int fd_) :
+    connection(fd_), reading(flags_ & EPOLLIN), writing(flags_ & EPOLLOUT), epoll(epoll_) {
+    event.events = flags_;
+    event.data.ptr = this;
+    if(0 > epoll_ctl(epoll, EPOLL_CTL_ADD, fd, &event)) {
+      throw SystemError("Failed to add connection to epoll");
+    }
+  }
+  EpollConnection::EpollConnection(int epoll_, int flags_, int fd_, Type type_) :
+    connection(fd_, type_), reading(flags_ & EPOLLIN), writing(flags_ & EPOLLOUT), epoll(epoll_) {
+    event.events = flags_;
+    event.data.ptr = this;
+    if(0 > epoll_ctl(epoll, EPOLL_CTL_ADD, fd, &event)) {
+      throw SystemError("Failed to add connection to epoll");
+    }
+  }
+
+  void EpollConnection::set_reading(bool state) {
+    if(reading == state) {
+      return;
+    }
+
+    if(state) {
+      event.events |= EPOLLIN;
+    } else {
+      event.events &= ~EPOLLIN;
+    }
+    
+    epoll_ctl(epoll, EPOLL_CTL_MOD, fd, &event);
+
+    reading = state;
+  }
+
+  void EpollConnection::set_writing(bool state) {
+    if(writing == state) {
+      return;
+    }
+
+    if(state) {
+      event.events |= EPOLLOUT;
+    } else {
+      event.events &= ~EPOLLOUT;
+    }
+      
+    epoll_ctl(epoll, EPOLL_CTL_MOD, fd, &event);
+      
+    writing = state;
+  }
 }

@@ -196,55 +196,11 @@ void run() {
   }
   
   // Add clock and client sockets to epoll
-  net::connection clockconn(clockfd, net::connection::CLOCK),
-    controllerconn(controllerfd, net::connection::CONTROLLER_LISTEN),
-    regionconn(regionfd, net::connection::REGION_LISTEN),
-    pngconn(pngfd, net::connection::PNGVIEWER_LISTEN);
+  net::EpollConnection clockconn(epoll, EPOLLIN, clockfd, net::connection::CLOCK),
+    controllerconn(epoll, EPOLLIN, controllerfd, net::connection::CONTROLLER_LISTEN),
+    regionconn(epoll, EPOLLIN, regionfd, net::connection::REGION_LISTEN),
+    pngconn(epoll, EPOLLIN, pngfd, net::connection::PNGVIEWER_LISTEN);
   
-  //epoll setup
-  struct epoll_event event;
-  event.events = EPOLLIN;
-  event.data.ptr = &clockconn;
-  if(0 > epoll_ctl(epoll, EPOLL_CTL_ADD, clockfd, &event)) {
-    perror("Failed to add controller socket to epoll");
-    close(controllerfd);
-    close(regionfd);
-    close(pngfd);
-    close(clockfd);
-    close(logfd);
-    exit(1);
-  }
-  event.data.ptr = &controllerconn;
-  if(0 > epoll_ctl(epoll, EPOLL_CTL_ADD, controllerfd, &event)) {
-    perror("Failed to add controller socket to epoll");
-    close(controllerfd);
-    close(regionfd);
-    close(pngfd);
-    close(clockfd);
-    close(logfd);
-    exit(1);
-  }
-  event.data.ptr = &regionconn;
-  if(0 > epoll_ctl(epoll, EPOLL_CTL_ADD, regionfd, &event)) {
-    perror("Failed to add region socket to epoll");
-    close(controllerfd);
-    close(regionfd);
-    close(pngfd);
-    close(clockfd);
-    close(logfd);
-    exit(1);
-  }
-  event.data.ptr = &pngconn;
-  if(0 > epoll_ctl(epoll, EPOLL_CTL_ADD, pngfd, &event)) {
-    perror("Failed to add pngviewer socket to epoll");
-    close(controllerfd);
-    close(regionfd);
-    close(pngfd);
-    close(clockfd);
-    close(logfd);
-    exit(1);
-  }
-
   //handle logging to file initializations
   PuckStack puckstack;
   ServerRobot serverrobot;
@@ -283,9 +239,9 @@ void run() {
   MessageReader reader(clockfd);
   int timeSteps = 0;
   time_t lastSecond = time(NULL);
-  vector<net::connection*> controllers;
-  vector<net::connection*> pngviewers;
-  vector<net::connection*> borderRegions;
+  vector<net::EpollConnection*> controllers;
+  vector<net::EpollConnection*> pngviewers;
+  vector<net::EpollConnection*> borderRegions;
 
   //send port listening info (IMPORTANT)
   //add listening ports
@@ -296,9 +252,7 @@ void run() {
   info.set_renderport(pngviewerPort);
   info.set_controllerport(controllerPort);
   clockconn.queue.push(MSG_REGIONINFO, info);
-  event.events = EPOLLOUT;
-  event.data.ptr = &clockconn;
-  epoll_ctl(epoll, EPOLL_CTL_MOD, clockconn.fd, &event);
+  clockconn.set_writing(true);
 
   #define MAX_EVENTS 128
   struct epoll_event events[MAX_EVENTS];
@@ -328,7 +282,7 @@ void run() {
 
     //check our events that were triggered
     for(size_t i = 0; i < (unsigned)eventcount; i++) {
-    	net::connection *c = (net::connection*)events[i].data.ptr;
+    	net::EpollConnection *c = (net::EpollConnection*)events[i].data.ptr;
       if(events[i].events & EPOLLIN) {
         switch(c->type) {
         case net::connection::CLOCK:
@@ -365,12 +319,10 @@ void run() {
                 blob = handleWorldImage();
                 png.set_image(blob.data(), blob.length());
                 png.set_timestep(timestep.timestep());
-                for(vector<net::connection*>::iterator i = pngviewers.begin();
+                for(vector<net::EpollConnection*>::iterator i = pngviewers.begin();
                     i != pngviewers.end(); ++i) {
                   (*i)->queue.push(MSG_REGIONRENDER, png);
-                  event.events = EPOLLOUT;
-                  event.data.ptr = *i;
-                  epoll_ctl(epoll, EPOLL_CTL_MOD, (*i)->fd, &event);
+                  (*i)->set_writing(true);
                 }
               }
 #ifdef ENABLE_LOGGING
@@ -395,9 +347,7 @@ void run() {
 #endif*/
               //Respond with done message
               c->queue.push(MSG_TIMESTEPDONE, tsdone);
-                event.events = EPOLLIN | EPOLLOUT;
-                event.data.ptr = c;
-                epoll_ctl(epoll, EPOLL_CTL_MOD, c->fd, &event);
+              c->set_writing(true);
               break;
             }
               default:
@@ -434,13 +384,11 @@ void run() {
             }
             net::set_blocking(fd, false);
 
-            net::connection *newconn = new net::connection(fd, net::connection::PNGVIEWER);
-            pngviewers.push_back(newconn);
-
-            event.events = EPOLLOUT;
-            event.data.ptr = newconn;
-            if(0 > epoll_ctl(epoll, EPOLL_CTL_ADD, fd, &event)) {
-              perror("Failed to add png viewer socket to epoll");
+            try {
+              net::EpollConnection *newconn = new net::EpollConnection(epoll, EPOLLOUT, fd, net::connection::PNGVIEWER);
+              pngviewers.push_back(newconn);
+            } catch(SystemError e) {
+              cerr << e.what() << endl;
               return;
             }
 
@@ -461,21 +409,13 @@ void run() {
         
           break;
         case net::connection::CLOCK:
+        case net::connection::PNGVIEWER:
           // Perform write
           if(c->queue.doWrite()) {
             // If the queue is empty, we don't care if this is writable
-            event.events = EPOLLIN;
-            event.data.ptr = c;
-            epoll_ctl(epoll, EPOLL_CTL_MOD, c->fd, &event);
+            c->set_writing(false);
           }
           break;
-        case net::connection::PNGVIEWER:
-            if(c->queue.doWrite()) {
-              event.events = 0;
-              event.data.ptr = c;
-              epoll_ctl(epoll, EPOLL_CTL_MOD, c->fd, &event);
-            }
-            break;
         default:
           cerr << "Unexpected writable socket!" << endl;
           break;

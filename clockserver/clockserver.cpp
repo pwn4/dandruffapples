@@ -29,10 +29,10 @@
 
 using namespace std;
 
-struct RegionConnection : public net::connection {
+struct RegionConnection : public net::EpollConnection {
 	in_addr_t addr;
 
-	RegionConnection(int fd, Type type) : net::connection(fd, type) {}
+	RegionConnection(int epoll, int flags, int fd, Type type) : net::EpollConnection(epoll, flags, fd, type) {}
 };
 
 //define variables
@@ -109,32 +109,9 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  struct epoll_event event;
-  RegionConnection listenconn(sock, RegionConnection::REGION_LISTEN),
-    controllerlistenconn(controllerSock, RegionConnection::CONTROLLER_LISTEN),
-    pnglistenconn(pngSock, RegionConnection::PNGVIEWER_LISTEN);
-  event.events = EPOLLIN;
-  event.data.ptr = &listenconn;
-  if(0 > epoll_ctl(epoll, EPOLL_CTL_ADD, sock, &event)) {
-    perror("Failed to add listen socket to epoll");
-    close(sock);
-    close(controllerSock);
-    return 1;
-  }
-  event.data.ptr = &controllerlistenconn;
-  if(0 > epoll_ctl(epoll, EPOLL_CTL_ADD, controllerSock, &event)) {
-    perror("Failed to add controller listen socket to epoll");
-    close(sock);
-    close(controllerSock);
-    return 1;
-  }
-  event.data.ptr = &pnglistenconn;
-  if(0 > epoll_ctl(epoll, EPOLL_CTL_ADD, pngSock, &event)) {
-    perror("Failed to add controller listen socket to epoll");
-    close(sock);
-    close(controllerSock);
-    return 1;
-  }
+  RegionConnection listenconn(epoll, EPOLLIN, sock, RegionConnection::REGION_LISTEN),
+    controllerlistenconn(epoll, EPOLLIN, controllerSock, RegionConnection::CONTROLLER_LISTEN),
+    pnglistenconn(epoll, EPOLLIN, pngSock, RegionConnection::PNGVIEWER_LISTEN);
   
   vector<RegionConnection*> regions, controllers, pngviewers;
   size_t maxevents = 1 + server_count;
@@ -190,26 +167,20 @@ int main(int argc, char **argv) {
               for(vector<RegionConnection*>::iterator i = controllers.begin();
                   i != controllers.end(); ++i) {
                 (*i)->queue.push(MSG_REGIONINFO, *region);
-
-                event.events = EPOLLOUT;
-                event.data.ptr = *i;
-                epoll_ctl(epoll, EPOLL_CTL_MOD, (*i)->fd, &event);
+                (*i)->set_writing(true);
               }
 
               for(vector<RegionConnection*>::iterator i = pngviewers.begin();
                   i != pngviewers.end(); ++i) {
                 (*i)->queue.push(MSG_REGIONINFO, *region);
-            
-                event.events = EPOLLOUT;
-                event.data.ptr = *i;
-                epoll_ctl(epoll, EPOLL_CTL_MOD, (*i)->fd, &event);
+                (*i)->set_writing(true);            
               }
               
               break;
             }
             
-              default:
-              cerr << "Unexpected readable socket message! Type:" << type << endl;
+            default:
+              cerr << "Unexpected message from region!" << endl;
             }
               
             }
@@ -253,17 +224,13 @@ int main(int argc, char **argv) {
             for(vector<RegionConnection*>::iterator i = regions.begin();
                 i != regions.end(); ++i) {
               (*i)->queue.push(MSG_TIMESTEPUPDATE, timestep);
-              event.events = EPOLLOUT;
-              event.data.ptr = *i;
-              epoll_ctl(epoll, EPOLL_CTL_MOD, (*i)->fd, &event);
+              (*i)->set_writing(true);
             }
             // Send to controllers
             for(vector<RegionConnection*>::iterator i = controllers.begin();
                 i != controllers.end(); ++i) {
               (*i)->queue.push(MSG_TIMESTEPUPDATE, timestep);
-              event.events = EPOLLOUT;
-              event.data.ptr = *i;
-              epoll_ctl(epoll, EPOLL_CTL_MOD, (*i)->fd, &event);
+              (*i)->set_writing(true);
             }
           }
           break;
@@ -319,16 +286,9 @@ int main(int argc, char **argv) {
           }
           net::set_blocking(fd, false);
 
-          RegionConnection *newconn = new RegionConnection(fd, RegionConnection::REGION);
+          RegionConnection *newconn = new RegionConnection(epoll, EPOLLIN, fd, RegionConnection::REGION);
           newconn->addr = ((struct sockaddr_in*)&addr)->sin_addr.s_addr;
           regions.push_back(newconn);
-
-          event.events = EPOLLIN;
-          event.data.ptr = newconn;
-          if(0 > epoll_ctl(epoll, EPOLL_CTL_ADD, fd, &event)) {
-            perror("Failed to add region server socket to epoll");
-            return 1;
-          }
 
           cout << "Got region server connection." << endl;
 
@@ -347,18 +307,11 @@ int main(int argc, char **argv) {
           }
           net::set_blocking(fd, false);
 
-          RegionConnection *newconn = new RegionConnection(fd, RegionConnection::CONTROLLER);
+          RegionConnection *newconn = new RegionConnection(epoll, EPOLLIN | EPOLLOUT, fd, RegionConnection::CONTROLLER);
           newconn->addr = ((struct sockaddr_in*)&addr)->sin_addr.s_addr;
           controllers.push_back(newconn);
           
           newconn->queue.push(MSG_WORLDINFO, worldinfo);
-
-          event.events = EPOLLOUT;
-          event.data.ptr = newconn;
-          if(0 > epoll_ctl(epoll, EPOLL_CTL_ADD, fd, &event)) {
-            perror("Failed to add controller socket to epoll");
-            return 1;
-          }
 
           cout << "Got controller connection." << endl;
           break;
@@ -374,19 +327,12 @@ int main(int argc, char **argv) {
           }
           net::set_blocking(fd, false);
 
-          RegionConnection *newconn = new RegionConnection(fd, RegionConnection::PNGVIEWER);
+          RegionConnection *newconn = new RegionConnection(epoll, EPOLLOUT, fd, RegionConnection::PNGVIEWER);
           newconn->addr = ((struct sockaddr_in*)&addr)->sin_addr.s_addr;
           pngviewers.push_back(newconn);
 
           for(size_t i = 0; i < (unsigned)worldinfo.region_size(); ++i) {
             newconn->queue.push(MSG_REGIONINFO, worldinfo.region(i));
-          }
-
-          event.events = EPOLLOUT;
-          event.data.ptr = newconn;
-          if(0 > epoll_ctl(epoll, EPOLL_CTL_ADD, fd, &event)) {
-            perror("Failed to add png viewer socket to epoll");
-            return 1;
           }
 
           cout << "Got png viewer connection." << endl;
@@ -401,19 +347,10 @@ int main(int argc, char **argv) {
         switch(c->type) {
         case RegionConnection::PNGVIEWER:
         case RegionConnection::CONTROLLER:
-          if(c->queue.doWrite()) {
-            // If the queue is empty, we don't care if this is writable
-            event.events = 0;
-            event.data.ptr = c;
-            epoll_ctl(epoll, EPOLL_CTL_MOD, c->fd, &event);
-          }
-          break;
         case RegionConnection::REGION:
           if(c->queue.doWrite()) {
-            // We're done writing for this server
-            event.events = EPOLLIN;
-            event.data.ptr = c;
-            epoll_ctl(epoll, EPOLL_CTL_MOD, c->fd, &event);
+            // If the queue is empty, we don't care if this is writable
+            c->set_writing(false);
           }
           break;
 
