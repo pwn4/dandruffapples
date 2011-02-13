@@ -25,7 +25,7 @@ Index AreaEngine::getRobotIndices(double x, double y){
 }
 
 //constructor
-AreaEngine::AreaEngine(int robotSize, int regionSize, int minElementSize, double viewDistance, double viewAngle) {
+AreaEngine::AreaEngine(int robotSize, int regionSize, int minElementSize, double viewDistance, double viewAngle, double maximumSpeed) {
   //format of constructor call:
   //robotDiameter:puckDiameter, regionSideLength:puckDiameter
   //min a[][] element size in terms of pucks
@@ -35,6 +35,7 @@ AreaEngine::AreaEngine(int robotSize, int regionSize, int minElementSize, double
   curStep = 0;
   viewDist = viewDistance;
   viewAng = viewAngle;
+  maxSpeed = maximumSpeed;
   
   //create our storage array with element size determined by our parameters
   //ensure regionSize can be split nicely
@@ -71,6 +72,14 @@ AreaEngine::~AreaEngine() {
   delete[] robotArray;
 }
 
+//this method checks if a robot at (x1,y1) sees a robot at (x2,y2)
+bool AreaEngine::Sees(double x1, double y1, double x2, double y2){
+return false;
+  if(sqrt((x1-x2)*(x1-x2) + (y1-y2)*(y1-y2)) <= robotRatio)
+    return true;
+  return false;
+}
+
 //this method checks if two robots at (x1,y1) and (x2,y2) are in collision
 bool AreaEngine::Collides(double x1, double y1, double x2, double y2){
   if(sqrt((x1-x2)*(x1-x2) + (y1-y2)*(y1-y2)) <= robotRatio)
@@ -81,58 +90,58 @@ bool AreaEngine::Collides(double x1, double y1, double x2, double y2){
 void AreaEngine::Step(){
   //O(n*c) for some nice, small constant. Can we improve this with a collision library? Let's benchmark and find out
   curStep++;
+  
+  //some worker variables
+  Index topLeft, botRight;
+  set<int>::iterator setIterator;
+  set<int> *nowSaw;
+  set<int> *lastSaw;
+  
   //iterate through our region's robots and simulate them
   for(int i = 0; i < robots.size(); i++)
   {
-    //only check if its behind in the step. This fixes the case where a robot was just pushed from a neighbor
-    //if(robots[i]->lastStep < curStep)
-    //{
-    //don't check this. addrobot should only be pushed at the end of a timestep.
-    
-      RobotObject * curRobot = robots[i];
-      
-      //this is the big one. This is the O(N^2) terror. Thankfully, in the worst case (current implementation)
-      //it runs (viewingdist*360degrees)/robotsize.
-      //So it's really not all that bad. Benchmarks! Will improve later, too.
-      
-      //collisions first - just check, and zero velocities if they would have collided
-      //calculate the bounds of the a[][] elements we need to check
-      Index topLeft = getRobotIndices(curRobot->x-robotRatio, curRobot->y-robotRatio);
-      Index botRight = getRobotIndices(curRobot->x+robotRatio, curRobot->y+robotRatio);
-
-      for(int j = topLeft.x; j <= botRight.x; j++)
-        for(int k = topLeft.y; k <= botRight.y; k++)
-        {
-          //we now have an a[][] element to check. Iterate through the robots in it
-          ArrayObject * element = &robotArray[j][k];
-
-          RobotObject *otherRobot = element->robots;
-          //check it if its first
-          while(otherRobot != NULL){         
-            if(curRobot->id != otherRobot->id && AreaEngine::Collides(curRobot->x+curRobot->vx, curRobot->y+curRobot->vy, otherRobot->x+otherRobot->vx, otherRobot->y+otherRobot->vy))
-            {
-              //they would have collided. Set their speeds to zero. Lock their speed by updating the current timestamp
-              curRobot->vx = 0;
-              curRobot->vy = 0;
-              otherRobot->vx = 0;
-              otherRobot->vy = 0;
-              
-              //comment out these two lines to prevent everything from stopping on collision
-              cout << "WORLDS COLLIDE! (Ie two robots have collided)" << endl;
-              //exit(1);
-              
-              //the lastCollision time_t variable is checked by setVelocity is called
-              curRobot->lastCollision = time(NULL);
-              otherRobot->lastCollision = curRobot->lastCollision;
-              
-            }
-            otherRobot = otherRobot->nextRobot;
-          }
-        }
-    //}
-  }
+    //NOTE: addrobot changes should only be taken in at the end of a timestep, AFTER simulation.
   
-  //here is where the sight code will go. LOL they're blind robots for now
+    RobotObject * curRobot = robots[i];
+    
+    //this is the big one. This is the O(N^2) terror. Thankfully, in the worst case (current implementation)
+    //it runs (viewingdist*360degrees)/robotsize.
+    //So it's really not all that bad. Benchmarks! Will improve later, too.
+    
+    //collisions first - just check, and zero velocities if they would have collided
+    //calculate the bounds of the a[][] elements we need to check
+    topLeft = getRobotIndices(curRobot->x-maxSpeed, curRobot->y-maxSpeed);
+    botRight = getRobotIndices(curRobot->x+maxSpeed, curRobot->y+maxSpeed);
+
+    for(int j = topLeft.x; j <= botRight.x; j++)
+      for(int k = topLeft.y; k <= botRight.y; k++)
+      {
+        //we now have an a[][] element to check. Iterate through the robots in it
+        ArrayObject * element = &robotArray[j][k];
+
+        RobotObject *otherRobot = element->robots;
+        //check'em
+        while(otherRobot != NULL){         
+          if(curRobot->id != otherRobot->id && AreaEngine::Collides(curRobot->x+curRobot->vx, curRobot->y+curRobot->vy, otherRobot->x+otherRobot->vx, otherRobot->y+otherRobot->vy))
+          {
+            //they would have collided. Set their speeds to zero. Lock their speed by updating the current timestamp
+            curRobot->vx = 0;
+            curRobot->vy = 0;
+            otherRobot->vx = 0;
+            otherRobot->vy = 0;
+            
+            //here we will send messages to these robots and those watching that they've stopped
+            //TODO:add this networking code
+            
+            //the lastCollision time_t variable is checked by setVelocity when it's called
+            curRobot->lastCollision = time(NULL);
+            otherRobot->lastCollision = curRobot->lastCollision;
+            
+          }
+          otherRobot = otherRobot->nextRobot;
+        }
+      }
+  }
 
   //move the robots, now that we know they won't collide
   for(int i = 0; i < robots.size(); i++)
@@ -146,10 +155,63 @@ void AreaEngine::Step(){
     if(curRobot->arrayLocation.x != oldIndices.x || curRobot->arrayLocation.y != oldIndices.y)
     {
       //the robot moved, so...
-      /*cout << "MOVING " << curRobot->id << " TO (" << curRobot->arrayLocation.x << ", " << 
-      curRobot->arrayLocation.y << ") FROM (" << oldIndices.x << ", " << oldIndices.y << ")" << endl;*/
       AreaEngine::AddRobot(curRobot);
       AreaEngine::RemoveRobot(curRobot->id, oldIndices.x, oldIndices.y, false);
+    }
+  }
+  
+  //check for sight. Theoretically runs in O(n^2)+O(n)+O(m). In reality, runs O((viewdist*360degrees/robotsize)*robotsinregion)+O(2*(viewdist*360degrees/robotsize))
+  for(int i = 0; i < robots.size(); i++)
+  {
+  
+    RobotObject * curRobot = robots[i];
+    
+    //swap the last and next sets, then clear the next
+    set<int> * tmpswap;
+    tmpswap = curRobot->lastSeen;
+    curRobot->lastSeen = curRobot->nowSeen;
+    curRobot->nowSeen = tmpswap;
+    curRobot->nowSeen->clear();
+    
+    //may make this better. don't need to check full 360 degrees if we only see a cone
+    topLeft = getRobotIndices(curRobot->x-viewDist, curRobot->y-viewDist);
+    botRight = getRobotIndices(curRobot->x+viewDist, curRobot->y+viewDist);
+
+    for(int j = topLeft.x; j <= botRight.x; j++)
+      for(int k = topLeft.y; k <= botRight.y; k++)
+      {
+        //we have an a[][] element again. Iterate through the robots in it
+        ArrayObject * element = &robotArray[j][k];
+
+        RobotObject *otherRobot = element->robots;
+        //check its elements
+        while(otherRobot != NULL) {       
+          if(curRobot->id != otherRobot->id && AreaEngine::Sees(curRobot->x, curRobot->y, otherRobot->x, otherRobot->y))
+            curRobot->nowSeen->insert(otherRobot->id);
+
+          otherRobot = otherRobot->nextRobot;
+        }
+        
+      }
+    
+    nowSaw = curRobot->nowSeen;
+    lastSaw = curRobot->lastSeen;
+    //we now take the differences between the two sets, and broadcast them
+    //first, that which we hadn't seen but now do
+    for(setIterator = nowSaw->begin(); setIterator != nowSaw->end(); setIterator++)
+    {
+      if(lastSaw->find(*setIterator) == lastSaw->end())
+      {
+        //TODO: add network code... send to curRobot that it now sees *setIterator
+      }  
+    }
+    //then, that which we did see, but now don't
+    for(setIterator = lastSaw->begin(); setIterator != lastSaw->end(); setIterator++)
+    {
+      if(nowSaw->find(*setIterator) == lastSaw->end())
+      {
+        //TODO: add network code... send to curRobot that it no longer sees *setIterator
+      }  
     }
   }
 }
