@@ -261,12 +261,24 @@ void run() {
   tsdone.set_done(true);
   WorldInfo worldinfo;
   RegionInfo regioninfo;
-  AreaEngine* regionarea = new AreaEngine(4, 2000, 16, 10, 360, 4);
-  //create two test robots who are destined for destruction with each other.
-  //as it is programmed right now, the engine throws an error on collision (for fun testing)
-  regionarea->AddRobot(10, 0, 1, 0.1, 0, 0);
-  regionarea->AddRobot(12, 15.8, 1, -0.1, 0, 0);
-    
+  //Region Area Variables (should be set by clock server)
+  int regionSideLen = 2000;
+  int robotDiameter = 4;
+  int minElementSize =  4;
+  double viewDistance = 20;
+  double viewAngle = 360;
+  double maxSpeed = 4;
+  AreaEngine* regionarea = new AreaEngine(robotDiameter, regionSideLen, minElementSize, viewDistance, viewAngle, maxSpeed);
+  //create robots for benchmarking!
+  int numRobots = 0;
+  int wantRobots = 100;
+  //regionarea->AddRobot(10, 0, 1, 0, 0, 0);
+  //regionarea->AddRobot(12, 15.8, 1, 0, 0, 0);
+  for(int i = robotDiameter; i < regionSideLen-(robotDiameter) && numRobots < wantRobots; i += 2*(robotDiameter))
+    for(int j = robotDiameter; j < regionSideLen-(robotDiameter) && numRobots < wantRobots; j += 2*(robotDiameter))
+        regionarea->AddRobot(numRobots++, i, j, 0, 0, 0);
+
+    cout << numRobots << " robots created." << endl;
   MessageWriter writer(clockfd);
   MessageReader reader(clockfd);
   int timeSteps = 0;
@@ -345,7 +357,9 @@ void run() {
 
               regionarea->Step();
               timeSteps++;  //Note: only use this for this temp stat taking. use regionarea->curStep for syncing
-
+              
+              
+/*
               if(timestep.timestep() % 200 == 0) {
                 // Only generate an image for one in 200 timesteps
                 blob = handleWorldImage();
@@ -378,7 +392,7 @@ void run() {
             	    complete = logWriter.doWrite();;
             	  }
                }
-#endif
+#endif*/
               //Respond with done message
               c->queue.push(MSG_TIMESTEPDONE, tsdone);
                 event.events = EPOLLIN | EPOLLOUT;
