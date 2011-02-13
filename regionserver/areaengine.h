@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include <set>
+#include <map>
 
 using namespace std;
 
@@ -39,13 +40,13 @@ struct RobotObject{
   bool holdingPuck;
   Index arrayLocation;
   time_t lastCollision;
-  set<int> *lastSeen;
-  set<int> *nowSeen; //used for sight calculations
+  map<int, bool> *lastSeen;
+  map<int, bool> *nowSeen; //used for sight calculations
   
   RobotObject * nextRobot;
   
-  RobotObject(int newid, double newx, double newy, Index aLoc, int curStep) : id(newid), lastStep(curStep), x(newx), y(newy), vx(0), vy(0), arrayLocation(aLoc), lastCollision(time(NULL)), lastSeen(new set<int>), nowSeen(new set<int>), nextRobot(NULL) {}
-  RobotObject(int newid, double newx, double newy, double newvx, double newvy, Index aLoc, int curStep) : id(newid), lastStep(curStep), x(newx), y(newy), vx(newvx), vy(newvy), arrayLocation(aLoc), lastCollision(time(NULL)), lastSeen(new set<int>), nowSeen(new set<int>), nextRobot(NULL) {}
+  RobotObject(int newid, double newx, double newy, Index aLoc, int curStep) : id(newid), lastStep(curStep), x(newx), y(newy), vx(0), vy(0), arrayLocation(aLoc), lastCollision(time(NULL)), lastSeen(new map<int, bool>), nowSeen(new map<int, bool>), nextRobot(NULL) {}
+  RobotObject(int newid, double newx, double newy, double newvx, double newvy, Index aLoc, int curStep) : id(newid), lastStep(curStep), x(newx), y(newy), vx(newvx), vy(newvy), arrayLocation(aLoc), lastCollision(time(NULL)), lastSeen(new map<int, bool>), nowSeen(new map<int, bool>), nextRobot(NULL) {}
 };
 
 struct ArrayObject{
