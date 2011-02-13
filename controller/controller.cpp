@@ -32,6 +32,14 @@
 
 using namespace std;
 
+
+class ClientConnection : public net::EpollConnection {
+public:
+	size_t id;
+
+	ClientConnection(int id_, int epoll, int flags, int fd, Type type) : net::EpollConnection(epoll, flags, fd, type), id(id_) {}
+};
+
 struct server_client{
 	int *server;
 	int *client;
@@ -75,6 +83,7 @@ void clientClaim(int rid, int *fd){
 
 int main(int argc, char** argv)
 {
+  size_t clientcount = 0;
   helper::Config config(argc, argv);
 	configFileName=(config.getArg("-c").length() == 0 ? "config" : config.getArg("-c").c_str());
 	loadConfigFile();
@@ -99,8 +108,7 @@ int main(int argc, char** argv)
   RegionInfo regioninfo;
   ClientRobot clientrobot;
   ClaimTeam claimteam;
-//  MessageReader reader(clockfd);
-  vector<net::EpollConnection*> clients;
+  vector<ClientConnection*> clients;
 
   #define MAX_EVENTS 128
   struct epoll_event events[MAX_EVENTS];
@@ -140,7 +148,7 @@ int main(int argc, char** argv)
               timestep.ParseFromArray(buffer, len);
 
               // Enqueue update to all clients
-              for(vector<net::EpollConnection*>::iterator i = clients.begin();
+              for(vector<ClientConnection*>::iterator i = clients.begin();
                   i != clients.end(); ++i) {
                 (*i)->queue.push(MSG_TIMESTEPUPDATE, timestep);
                 (*i)->set_writing(true);
@@ -196,15 +204,13 @@ int main(int argc, char** argv)
           }
           net::set_blocking(fd, false);
 
-          net::EpollConnection *newconn = new net::EpollConnection(epoll, EPOLLIN, fd, net::connection::CLIENT);
+          ClientConnection *newconn = new ClientConnection(clientcount++, epoll, EPOLLIN, fd, net::connection::CLIENT);
           clients.push_back(newconn);
 
           break;
         }
         default:
-					close(c->fd);	//supposed to handle when clients disconnect
-          cerr << "Unexpected readable socket!, Did client disconnect?" << endl;
-          break;
+          cerr << "Unexpected readable socket!" << endl;
         }
       } else if(events[i].events & EPOLLOUT) {
 				//ready to write
