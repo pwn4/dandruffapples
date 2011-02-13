@@ -127,9 +127,7 @@ void *artificialIntelligence(void *threadid) {
     clientRobot.set_angle(angle);
 
     theController->queue.push(MSG_CLIENTROBOT, clientRobot);
-    event.events = EPOLLIN | EPOLLOUT; 
-    event.data.ptr = theController;
-    epoll_ctl(epoll, EPOLL_CTL_MOD, theController->fd, &event);
+    theController->set_writing(true);
 
     sched_yield(); // Let the other thread read and write
     sleep(5); // delay this thread for 5 seconds
