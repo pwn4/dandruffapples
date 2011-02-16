@@ -117,30 +117,6 @@ char *parse_port(char *input) {
   }
 }
 
-Blob handleWorldImage()
-{
-	Blob blob;
-	Image regionPiece("320x320", "white");
-	regionPiece.magick("png");
-
-	int x,y;
-
-	for( int i=0;i<10;i++ )
-	{
-		x=1 + rand()%318;
-		y=1 + rand()%318;
-
-		//make the pixel more visible by drawing more pixels around it
-		regionPiece.pixelColor(x, y, Color("black"));
-		regionPiece.pixelColor(x+1, y, Color("black"));
-		regionPiece.pixelColor(x-1, y, Color("black"));
-		regionPiece.pixelColor(x, y+1, Color("black"));
-		regionPiece.pixelColor(x, y-1, Color("black"));
-	}
-	regionPiece.write(&blob);
-
-	return blob;
-}
 
 //the main function
 void run() {
@@ -230,9 +206,9 @@ void run() {
   int wantRobots = 1000;
   //regionarea->AddRobot(10, 0, 1, 0, 0, 0);
   //regionarea->AddRobot(12, 15.8, 1, 0, 0, 0);
-  for(int i = robotDiameter; i < regionSideLen-(robotDiameter) && numRobots < wantRobots; i += 10*(robotDiameter))
-    for(int j = robotDiameter; j < regionSideLen-(robotDiameter) && numRobots < wantRobots; j += 10*(robotDiameter))
-        regionarea->AddRobot(numRobots++, i, j, 0, 0, 0, "black");
+  for(int i = 3*robotDiameter; i < regionSideLen-3*(robotDiameter) && numRobots < wantRobots; i += 3*(robotDiameter))
+    for(int j = 3*robotDiameter; j < regionSideLen-3*(robotDiameter) && numRobots < wantRobots; j += 3*(robotDiameter))
+        regionarea->AddRobot(numRobots++, i, j, 0, 0, 0, (numRobots % 3 == 0 ? "red" : ((numRobots+1) % 3 == 0 ? "blue" : "green")));
 
     cout << numRobots << " robots created." << endl;
   MessageWriter writer(clockfd);
@@ -319,7 +295,7 @@ void run() {
 
               if(timestep.timestep() % 200 == 0) {
                 // Only generate an image for one in 200 timesteps
-                blob = handleWorldImage();
+                blob = regionarea->stepImage;
                 png.set_image(blob.data(), blob.length());
                 png.set_timestep(timestep.timestep());
                 for(vector<net::EpollConnection*>::iterator i = pngviewers.begin();
