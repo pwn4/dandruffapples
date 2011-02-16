@@ -154,11 +154,11 @@ int main(int argc, char** argv)
               } else {
                 cout << "Client " << client << "'s request for team "
                      << claimteam.id() << " was rejected." << endl;
-                // Notify client of rejection
-                claimteam.clear_clientid();
-                clients[client]->queue.push(MSG_CLAIMTEAM, claimteam);
-                clients[client]->set_writing(true);
               }
+              // Notify client of acceptance/rejection
+              claimteam.clear_clientid();
+              clients[client]->queue.push(MSG_CLAIMTEAM, claimteam);
+              clients[client]->set_writing(true);
               break;
             }
 
@@ -189,11 +189,16 @@ int main(int argc, char** argv)
             }
 
             case MSG_CLAIMTEAM:
+            {
+              bool foundMatch = false;
               // Forward to the clock
               claimteam.ParseFromArray(buffer, len);
+              claimteam.set_clientid(((ClientConnection*)c)->id);
+
               clockconn.queue.push(MSG_CLAIMTEAM, claimteam);
               clockconn.set_writing(true);
               break;
+            }
 
             default:
               cerr << "Unexpected readable socket from client!" << endl;
@@ -226,6 +231,8 @@ int main(int argc, char** argv)
               // Update lookup table
               claimrobot.ParseFromArray(buffer, len);
               robots[claimrobot.id()].server = c;
+              cout << "Do we get claims? Robot ID #" << claimrobot.id()
+                   << endl;
               break;
 
             default:
@@ -262,14 +269,19 @@ int main(int argc, char** argv)
 				//ready to write
         switch(c->type) {
         case net::connection::CLIENT:
-        {
           if(c->queue.doWrite()) {
             c->set_writing(false);
           }
           break;
-        }
+        case net::connection::CLOCK:
+          // Sending ClaimTeam messages
+          if(c->queue.doWrite()) {
+            c->set_writing(false);
+          }
+          break;
         default:
-          cerr << "Unexpected writable socket!" << endl;
+          cerr << "Unexpected writable socket of type " << c->type << "!" 
+               << endl;
           break;
         }
       }
