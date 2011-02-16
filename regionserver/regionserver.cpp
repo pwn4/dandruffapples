@@ -301,15 +301,7 @@ void run() {
             	unsigned char *surfaceData = cairo_image_surface_get_data(surface);
             	size_t surfaceLength = cairo_image_surface_get_height(surface) * cairo_format_stride_for_width(cairo_image_surface_get_format(surface), cairo_image_surface_get_width(surface));
 
-            	string tmp((char*)surfaceData, surfaceLength);
-            	cout<<"good"<<endl;
-                png.set_image((void*)&tmp, surfaceLength );
-                cout<<"STILL GOOD"<<endl;
-
-
-            	cairo_surface_t *image = cairo_image_surface_create_for_data((unsigned char*)tmp.c_str(), CAIRO_FORMAT_A8, 625, 625, cairo_format_stride_for_width(CAIRO_FORMAT_A8, 625) );
-            	cairo_surface_write_to_png(image, "/tmp/region_image2.png");
-
+                png.set_image((void*)surfaceData, surfaceLength );
                 png.set_timestep(timestep.timestep());
                 for(vector<net::EpollConnection*>::iterator i = pngviewers.begin();
                     i != pngviewers.end(); ++i) {

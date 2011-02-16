@@ -104,7 +104,7 @@ gboolean io_regionmessage(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 	case MSG_REGIONRENDER: {
 		RegionRender render;
 		render.ParseFromArray(buffer, len);
-		cout<<"length of image is: "<<render.image().length()<<endl;
+
 #ifdef DEBUG
 		debug << "Received MSG_REGIONRENDER update and the timestep is # "
 				<< render.timestep() << endl;
