@@ -185,12 +185,12 @@ void AreaEngine::Step(bool generateImage){
       curRobot->x += curRobot->vx;
       curRobot->y += curRobot->vy;
       //repaint the robot
-      drawX = (curRobot->x / (regionRatio))*625;
-      drawY = (curRobot->y / (regionRatio))*625;
+      drawX = (curRobot->x-(regionRatio/regionBounds) / (regionRatio))*625;
+      drawY = (curRobot->y-(regionRatio/regionBounds) / (regionRatio))*625;
       //set the color
       cairo_set_source_rgb(stepImageDrawer, .1, .1, .1);
       //don't draw the overlaps
-      if(drawX >= regionRatio/regionBounds && drawX < 625 && drawY >= regionRatio/regionBounds && drawY < 625)
+      if(drawX >= 0 && drawX < 625 && drawY >= 0 && drawY < 625)
       {
         cairo_move_to (stepImageDrawer, drawX, drawY);
         cairo_line_to (stepImageDrawer, drawX, drawY);
@@ -218,9 +218,14 @@ void AreaEngine::Step(bool generateImage){
       curRobot->arrayLocation = getRobotIndices(curRobot->x, curRobot->y);
       if(curRobot->arrayLocation.x != oldIndices.x || curRobot->arrayLocation.y != oldIndices.y)
       {
-        //the robot moved, so...
-        AreaEngine::AddRobot(curRobot);
-        AreaEngine::RemoveRobot(curRobot->id, oldIndices.x, oldIndices.y, false);
+        //the robot moved, so...if we no longer track it
+        if(curRobot->x < 0 || curRobot->y < 0 || curRobot->x > regionRatio+2*(regionRatio/regionBounds) || curRobot->y > regionRatio+2*(regionRatio/regionBounds))
+        {
+          AreaEngine::RemoveRobot(curRobot->id, oldIndices.x, oldIndices.y, true);
+        }else{
+          AreaEngine::AddRobot(curRobot);
+          AreaEngine::RemoveRobot(curRobot->id, oldIndices.x, oldIndices.y, false);
+        }
       }
     }
   }
