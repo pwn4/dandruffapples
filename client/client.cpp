@@ -55,9 +55,16 @@ struct OwnRobot {
   float angle;
   bool hasPuck;
   bool hasCollided;  
+
+  OwnRobot() : x(0.0), y(0.0), velocity(0.0), angle(0.0), hasPuck(false),
+               hasCollided(false) {}
 };
 
-OwnRobot* ownRobots; 
+struct Team {
+  OwnRobot** ownRobots;
+};
+
+Team** teams;
 
 
 //Config variables
@@ -114,21 +121,22 @@ void *artificialIntelligence(void *threadid) {
 
   struct epoll_event event; 
   ClientRobot clientRobot;
-  int id = 1337;
   float velocity = 0.1;
   float angle = 3.0;
 
 
-  // Make robot #1337 do something every 5 seconds 
   while (true) {
-    cout << "AI thread creating ClientRobot message at timestep "
-         << currentTimestep << endl; 
-    clientRobot.set_id(id);
-    clientRobot.set_velocity(velocity);
-    clientRobot.set_angle(angle);
+    // TODO: Change the base team to equal firstRobot
+    for (int i = 0; i < numTeams * numRobots; i++) {
+      cout << "AI thread moving robot #" << i << " at timestep "
+           << currentTimestep << endl; 
+      clientRobot.set_id(i);
+      clientRobot.set_velocity(velocity);
+      clientRobot.set_angle(angle);
 
-    theController->queue.push(MSG_CLIENTROBOT, clientRobot);
-    theController->set_writing(true);
+      theController->queue.push(MSG_CLIENTROBOT, clientRobot);
+      theController->set_writing(true);
+    }
 
     sched_yield(); // Let the other thread read and write
     sleep(5); // delay this thread for 5 seconds
@@ -219,26 +227,22 @@ void run() {
                 cout << "Got worldinfo! Calculated " << numTeams 
                      << " teams with " << numRobots << " robots each.\n";
 
+                // Assign teams
+                teams = new Team*[numTeams];
+                for (int i = 0; i < numTeams; i++) {
+                  teams[i]->ownRobots = new OwnRobot*[numRobots];
+                  for (int j = 0; j < numRobots; j++) {
+                    // We don't have any initial robot data, yet.
+                    teams[i]->ownRobots[j] = new OwnRobot();
+                  }
+                }
+
                 break;
               }
               case MSG_TIMESTEPUPDATE:
                 timestep.ParseFromArray(buffer, len);
                 currentTimestep = timestep.timestep();
 
-                if (currentTimestep % 10000 == 0) {
-                  cout << "Generating ClientRobot message at timestep " 
-                       << currentTimestep << endl;
-                  // Test something every 10000 timesteps
-                  int id = 0;
-                  float velocity = 0.1;
-                  float angle = 3.0;
-                  clientRobot.set_id(id);
-                  clientRobot.set_velocity(velocity);
-                  clientRobot.set_angle(angle);
-
-                  c->queue.push(MSG_CLIENTROBOT, clientRobot);
-                  c->set_writing(true);
-                }
                 break;
               case MSG_SERVERROBOT:
                 cout << "Received ServerRobot update!" << endl;
