@@ -55,9 +55,6 @@ struct regionConnection: net::connection {
 };
 
 //variable declarations
-MessageType type;
-size_t len;
-const void *buffer;
 ofstream debug;
 vector<regionConnection*> regions;
 vector<GtkDrawingArea*> pngDrawingArea;
@@ -78,51 +75,24 @@ void loadConfigFile(const char *configFileName, char* clockip) {
 	strcpy(clockip, configuration["CLOCKIP"].c_str());
 }
 
-cairo_status_t reader(void *blob, unsigned char *data, unsigned int length)
- {
-	const void* blobData=((Blob*)blob)->data();
-	data= (unsigned char*)blobData;
-
-    return CAIRO_STATUS_SUCCESS;
- }
 
 
 //display the png that we received from a region server in its pngDrawingArea space
 void displayPng(int serverNum, RegionRender render) {
-	Blob blob((void*) render.image().c_str(), render.image().length());
-	Image blobImage;
-	blobImage.read(blob);
-	Pixels blobDots(blobImage);
-	
-  PixelPacket *pixel_cache = blobImage.getPixels(0,0,blobImage.columns(),blobImage.rows());
-
-  PixelPacket *pixel;
-  //iterate through the pixels
-  for(ssize_t row = 0; row < blobImage.rows(); row++)
-    for(ssize_t column = 0; column < blobImage.columns(); column++)
-    {
-      pixel = pixel_cache+row*blobImage.columns()+column;
-      
-      //NOTE: color values range from 0 to 65535 (not 255). all values 65535=white.
-      //if(pixel->red != 65535 || pixel->green != 65535 || pixel->blue != 65535)
-      //  printf("%d %d %d\n", pixel->red, pixel->green, pixel->blue);
-    }
-	
-	//cairo code to be integrated?
-  /*
 	cairo_t *cr = gdk_cairo_create(pngDrawingArea.at(serverNum)->widget.window);
 
-	cairo_surface_t *image = cairo_image_surface_create_from_png_stream(reader, &blob);
+	//cairo_set_source_surface(cr, image, 0, 0);
+	//cairo_paint(cr);
 
-	cairo_set_source_surface(cr, image, 10, 10);
-	cairo_paint(cr);
-
-	cairo_destroy(cr);*/
+	//cairo_destroy(cr);
 }
 
 //handler for region received messages
 gboolean io_regionmessage(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 	g_type_init();
+	MessageType type;
+	size_t len;
+	const void *buffer;
 
 	int serverNum=0;
 	//get the region number that we are receiving a PNG from
@@ -158,6 +128,10 @@ gboolean io_regionmessage(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 //handler for clock received messages
 gboolean io_clockmessage(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 	g_type_init();
+	MessageType type;
+	size_t len;
+	const void *buffer;
+
 	MessageReader *clockReader = (MessageReader*) data;
 
 	for (bool complete = false; !complete;)
