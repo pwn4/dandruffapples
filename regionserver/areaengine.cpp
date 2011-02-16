@@ -209,7 +209,7 @@ void AreaEngine::Step(){
               if(nowSaw->find(otherRobot->id) != nowSaw->end())
               {
                 nowSaw->erase(otherRobot->id);
-                //TODO: add network code... send to curRobot that it now sees *setIterator
+                //TODO: add network code... send to curRobot that it no longer sees *setIterator
               }
             }
 
