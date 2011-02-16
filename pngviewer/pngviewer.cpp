@@ -36,7 +36,7 @@
 #include "../common/messagewriter.h"
 
 #include "../common/helper.h"
-#include "../common/imageformat.h"
+#include "../common/imageconstants.h"
 #include <gtk/gtk.h>
 #include <cairo.h>
 
@@ -212,6 +212,7 @@ void on_Properties_toggled(GtkWidget *widget, gpointer window) {
 	}
 }
 
+//initializations for the things that will be drawn
 void drawer(int argc, char* argv[], int clockfd) {
 	gtk_init(&argc, &argv);
 	g_type_init();
@@ -227,10 +228,23 @@ void drawer(int argc, char* argv[], int clockfd) {
 	GtkWidget *window = GTK_WIDGET(gtk_builder_get_object( builder, "window" ));
 	GtkToggleToolButton	*navigation =
 					GTK_TOGGLE_TOOL_BUTTON(gtk_builder_get_object( builder, "Navigation" ));
+	GtkWidget *pngHbox = GTK_WIDGET(gtk_builder_get_object( builder, "pngHbox" ));
 
-	//todo: this is only hardcoded for 2. Must work for 'n' in the future.
-	pngDrawingArea.push_back(GTK_DRAWING_AREA(gtk_builder_get_object( builder, "pngDraw1" )));
-	pngDrawingArea.push_back(GTK_DRAWING_AREA(gtk_builder_get_object( builder, "pngDraw2" )));
+	//change the color of the window's background to black
+	GdkColor color;
+	color.red = 0;
+	color.green = 0;
+	color.blue = 0;
+	gtk_widget_modify_bg(GTK_WIDGET(window), GTK_STATE_NORMAL, &color);
+
+
+	//create a PNGVIEWER_MAX_VIEWS GtkDrawingAreas
+	for(int i=0; i<PNGVIEWER_MAX_VIEWS; i++)
+	{
+		GtkDrawingArea* area = GTK_DRAWING_AREA(gtk_drawing_area_new());
+		gtk_box_pack_start (GTK_BOX(pngHbox), GTK_WIDGET(area), true, true, 0);
+		pngDrawingArea.push_back(GTK_DRAWING_AREA(area));
+	}
 
 	MessageReader clockReader(clockfd);
 

@@ -1,6 +1,6 @@
 #include "areaengine.h"
 #include "../common/except.h"
-#include "../common/imageformat.h"
+#include "../common/imageconstants.h"
 #include <algorithm>
 #include <iostream>
 #include <limits.h>
