@@ -230,8 +230,8 @@ void run() {
   int wantRobots = 1000;
   //regionarea->AddRobot(10, 0, 1, 0, 0, 0);
   //regionarea->AddRobot(12, 15.8, 1, 0, 0, 0);
-  for(int i = robotDiameter; i < regionSideLen-(robotDiameter) && numRobots < wantRobots; i += 2*(robotDiameter))
-    for(int j = robotDiameter; j < regionSideLen-(robotDiameter) && numRobots < wantRobots; j += 2*(robotDiameter))
+  for(int i = robotDiameter; i < regionSideLen-(robotDiameter) && numRobots < wantRobots; i += 10*(robotDiameter))
+    for(int j = robotDiameter; j < regionSideLen-(robotDiameter) && numRobots < wantRobots; j += 10*(robotDiameter))
         regionarea->AddRobot(numRobots++, i, j, 0, 0, 0);
 
     cout << numRobots << " robots created." << endl;
@@ -313,7 +313,7 @@ void run() {
               timeSteps++;  //Note: only use this for this temp stat taking. use regionarea->curStep for syncing
               
               
-/*
+
               if(timestep.timestep() % 200 == 0) {
                 // Only generate an image for one in 200 timesteps
                 blob = handleWorldImage();
@@ -344,7 +344,7 @@ void run() {
             	    complete = logWriter.doWrite();;
             	  }
                }
-#endif*/
+#endif
               //Respond with done message
               c->queue.push(MSG_TIMESTEPDONE, tsdone);
               c->set_writing(true);
