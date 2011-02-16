@@ -8,6 +8,7 @@
 #include <time.h>
 #include <sys/time.h>
 #include <math.h>
+#include <Magick++.h>
 
 using namespace std;
 
@@ -100,7 +101,7 @@ bool AreaEngine::Collides(double x1, double y1, double x2, double y2){
   return false;
 }
 
-void AreaEngine::Step(){
+void AreaEngine::Step(bool generateImage){
   //O(n*c) for some nice, small constant. Can we improve this with a collision library? Let's benchmark and find out
   curStep++;
   
@@ -108,11 +109,9 @@ void AreaEngine::Step(){
   Index topLeft, botRight;
   map<int, bool>::iterator setIterator;
   map<int, bool> *nowSaw;
-  timeval tim;
-
   
   //iterate through our region's robots and simulate them
-  for(int i = 0; i < robots.size(); i++)
+  for(size_t i = 0; i < robots.size(); i++)
   {
     //NOTE: addrobot changes should only be taken in at the end of a timestep, AFTER simulation.
   
@@ -156,27 +155,54 @@ void AreaEngine::Step(){
         }
       }
   }
-    
-  //move the robots, now that we know they won't collide
-  for(int i = 0; i < robots.size(); i++)
-  {
-    RobotObject * curRobot = robots[i];
-    curRobot->x += curRobot->vx;
-    curRobot->y += curRobot->vy;
-    //check if the robot moves through a[][]
-    Index oldIndices = curRobot->arrayLocation;
-    curRobot->arrayLocation = getRobotIndices(curRobot->x, curRobot->y);
-    if(curRobot->arrayLocation.x != oldIndices.x || curRobot->arrayLocation.y != oldIndices.y)
+  
+  if(generateImage){
+    //clear the blob
+	  Image newPNG("625x625", "white");
+	  newPNG.magick("png8");
+	  
+	  //move the robots, now that we know they won't collide
+    for(size_t i = 0; i < robots.size(); i++)
     {
-      //the robot moved, so...
-      AreaEngine::AddRobot(curRobot);
-      AreaEngine::RemoveRobot(curRobot->id, oldIndices.x, oldIndices.y, false);
+      RobotObject * curRobot = robots[i];
+      curRobot->x += curRobot->vx;
+      curRobot->y += curRobot->vy;
+      //repaint the robot
+      newPNG.pixelColor(curRobot->x, curRobot->y, curRobot->robotColor);
+      //check if the robot moves through a[][]
+      Index oldIndices = curRobot->arrayLocation;
+      curRobot->arrayLocation = getRobotIndices(curRobot->x, curRobot->y);
+      if(curRobot->arrayLocation.x != oldIndices.x || curRobot->arrayLocation.y != oldIndices.y)
+      {
+        //the robot moved, so...
+        AreaEngine::AddRobot(curRobot);
+        AreaEngine::RemoveRobot(curRobot->id, oldIndices.x, oldIndices.y, false);
+      }
+    }
+    //draw to the blob
+    newPNG.write(&stepImage);
+  }else{
+    //move the robots, now that we know they won't collide
+    for(size_t i = 0; i < robots.size(); i++)
+    {
+      RobotObject * curRobot = robots[i];
+      curRobot->x += curRobot->vx;
+      curRobot->y += curRobot->vy;
+      //check if the robot moves through a[][]
+      Index oldIndices = curRobot->arrayLocation;
+      curRobot->arrayLocation = getRobotIndices(curRobot->x, curRobot->y);
+      if(curRobot->arrayLocation.x != oldIndices.x || curRobot->arrayLocation.y != oldIndices.y)
+      {
+        //the robot moved, so...
+        AreaEngine::AddRobot(curRobot);
+        AreaEngine::RemoveRobot(curRobot->id, oldIndices.x, oldIndices.y, false);
+      }
     }
   }
   
   //check for sight. Theoretically runs in O(n^2)+O(n)+O(m). In reality, runs O((viewdist*360degrees/robotsize)*robotsinregion)+O(2*(viewdist*360degrees/robotsize))
   //THIS IS THE BOTTLENECK RIGHT NOW
-  for(int i = 0; i < robots.size(); i++)
+  for(size_t i = 0; i < robots.size(); i++)
   {
   
     RobotObject * curRobot = robots[i];
@@ -238,14 +264,10 @@ void AreaEngine::AddRobot(RobotObject * oldRobot){
 
 }
 
-RobotObject* AreaEngine::AddRobot(int robotId, double newx, double newy, int atStep){
-  return AreaEngine::AddRobot(robotId, newx, newy, 0, 0, atStep);
-}
-
-RobotObject* AreaEngine::AddRobot(int robotId, double newx, double newy, double newvx, double newvy, int atStep){
+RobotObject* AreaEngine::AddRobot(int robotId, double newx, double newy, double newvx, double newvy, int atStep, string newColor){
   //O(1) insertion
   Index robotIndices = getRobotIndices(newx, newy);
-  RobotObject* newRobot = new RobotObject(robotId, newx, newy, newvx, newvy, robotIndices, atStep);
+  RobotObject* newRobot = new RobotObject(robotId, newx, newy, newvx, newvy, robotIndices, atStep, newColor);
 
   //add the robot to our robots vector (used for timestepping)
   robots.push_back(newRobot);
