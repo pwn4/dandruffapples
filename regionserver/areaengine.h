@@ -7,8 +7,10 @@
 #include <time.h>
 #include <map>
 #include <Magick++.h>
+#include <string>
 
 using namespace std;
+using namespace Magick;
 
 #define TOP_LEFT 0
 #define TOP 1
@@ -41,12 +43,12 @@ struct RobotObject{
   Index arrayLocation;
   time_t lastCollision;
   map<int, bool> *lastSeen;
-  map<int, bool> *nowSeen; //used for sight calculations
+  string robotColor;
   
   RobotObject * nextRobot;
   
-  RobotObject(int newid, double newx, double newy, Index aLoc, int curStep) : id(newid), lastStep(curStep), x(newx), y(newy), vx(0), vy(0), arrayLocation(aLoc), lastCollision(time(NULL)), lastSeen(new map<int, bool>), nowSeen(new map<int, bool>), nextRobot(NULL) {}
-  RobotObject(int newid, double newx, double newy, double newvx, double newvy, Index aLoc, int curStep) : id(newid), lastStep(curStep), x(newx), y(newy), vx(newvx), vy(newvy), arrayLocation(aLoc), lastCollision(time(NULL)), lastSeen(new map<int, bool>), nowSeen(new map<int, bool>), nextRobot(NULL) {}
+  RobotObject(int newid, double newx, double newy, Index aLoc, int curStep, string color) : id(newid), lastStep(curStep), x(newx), y(newy), vx(0), vy(0), arrayLocation(aLoc), lastCollision(time(NULL)), lastSeen(new map<int, bool>), robotColor(color), nextRobot(NULL) {}
+  RobotObject(int newid, double newx, double newy, double newvx, double newvy, Index aLoc, int curStep, string color) : id(newid), lastStep(curStep), x(newx), y(newy), vx(newvx), vy(newvy), arrayLocation(aLoc), lastCollision(time(NULL)), lastSeen(new map<int, bool>), robotColor(color), nextRobot(NULL) {}
 };
 
 struct ArrayObject{
@@ -70,22 +72,20 @@ int** puckArray;
 double maxSpeed; //a bound on the speed of robots. Should be passed by the clock.
 ArrayObject** robotArray;
 vector<RobotObject*> robots;
-Blob stepImage;
   
 public:
+  Blob stepImage; //contains the image of the last step called with generateImage=true
   int curStep;
-  
   Index getRobotIndices(double x, double y);
   
-  void Step();
+  void Step(bool generateImage);
   
   bool Sees(double x1, double y1, double x2, double y2);
   
   bool Collides(double x1, double y1, double x2, double y2);
   
   void AddRobot(RobotObject * oldRobot);
-  RobotObject* AddRobot(int robotId, double newx, double newy, int atStep);
-  RobotObject* AddRobot(int robotId, double newx, double newy, double newvx, double newvy, int atStep);
+  RobotObject* AddRobot(int robotId, double newx, double newy, double newvx, double newvy, int atStep, string newColor);
   
   bool RemoveRobot(int robotId, int xInd, int yInd, bool freeMem);
   
