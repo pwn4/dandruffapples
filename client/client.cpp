@@ -44,7 +44,7 @@ int currentTimestep = 0;
 int firstRobot; // offset, lets us control robots 600-1000, for example
 int firstTeam; // lowest teamid we control
 int numTeams; // this client computer controls this number of teams.
-int numRobots; // number of robots per team
+int robotsPerTeam; 
 net::EpollConnection* theController;
 int epoll;
 
@@ -60,11 +60,7 @@ struct OwnRobot {
                hasCollided(false) {}
 };
 
-struct Team {
-  OwnRobot** ownRobots;
-};
-
-Team** teams;
+OwnRobot** ownRobots;
 
 
 //Config variables
@@ -113,6 +109,19 @@ void loadConfigFile()
 		printf("Error: Cannot open config file %s\n", configFileName);
 }
 
+int indexToRobotId(int index) {
+  return (index + firstRobot);
+}
+
+int robotIdToIndex(int robotId) {
+  return (robotId - firstRobot);
+}
+
+int indexToTeamId(int index) {
+  return (index / robotsPerTeam);
+}
+
+// Destination function for the AI thread.
 void *artificialIntelligence(void *threadid) {
   while (currentTimestep < 1) {
     // do nothing until simulation starts
@@ -126,10 +135,10 @@ void *artificialIntelligence(void *threadid) {
 
 
   while (true) {
-    for (int i = 0; i < numTeams * numRobots; i++) {
-      cout << "AI thread moving robot #" << i << " + " << firstRobot 
-           << " at timestep " << currentTimestep << endl; 
-      clientRobot.set_id(i + firstRobot);
+    for (int i = 0; i < numTeams * robotsPerTeam; i++) {
+      cout << "AI thread moving robot #" << indexToRobotId(i)
+           << " at timestep " << currentTimestep << endl;
+      clientRobot.set_id(indexToRobotId(i));
       clientRobot.set_velocity(velocity);
       clientRobot.set_angle(angle);
 
@@ -211,14 +220,14 @@ void run() {
                 bool sameTeam = true;
                 bool foundFirstRobot = false; 
 
-                numRobots = 0; // global var
+                robotsPerTeam = 0; // global var
 
                 // Count number of robots per team and determine the first
                 // robotID that we actually control.
                 for(int i = 0; i < robotSize && (!foundFirstRobot || sameTeam)
                     ; i++) {
                   if (worldinfo.robot(i).team() == 0 && sameTeam) {
-                    numRobots++;
+                    robotsPerTeam++;
                   } else {
                     sameTeam = false; 
                   }
@@ -239,16 +248,13 @@ void run() {
                 }
 
                 cout << "Got worldinfo! Calculated " << numTeams 
-                     << " teams with " << numRobots << " robots each.\n";
+                     << " teams with " << robotsPerTeam << " robots each.\n";
 
                 // Assign teams
-                teams = new Team*[numTeams];
-                for (int i = 0; i < numTeams; i++) {
-                  teams[i]->ownRobots = new OwnRobot*[numRobots];
-                  for (int j = 0; j < numRobots; j++) {
-                    // We don't have any initial robot data, yet.
-                    teams[i]->ownRobots[j] = new OwnRobot();
-                  }
+                ownRobots = new OwnRobot*[numTeams * robotsPerTeam];
+                for (int i = 0; i < numTeams * robotsPerTeam; i++) {
+                  // We don't have any initial robot data, yet.
+                  ownRobots[i] = new OwnRobot();
                 }
 
                 break;
@@ -297,6 +303,12 @@ void run() {
   // Clean up
   shutdown(controllerfd, SHUT_RDWR);
   close(controllerfd);
+
+  for (int i = 0; i < numTeams * robotsPerTeam; i++) {
+    delete ownRobots[i];
+  }
+  delete[] ownRobots;
+  
 }
 
 //this is the main loop for the client
