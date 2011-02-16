@@ -232,7 +232,7 @@ void run() {
   //regionarea->AddRobot(12, 15.8, 1, 0, 0, 0);
   for(int i = robotDiameter; i < regionSideLen-(robotDiameter) && numRobots < wantRobots; i += 10*(robotDiameter))
     for(int j = robotDiameter; j < regionSideLen-(robotDiameter) && numRobots < wantRobots; j += 10*(robotDiameter))
-        regionarea->AddRobot(numRobots++, i, j, 0, 0, 0);
+        regionarea->AddRobot(numRobots++, i, j, 0, 0, 0, "black");
 
     cout << numRobots << " robots created." << endl;
   MessageWriter writer(clockfd);
@@ -309,9 +309,12 @@ void run() {
             {
               timestep.ParseFromArray(buffer, len);
 
-              regionarea->Step();
+              if(regionarea->curStep % 20 == 0)
+                regionarea->Step(true);
+              else
+                regionarea->Step(false);
+                
               timeSteps++;  //Note: only use this for this temp stat taking. use regionarea->curStep for syncing
-              
               
 
               if(timestep.timestep() % 200 == 0) {
