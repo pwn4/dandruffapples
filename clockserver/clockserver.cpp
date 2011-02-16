@@ -254,6 +254,7 @@ int main(int argc, char **argv) {
                 } else {
                   cout << "Team " << id << " has been claimed." << endl;
                   claimteam.set_granted(true);
+                  teamclaimed[id] = true;
                 }
                 c->queue.push(MSG_CLAIMTEAM, claimteam);
                 break;
