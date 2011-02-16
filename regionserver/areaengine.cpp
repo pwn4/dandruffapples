@@ -161,6 +161,7 @@ void AreaEngine::Step(bool generateImage){
     //clear the blob
 	  Image newPNG("625x625", "white");
 	  newPNG.magick("png");
+	  newPNG.depth(8);
 	  int drawX, drawY;
 
 	  //move the robots, now that we know they won't collide
