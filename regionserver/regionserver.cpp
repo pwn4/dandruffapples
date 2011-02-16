@@ -351,7 +351,21 @@ void run() {
         }
         case net::connection::CONTROLLER_LISTEN:
         {
-        
+          int fd = accept(c->fd, NULL, NULL);
+          if(fd < 0) {
+            throw SystemError("Failed to accept controller");
+          }
+          net::set_blocking(fd, false);
+          try {
+            net::EpollConnection *newconn = new net::EpollConnection(epoll, 
+                EPOLLOUT, fd, net::connection::CONTROLLER);
+            controllers.push_back(newconn);
+          } catch(SystemError e) {
+            cerr << e.what() << endl;
+            return;
+          }
+
+          cout << "Got controller connection." << endl;
           break;
         }
         case net::connection::PNGVIEWER_LISTEN:

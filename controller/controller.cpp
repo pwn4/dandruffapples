@@ -73,14 +73,14 @@ int main(int argc, char** argv)
 {
   size_t clientcount = 0;
   helper::Config config(argc, argv);
-	configFileName=(config.getArg("-c").length() == 0 ? "config" : config.getArg("-c").c_str());
-	loadConfigFile();
+  configFileName=(config.getArg("-c").length() == 0 ? "config" : config.getArg("-c").c_str());
+  loadConfigFile();
 
-	// Print a starting message
-	printf("--== Controller Server Software ==-\n");
-	
-	clockfd = net::do_connect(clockip, CONTROLLERS_PORT);
-	cout << "Connected to Clock Server" << endl;
+  // Print a starting message
+  printf("--== Controller Server Software ==-\n");
+
+  clockfd = net::do_connect(clockip, CONTROLLERS_PORT);
+  cout << "Connected to Clock Server" << endl;
     
   listenfd = net::do_listen(CLIENTS_PORT);
   net::set_blocking(listenfd, false);
@@ -99,6 +99,7 @@ int main(int argc, char** argv)
   ClaimTeam claimteam;
   Claim claimrobot;
   vector<ClientConnection*> clients;
+  vector<net::EpollConnection*> servers;
 
   #define MAX_EVENTS 128
   struct epoll_event events[MAX_EVENTS];
@@ -121,15 +122,49 @@ int main(int argc, char** argv)
           if(c->reader.doRead(&type, &len, &buffer)) {
             switch(type) {
             case MSG_WORLDINFO:
+            {
               worldinfo.ParseFromArray(buffer, len);
               cout << "Got world info." << endl;
+              for (int i = 0; i < worldinfo.region_size(); i++) {
+                struct in_addr addr;
+                addr.s_addr = worldinfo.region(i).address();
+                int regionfd = net::do_connect(addr,
+                    worldinfo.region(i).controllerport());
+                if (regionfd < 0) {
+                  cout << "Failed to connect to a Region Server.\n";
+                } else if (regionfd == 0) {
+                  cout << "Invalid Region Server address\n";
+                } else {
+                  cout << "Connected to a Region Server" << endl;
+                }
+                net::EpollConnection *newServer = new net::EpollConnection(
+                    epoll, EPOLLIN, regionfd, net::connection::REGION);
+                servers.push_back(newServer);
+              }
               break;
+            }
 
             case MSG_REGIONINFO:
-							//should add connections to region servers
+            {
+              // TODO: Make a function perform the identical code here and in
+              //       the MSG_WORLDINFO case.
               regioninfo.ParseFromArray(buffer, len);
-              cout << "Got region info." << endl;
+              cout << "Got a new RegionInfo message! Trying to connect...\n";
+              struct in_addr addr;
+              addr.s_addr = regioninfo.address();
+              int regionfd = net::do_connect(addr, regioninfo.controllerport());
+              if (regionfd < 0) {
+                cout << "Failed to connect to a Region Server.\n";
+              } else if (regionfd == 0) {
+                cout << "Invalid Region Server address\n";
+              } else {
+                cout << "Connected to a Region Server" << endl;
+              }
+              net::EpollConnection *newServer = new net::EpollConnection(
+                  epoll, EPOLLIN, regionfd, net::connection::REGION);
+              servers.push_back(newServer);
               break;
+            }
 
             case MSG_TIMESTEPUPDATE:
               timestep.ParseFromArray(buffer, len);
@@ -190,7 +225,6 @@ int main(int argc, char** argv)
 
             case MSG_CLAIMTEAM:
             {
-              bool foundMatch = false;
               // Forward to the clock
               claimteam.ParseFromArray(buffer, len);
               claimteam.set_clientid(((ClientConnection*)c)->id);
