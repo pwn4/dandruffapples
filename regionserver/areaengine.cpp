@@ -159,8 +159,9 @@ void AreaEngine::Step(bool generateImage){
   if(generateImage){
     //clear the blob
 	  Image newPNG("625x625", "white");
-	  newPNG.magick("png8");
-	  
+	  newPNG.magick("png");
+	  int drawX, drawY;
+
 	  //move the robots, now that we know they won't collide
     for(size_t i = 0; i < robots.size(); i++)
     {
@@ -168,7 +169,11 @@ void AreaEngine::Step(bool generateImage){
       curRobot->x += curRobot->vx;
       curRobot->y += curRobot->vy;
       //repaint the robot
-      newPNG.pixelColor(curRobot->x, curRobot->y, curRobot->robotColor);
+      drawX = (curRobot->x / (regionRatio))*625;
+      drawY = (curRobot->y / (regionRatio))*625;
+      //don't draw the overlaps
+      if(drawX >= regionRatio/regionBounds && drawX < 625 && drawY >= regionRatio/regionBounds && drawY < 625)
+        newPNG.pixelColor(drawX, drawY, curRobot->robotColor);
       //check if the robot moves through a[][]
       Index oldIndices = curRobot->arrayLocation;
       curRobot->arrayLocation = getRobotIndices(curRobot->x, curRobot->y);
