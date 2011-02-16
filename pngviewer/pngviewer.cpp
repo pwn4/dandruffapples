@@ -36,12 +36,10 @@
 #include "../common/messagewriter.h"
 
 #include "../common/helper.h"
-#include <Magick++.h>
 #include <gtk/gtk.h>
 #include <cairo.h>
 
 using namespace std;
-using namespace Magick;
 
 struct regionConnection: net::connection {
 	RegionInfo info;
