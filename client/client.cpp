@@ -126,11 +126,10 @@ void *artificialIntelligence(void *threadid) {
 
 
   while (true) {
-    // TODO: Change the base team to equal firstRobot
     for (int i = 0; i < numTeams * numRobots; i++) {
-      cout << "AI thread moving robot #" << i << " at timestep "
-           << currentTimestep << endl; 
-      clientRobot.set_id(i);
+      cout << "AI thread moving robot #" << i << " + " << firstRobot 
+           << " at timestep " << currentTimestep << endl; 
+      clientRobot.set_id(i + firstRobot);
       clientRobot.set_velocity(velocity);
       clientRobot.set_angle(angle);
 
@@ -209,20 +208,35 @@ void run() {
                 int robotSize = worldinfo.robot_size();
 
                 int maxTeamId = 0;
-                numTeams = 0; // global var
-                numRobots = 0; // global var
                 bool sameTeam = true;
+                bool foundFirstRobot = false; 
 
-                for(int i = 0; robotSize && sameTeam; i++) {
-                  // count number of robots per team
+                numRobots = 0; // global var
+
+                // Count number of robots per team and determine the first
+                // robotID that we actually control.
+                for(int i = 0; i < robotSize && (!foundFirstRobot || sameTeam)
+                    ; i++) {
                   if (worldinfo.robot(i).team() == 0 && sameTeam) {
                     numRobots++;
                   } else {
                     sameTeam = false; 
                   }
+
+                  if (worldinfo.robot(i).team() == firstTeam
+                      && !foundFirstRobot) {
+                    foundFirstRobot = true;
+                    firstRobot = worldinfo.robot(i).id();
+                    cout << "Found first robot to be #" << firstRobot << endl;
+                  }
                 }
+
                 maxTeamId = worldinfo.robot(robotSize - 1).team();
-                numTeams = maxTeamId + 1; 
+                // Check if the number of teams from WorldInfo is less than
+                // the number of teams we want to control per the config file.
+                if (numTeams > maxTeamId - firstTeam + 1) {
+                  numTeams = maxTeamId - firstTeam + 1;
+                }
 
                 cout << "Got worldinfo! Calculated " << numTeams 
                      << " teams with " << numRobots << " robots each.\n";
