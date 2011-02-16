@@ -193,12 +193,7 @@ int main(int argc, char** argv)
               bool foundMatch = false;
               // Forward to the clock
               claimteam.ParseFromArray(buffer, len);
-              for(unsigned i = 0; i < clients.size() && !foundMatch; ++i) {
-                if (clients.at(i) == c) {
-                  claimteam.set_clientid(i);
-                  foundMatch = true;
-                } 
-              }
+              claimteam.set_clientid(((ClientConnection*)c)->id);
 
               clockconn.queue.push(MSG_CLAIMTEAM, claimteam);
               clockconn.set_writing(true);
@@ -236,6 +231,8 @@ int main(int argc, char** argv)
               // Update lookup table
               claimrobot.ParseFromArray(buffer, len);
               robots[claimrobot.id()].server = c;
+              cout << "Do we get claims? Robot ID #" << claimrobot.id()
+                   << endl;
               break;
 
             default:
