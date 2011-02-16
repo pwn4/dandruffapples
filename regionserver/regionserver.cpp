@@ -298,7 +298,10 @@ void run() {
               if(timestep.timestep() % 200 == 0) {
                 // Only generate an image for one in 200 timesteps
             	surface = regionarea->stepImage;
-                png.set_image((void*)surface, cairo_image_surface_get_stride(surface)*cairo_image_surface_get_height(surface) );
+            	unsigned char *surfaceData = cairo_image_surface_get_data(surface);
+            	size_t surfaceLength = cairo_image_surface_get_height(surface) * cairo_format_stride_for_width(cairo_image_surface_get_format(surface), cairo_image_surface_get_width(surface));
+
+                png.set_image((void*)surfaceData, surfaceLength );
                 png.set_timestep(timestep.timestep());
                 for(vector<net::EpollConnection*>::iterator i = pngviewers.begin();
                     i != pngviewers.end(); ++i) {
