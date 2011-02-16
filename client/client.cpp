@@ -25,6 +25,7 @@ This program communications with controllers.
 #include "../common/clientrobot.pb.h"
 #include "../common/serverrobot.pb.h"
 #include "../common/timestep.pb.h"
+#include "../common/worldinfo.pb.h"
 #include "../common/net.h"
 #include "../common/messagequeue.h"
 #include "../common/messagereader.h"
@@ -164,6 +165,7 @@ void run() {
                                  net::connection::CONTROLLER);
   theController = &controllerconn; // Allows other thread to access. Fix later.
 
+  WorldInfo worldinfo;
   TimestepUpdate timestep;
   ClientRobot clientRobot;
 
@@ -192,6 +194,33 @@ void run() {
             const void *buffer;
             if(c->reader.doRead(&type, &len, &buffer)) {
               switch(type) {
+              case MSG_WORLDINFO:
+              {
+                // Should be the first message we recieve from the controller
+                worldinfo.ParseFromArray(buffer, len);
+                int robotSize = worldinfo.robot_size();
+
+                int maxTeamId = 0;
+                numTeams = 0; // global var
+                numRobots = 0; // global var
+                bool sameTeam = true;
+
+                for(int i = 0; robotSize && sameTeam; i++) {
+                  // count number of robots per team
+                  if (worldinfo.robot(i).team() == 0 && sameTeam) {
+                    numRobots++;
+                  } else {
+                    sameTeam = false; 
+                  }
+                }
+                maxTeamId = worldinfo.robot(robotSize - 1).team();
+                numTeams = maxTeamId + 1; 
+
+                cout << "Got worldinfo! Calculated " << numTeams 
+                     << " teams with " << numRobots << " robots each.\n";
+
+                break;
+              }
               case MSG_TIMESTEPUPDATE:
                 timestep.ParseFromArray(buffer, len);
                 currentTimestep = timestep.timestep();

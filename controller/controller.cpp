@@ -248,6 +248,10 @@ int main(int argc, char** argv)
           ClientConnection *newconn = new ClientConnection(clientcount++, epoll, EPOLLIN, fd, net::connection::CLIENT);
           clients.push_back(newconn);
 
+          // Pass WorldInfo to client so it can calculate how many robots
+          // per team, and how many teams there are.
+          newconn->queue.push(MSG_WORLDINFO, worldinfo);
+
           break;
         }
         default:
