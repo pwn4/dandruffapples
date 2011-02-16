@@ -5,8 +5,8 @@
 #include <vector>
 #include <stdlib.h>
 #include <time.h>
-#include <set>
 #include <map>
+#include <Magick++.h>
 
 using namespace std;
 
@@ -70,6 +70,7 @@ int** puckArray;
 double maxSpeed; //a bound on the speed of robots. Should be passed by the clock.
 ArrayObject** robotArray;
 vector<RobotObject*> robots;
+Blob stepImage;
   
 public:
   int curStep;
