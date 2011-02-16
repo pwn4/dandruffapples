@@ -9,7 +9,6 @@
 #include <cerrno>
 #include <tr1/memory>
 #include <fstream>
-
 #include <unistd.h>
 #include <sys/socket.h>
 #include <sys/fcntl.h>
@@ -17,22 +16,14 @@
 #include <arpa/inet.h>
 #include <sys/epoll.h>
 #include <signal.h>
-
 #include <stdio.h>
 #include <string>
-#include <string.h>
 #include <stdlib.h>
 
 #include <google/protobuf/message_lite.h>
 
-#include "../common/timestep.pb.h"
-#include "../common/net.h"
-#include "../common/serverrobot.pb.h"
-#include "../common/puckstack.pb.h"
-#include "../common/messagewriter.h"
 #include "../common/worldinfo.pb.h"
 #include "../common/regionrender.pb.h"
-
 #include "../common/ports.h"
 #include "../common/messagereader.h"
 #include "../common/messagequeue.h"
@@ -43,7 +34,6 @@
 #include "../common/serverrobot.pb.h"
 #include "../common/puckstack.pb.h"
 #include "../common/messagewriter.h"
-#include "../common/messagereader.h"
 
 #include "../common/helper.h"
 #include <Magick++.h>
@@ -55,6 +45,8 @@ using namespace Magick;
 
 struct regionConnection: net::connection {
 	RegionInfo info;
+	//temporary int
+	int num;
 
 	regionConnection(int fd, RegionInfo info_) :
 		net::connection(fd), info(info_) {
@@ -63,18 +55,16 @@ struct regionConnection: net::connection {
 };
 
 //variable declarations
-TimestepUpdate timestep;
-GIOChannel *ioch; //event handler
 MessageType type;
 size_t len;
 const void *buffer;
 ofstream debug;
 vector<regionConnection*> regions;
+vector<GtkDrawingArea*> pngDrawingArea;
 GtkBuilder *builder;
 
+//load the config file
 void loadConfigFile(const char *configFileName, char* clockip) {
-	//load the config file
-
 	conf configuration = parseconf(configFileName);
 
 	//clock ip address
@@ -84,39 +74,53 @@ void loadConfigFile(const char *configFileName, char* clockip) {
 #endif
 		exit(1);
 	}
-	strcpy(clockip, configuration["CLOCKIP"].c_str());
 
+	strcpy(clockip, configuration["CLOCKIP"].c_str());
+}
+
+cairo_status_t reader(void *blob, unsigned char *data, unsigned int length)
+ {
+	const void* blobData=((Blob*)blob)->data();
+	data= (unsigned char*)blobData;
+
+    return CAIRO_STATUS_SUCCESS;
+ }
+
+
+//display the png that we received from a region server in its pngDrawingArea space
+void displayPng(int serverNum, RegionRender render) {
+	Blob blob((void*) render.image().c_str(), render.image().length());
+	cairo_t *cr = gdk_cairo_create(pngDrawingArea.at(serverNum)->widget.window);
+
+	cairo_surface_t *image = cairo_image_surface_create_from_png_stream(reader, &blob);
+
+	cairo_set_source_surface(cr, image, 10, 10);
+	cairo_paint(cr);
+
+	cairo_destroy(cr);
 }
 
 //handler for region received messages
 gboolean io_regionmessage(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 	g_type_init();
 
-	regionConnection * regionConn;
-	//get the reader for the handle
-	for (vector<regionConnection*>::iterator i = regions.begin(); i
-			!= regions.end(); i++)
-		if ((*i)->fd == g_io_channel_unix_get_fd(ioch)) {
-			regionConn = (*i);
-			break;
-		}
+	int serverNum=0;
+	//get the region number that we are receiving a PNG from
+	for (vector<regionConnection*>::iterator it = regions.begin(); it
+			!= regions.end() && (*it)->fd != g_io_channel_unix_get_fd(ioch); it++, serverNum++){}
 
 	for (bool complete = false; !complete;)
-		complete = regionConn->reader.doRead(&type, &len, &buffer);
+		complete = regions.at(serverNum)->reader.doRead(&type, &len, &buffer);
 
 	switch (type) {
 	case MSG_REGIONRENDER: {
 		RegionRender render;
 		render.ParseFromArray(buffer, len);
-		Blob blob((void*) render.image().c_str(), render.image().length());
-
 #ifdef DEBUG
 		debug << "Received MSG_REGIONRENDER update and the timestep is # "
 				<< render.timestep() << endl;
 #endif
-
-		//Image image;
-		//image.read(blob);
+		displayPng(serverNum, render);
 
 		break;
 	}
@@ -165,6 +169,8 @@ gboolean io_clockmessage(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 		regionConnection *newregion =
 				new regionConnection(regionFd, regioninfo);
 		regions.push_back(newregion);
+
+		//create a new handler to wait for when the server sends a new png to us
 		g_io_add_watch(g_io_channel_unix_new(regionFd), G_IO_IN,
 				io_regionmessage, NULL);
 #ifdef DEBUG
@@ -175,51 +181,77 @@ gboolean io_clockmessage(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 	}
 
 	default:
-		cerr << "Unexpected readable message type from clock! Type:" << type
+	{
+#ifdef DEBUG
+		debug << "Unexpected readable message type from clock! Type:" << type
 				<< endl;
+#endif
+	}
 	}
 
 	return TRUE;
 }
 
 //navigation button handler
-G_MODULE_EXPORT void on_Navigation_toggled(GtkWidget *widget, gpointer window) {
+void on_Navigation_toggled(GtkWidget *widget, gpointer window) {
 
-	GtkWidget *navigation = GTK_WIDGET(gtk_builder_get_object( builder, "navigation" ));
-	gtk_widget_show_all(navigation);
+	GtkWidget *navigationWindow =
+			GTK_WIDGET(gtk_builder_get_object( builder, "navigationWindow" ));
+
+	if (gtk_toggle_tool_button_get_active(GTK_TOGGLE_TOOL_BUTTON(widget))) {
+		gtk_widget_show_all(navigationWindow);
+	} else {
+		gtk_widget_hide_all(navigationWindow);
+	}
 }
 
 //properties button handler
-G_MODULE_EXPORT void on_Properties_toggled(GtkWidget *widget, gpointer window) {
+void on_Properties_toggled(GtkWidget *widget, gpointer window) {
 
-	GtkWidget *properties = GTK_WIDGET(gtk_builder_get_object( builder, "properties" ));
-	gtk_widget_show_all(properties);
+	GtkWidget *propertiesWindow =
+			GTK_WIDGET(gtk_builder_get_object( builder, "propertiesWindow" ));
+
+	if (gtk_toggle_tool_button_get_active(
+			GTK_TOGGLE_TOOL_BUTTON(propertiesWindow))) {
+		gtk_widget_show_all(propertiesWindow);
+	} else {
+		gtk_widget_hide_all(propertiesWindow);
+	}
 }
 
-
 void drawer(int argc, char* argv[], int clockfd) {
+	gtk_init(&argc, &argv);
 	g_type_init();
 
+	//assume that the pngviewer.builder is in the same directory as the executable that we are running
+	string builderPath(argv[0]);
+	builderPath = builderPath.substr(0, builderPath.find_last_of("//") + 1)
+			+ "pngviewer.builder";
+	builder = gtk_builder_new();
+	gtk_builder_add_from_file(builder, builderPath.c_str(), NULL);
+	gtk_builder_connect_signals(builder, NULL);
+
 	GtkWidget *window = GTK_WIDGET(gtk_builder_get_object( builder, "window" ));
+	GtkToggleToolButton	*navigation =
+					GTK_TOGGLE_TOOL_BUTTON(gtk_builder_get_object( builder, "Navigation" ));
+
+	//todo: this is only hardcoded for 2. Must work for 'n' in the future.
+	pngDrawingArea.push_back(GTK_DRAWING_AREA(gtk_builder_get_object( builder, "pngDraw1" )));
+	pngDrawingArea.push_back(GTK_DRAWING_AREA(gtk_builder_get_object( builder, "pngDraw2" )));
 
 	MessageReader clockReader(clockfd);
 
 	//adder handler for the clock
 	g_io_add_watch(g_io_channel_unix_new(clockfd), G_IO_IN, io_clockmessage,
 			(gpointer) &clockReader);
+	g_signal_connect(navigation, "toggled", G_CALLBACK(on_Navigation_toggled), (gpointer) window);
 
-	g_object_unref( G_OBJECT( builder ) );
 	gtk_widget_show_all(window);
 
 	gtk_main();
 }
 
-//main method
 int main(int argc, char* argv[]) {
-	gtk_init(&argc, &argv);
-	builder = gtk_builder_new();
-	gtk_builder_add_from_file( builder, "pngviewer.builder", NULL );
-	gtk_builder_connect_signals(builder, NULL);
 	char clockip[40];
 	helper::Config config(argc, argv);
 
@@ -251,6 +283,7 @@ int main(int argc, char* argv[]) {
 	drawer(argc, argv, clockfd);
 
 	debug.close();
+	g_object_unref(G_OBJECT( builder ));
 
 	return 0;
 }
