@@ -50,6 +50,18 @@ struct lookup_pair {
 
 lookup_pair robots[ROBOT_LOOKUP_SIZE];
 
+struct NoTeamRobot {
+  int robotId;
+  int regionId;
+  int teamId;
+  
+  NoTeamRobot(int robotId_, int regionId_, int teamId_) : robotId(robotId_),
+     regionId(regionId_), teamId(teamId_) {}
+};
+
+vector<NoTeamRobot> unassignedRobots;
+
+
 const char *configFileName;
 int clockfd, listenfd, clientfd;
 
@@ -125,6 +137,14 @@ int main(int argc, char** argv)
             {
               worldinfo.ParseFromArray(buffer, len);
               cout << "Got world info." << endl;
+              
+              // Get the robot information.
+              for (int i = 0; i < worldinfo.robot_size(); i++) {
+                unassignedRobots.push_back(NoTeamRobot(worldinfo.robot(i).id(),
+                    worldinfo.robot(i).region(), worldinfo.robot(i).team()));
+              }
+
+              // Get the RegionServer connections.
               for (int i = 0; i < worldinfo.region_size(); i++) {
                 struct in_addr addr;
                 addr.s_addr = worldinfo.region(i).address();
@@ -140,7 +160,21 @@ int main(int argc, char** argv)
                 net::EpollConnection *newServer = new net::EpollConnection(
                     epoll, EPOLLIN, regionfd, net::connection::REGION);
                 servers.push_back(newServer);
+
+                // TODO: Get real regionId from the RegionInfo message.
+
+                // Populate lookup table.
+                for(vector<NoTeamRobot>::iterator j = unassignedRobots.begin();
+                    j != unassignedRobots.end(); ++j) {
+                  if (j->regionId == i) {
+                    robots[j->robotId].server = newServer;
+                    robots[j->robotId].client = NULL;
+                    cout << "Assigned robot " << j->robotId << " to regionserver "
+                         << i << endl;
+                  }
+                }
               }
+
               break;
             }
 
@@ -184,8 +218,17 @@ int main(int argc, char** argv)
               if(claimteam.granted()) {
                 cout << "Client " << client << " granted team " << claimteam.id()
                      << "." << endl;
-                // TODO: Send list of robots to client
-                // TODO: Update lookup table
+
+                // Update lookup table. 
+                for(vector<NoTeamRobot>::iterator i = unassignedRobots.begin();
+                    i != unassignedRobots.end(); ++i) {
+                  if (i->teamId == (int)claimteam.id()) {
+                    robots[i->robotId].client = clients[client];
+                    cout << "Assigned robot " << i->robotId << " to client "
+                         << client << endl;
+                    // TODO: Erase unassignedRobot entries when done.
+                  }
+                }
               } else {
                 cout << "Client " << client << "'s request for team "
                      << claimteam.id() << " was rejected." << endl;
@@ -194,6 +237,7 @@ int main(int argc, char** argv)
               claimteam.clear_clientid();
               clients[client]->queue.push(MSG_CLAIMTEAM, claimteam);
               clients[client]->set_writing(true);
+
               break;
             }
 
