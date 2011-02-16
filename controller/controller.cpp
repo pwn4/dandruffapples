@@ -251,6 +251,7 @@ int main(int argc, char** argv)
           // Pass WorldInfo to client so it can calculate how many robots
           // per team, and how many teams there are.
           newconn->queue.push(MSG_WORLDINFO, worldinfo);
+          newconn->set_writing(true);
 
           break;
         }
