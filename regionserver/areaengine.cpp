@@ -1,5 +1,6 @@
 #include "areaengine.h"
 #include "../common/except.h"
+#include "../common/imageformat.h"
 #include <algorithm>
 #include <iostream>
 #include <limits.h>
@@ -88,6 +89,11 @@ AreaEngine::~AreaEngine() {
   delete[] robotArray;
 }
 
+//this is the color mapping method: teams->Color components
+ColorObject colorFromTeam(int teamId){
+  return ColorObject(0.1, 0.1, 0.1);
+}
+
 //this method checks if a robot at (x1,y1) sees a robot at (x2,y2)
 bool AreaEngine::Sees(double x1, double y1, double x2, double y2){
 //assumes robots can see from any part of themselves
@@ -113,7 +119,7 @@ void AreaEngine::Step(bool generateImage){
   map<int, RobotObject*>::iterator robotIt;
   
   //init our surface
-  stepImage = cairo_image_surface_create (CAIRO_FORMAT_A8 , 625, 625);
+  stepImage = cairo_image_surface_create (IMAGEFORMAT , IMAGEWIDTH, IMAGEHEIGHT);
   stepImageDrawer = cairo_create (stepImage);
   
   //iterate through our region's robots and simulate them
