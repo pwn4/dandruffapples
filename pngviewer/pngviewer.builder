@@ -100,7 +100,7 @@
     <property name="border_width">5</property>
     <property name="title"> </property>
     <property name="resizable">False</property>
-    <property name="window_position">mouse</property>
+    <property name="window_position">center-always</property>
     <property name="default_width">450</property>
     <property name="default_height">250</property>
     <signal name="destroy" handler="gtk_widget_hide"/>
@@ -209,5 +209,18 @@
   <object class="GtkImage" id="upImg">
     <property name="visible">True</property>
     <property name="stock">gtk-go-up</property>
+  </object>
+  <object class="GtkWindow" id="propertiesWindow">
+    <property name="title" translatable="yes"> </property>
+    <property name="resizable">False</property>
+    <property name="window_position">center-always</property>
+    <property name="default_width">440</property>
+    <property name="default_height">250</property>
+    <child>
+      <object class="GtkLabel" id="test">
+        <property name="visible">True</property>
+        <property name="label" translatable="yes">testtesttesttesttest</property>
+      </object>
+    </child>
   </object>
 </interface>
