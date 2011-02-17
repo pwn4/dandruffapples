@@ -116,7 +116,6 @@ bool AreaEngine::Collides(double x1, double y1, double x2, double y2){
 void AreaEngine::Step(bool generateImage){
   //O(n*c) for some nice, small constant. Can we improve this with a collision library? Let's benchmark and find out
   curStep++;
-  
   //some worker variables
   Index topLeft, botRight;
   map<int, bool> *nowSaw;
@@ -167,7 +166,7 @@ void AreaEngine::Step(bool generateImage){
         }
       }
   }
-  
+
   if(generateImage){
     //clear the image
     cairo_set_source_rgb (stepImageDrawer, 1, 1, 1);
@@ -177,7 +176,7 @@ void AreaEngine::Step(bool generateImage){
     cairo_set_line_cap  (stepImageDrawer, CAIRO_LINE_CAP_ROUND); /* Round dot*/
 
 	  int drawX, drawY;
-
+	  
 	  //move the robots, now that we know they won't collide
     for(robotIt=robots.begin() ; robotIt != robots.end(); robotIt++)
     {
@@ -234,7 +233,7 @@ void AreaEngine::Step(bool generateImage){
       }
     }
   }
-  
+
   //check for sight. Theoretically runs in O(n^2)+O(n)+O(m). In reality, runs O((viewdist*360degrees/robotsize)*robotsinregion)+O(2*(viewdist*360degrees/robotsize))
   //THIS IS THE BOTTLENECK RIGHT NOW
   for(robotIt=robots.begin() ; robotIt != robots.end(); robotIt++)
@@ -278,7 +277,6 @@ void AreaEngine::Step(bool generateImage){
           }
         }
   }
-    
 }
 
 //add a robot to the system. returns the robotobject that is created for convenience
@@ -336,10 +334,13 @@ bool AreaEngine::RemoveRobot(int robotId, int xInd, int yInd, bool freeMem){
   if(curRobot->id == robotId)
   {
     element.robots = curRobot->nextRobot;
-    if(freeMem)
+    if(freeMem){
+      robots.erase(curRobot->id);
       delete curRobot;
+    }
     return true;
   }
+
   RobotObject * lastRobot = curRobot;
   curRobot = lastRobot->nextRobot;
   
@@ -347,10 +348,14 @@ bool AreaEngine::RemoveRobot(int robotId, int xInd, int yInd, bool freeMem){
     if(curRobot->id == robotId){
       //we've found it. Stitch up the list and return
       lastRobot->nextRobot = curRobot->nextRobot;
-      if(freeMem)
+      if(freeMem){
+        robots.erase(curRobot->id);
         delete curRobot;
+      }
       return true;
     }
+    lastRobot = curRobot;
+    curRobot = lastRobot->nextRobot;
   }
   
   return false;
