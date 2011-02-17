@@ -201,9 +201,14 @@ void AreaEngine::Step(bool generateImage){
       curRobot->arrayLocation = getRobotIndices(curRobot->x, curRobot->y);
       if(curRobot->arrayLocation.x != oldIndices.x || curRobot->arrayLocation.y != oldIndices.y)
       {
-        //the robot moved, so...
-        AreaEngine::AddRobot(curRobot);
-        AreaEngine::RemoveRobot(curRobot->id, oldIndices.x, oldIndices.y, false);
+        //the robot moved, so...if we no longer track it
+        if(curRobot->x < 0 || curRobot->y < 0 || curRobot->x > regionRatio+2*(regionRatio/regionBounds) || curRobot->y > regionRatio+2*(regionRatio/regionBounds))
+        {
+          AreaEngine::RemoveRobot(curRobot->id, oldIndices.x, oldIndices.y, true);
+        }else{
+          AreaEngine::AddRobot(curRobot);
+          AreaEngine::RemoveRobot(curRobot->id, oldIndices.x, oldIndices.y, false);
+        }
       }
     }
   }else{
