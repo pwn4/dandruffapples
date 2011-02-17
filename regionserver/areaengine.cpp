@@ -39,7 +39,7 @@ Index AreaEngine::getRobotIndices(double x, double y){
 }
 
 //constructor
-AreaEngine::AreaEngine(int robotSize, int regionSize, int minElementSize, double viewDistance, double viewAngle, double maximumSpeed) {
+AreaEngine::AreaEngine(int robotSize, int regionSize, int minElementSize, double viewDistance, double viewAngle, double maximumSpeed, double maximumRotate) {
   //format of constructor call:
   //robotDiameter:puckDiameter, regionSideLength:puckDiameter
   //min a[][] element size in terms of pucks
@@ -50,6 +50,7 @@ AreaEngine::AreaEngine(int robotSize, int regionSize, int minElementSize, double
   viewDist = viewDistance;
   viewAng = viewAngle;
   maxSpeed = maximumSpeed;
+  maxRotate = maximumRotate;
   
   //create our storage array with element size determined by our parameters
   //ensure regionSize can be split nicely
@@ -269,10 +270,10 @@ void AreaEngine::AddRobot(RobotObject * oldRobot){
 
 }
 
-RobotObject* AreaEngine::AddRobot(int robotId, double newx, double newy, double newvx, double newvy, int atStep, string newColor){
+RobotObject* AreaEngine::AddRobot(int robotId, double newx, double newy, double newa, double newvx, double newvy, int atStep, string newColor){
   //O(1) insertion
   Index robotIndices = getRobotIndices(newx, newy);
-  RobotObject* newRobot = new RobotObject(robotId, newx, newy, newvx, newvy, robotIndices, atStep, newColor);
+  RobotObject* newRobot = new RobotObject(robotId, newx, newy, newa, newvx, newvy, robotIndices, atStep, newColor);
 
   //add the robot to our robots vector (used for timestepping)
   robots.insert(pair<int, RobotObject*>(robotId, newRobot));
@@ -325,4 +326,44 @@ bool AreaEngine::RemoveRobot(int robotId, int xInd, int yInd, bool freeMem){
   
   return false;
 }
+
+bool AreaEngine::ChangeVelocity(int robotId, double newvx, double newvy){
+  //enforce max speed
+  double len = sqrt(newvx*newvx + newvy*newvy);
+  if(len > maxSpeed)
+  {
+    newvx *= (maxSpeed/len);
+    newvy *= (maxSpeed/len);
+  }
+  if(robots.find(robotId) == robots.end())
+    return false;
+  
+  robots[robotId]->vx = newvx;
+  robots[robotId]->vy = newvy;
+  return true;
+}
+
+//NOTE: newangle is not the desired angle, it is the angle amount to rotate by!
+bool AreaEngine::ChangeAngle(int robotId, double newangle){
+  if(robots.find(robotId) == robots.end())
+    return false;
+  
+  if(fabs(newangle) > maxRotate){
+    if(newangle < 0)
+      newangle = -1*maxRotate;
+    else
+      newangle = maxRotate;
+  }
+
+  robots[robotId]->angle += newangle;
+  
+  while(robots[robotId]->angle >= 2*M_PI)
+    robots[robotId]->angle -= 2*M_PI;
+    
+  while(robots[robotId]->angle < 0)
+    robots[robotId]->angle += 2*M_PI;;
+     
+  return true;
+}
+
 
