@@ -167,7 +167,6 @@ void AreaEngine::Step(bool generateImage){
     cairo_set_source_rgb (stepImageDrawer, 1, 1, 1);
     cairo_paint (stepImageDrawer); 
     
-    cairo_set_source_rgb(stepImageDrawer, .1, .1, .1);
     cairo_set_line_width (stepImageDrawer, 1);
     //cairo_set_line_cap  (cr, CAIRO_LINE_CAP_ROUND); /* Round dot*/
 
@@ -182,6 +181,8 @@ void AreaEngine::Step(bool generateImage){
       //repaint the robot
       drawX = (curRobot->x / (regionRatio))*625;
       drawY = (curRobot->y / (regionRatio))*625;
+      //set the color
+      cairo_set_source_rgb(stepImageDrawer, .1, .1, .1);
       //don't draw the overlaps
       if(drawX >= regionRatio/regionBounds && drawX < 625 && drawY >= regionRatio/regionBounds && drawY < 625)
       {
