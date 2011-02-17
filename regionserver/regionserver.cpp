@@ -210,7 +210,7 @@ void run() {
   //regionarea->AddRobot(numRobots++, 1800, 10, 0, -.1, 0, 0, "red");
   for(int i = 3*robotDiameter; i < regionSideLen-3*(robotDiameter) && numRobots < wantRobots; i += 10*(robotDiameter))
     for(int j = 3*robotDiameter; j < regionSideLen-3*(robotDiameter) && numRobots < wantRobots; j += 10*(robotDiameter))
-        regionarea->AddRobot(numRobots++, i, j, 0, 1, 0, 0, (numRobots % 3 == 0 ? "red" : ((numRobots+1) % 3 == 0 ? "blue" : "green")));
+        regionarea->AddRobot(numRobots++, i, j, 0, .1, 0, 0, (numRobots % 3 == 0 ? "red" : ((numRobots+1) % 3 == 0 ? "blue" : "green")));
 
     cout << numRobots << " robots created." << endl;
   MessageWriter writer(clockfd);
@@ -295,7 +295,7 @@ void run() {
               timeSteps++;  //Note: only use this for this temp stat taking. use regionarea->curStep for syncing
               
 
-              if(regionarea->curStep % 100 == 0) {
+              if(regionarea->curStep % 20 == 0) {
                 // Only generate an image for one in 200 timesteps
             	surface = regionarea->stepImage;
             	unsigned char *surfaceData = cairo_image_surface_get_data(surface);
