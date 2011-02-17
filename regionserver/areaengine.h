@@ -48,10 +48,11 @@ struct RobotObject{
   string robotColor;
   RobotObject * nextRobot;
   int controllerfd;
+  int team;
  
   
-  RobotObject(int newid, double newx, double newy, double newa, Index aLoc, int curStep, string color) : id(newid), lastStep(curStep), x(newx), y(newy), angle(newa), vx(0), vy(0), arrayLocation(aLoc), lastCollision(time(NULL)), lastSeen(new map<int, bool>), robotColor(color), nextRobot(NULL), controllerfd(-1) {}
-  RobotObject(int newid, double newx, double newy, double newa, double newvx, double newvy, Index aLoc, int curStep, string color) : id(newid), lastStep(curStep), x(newx), y(newy), angle(newa), vx(newvx), vy(newvy), arrayLocation(aLoc), lastCollision(time(NULL)), lastSeen(new map<int, bool>), robotColor(color), nextRobot(NULL), controllerfd(-1) {}
+  RobotObject(int newid, double newx, double newy, double newa, Index aLoc, int curStep, string color) : id(newid), lastStep(curStep), x(newx), y(newy), angle(newa), vx(0), vy(0), arrayLocation(aLoc), lastCollision(time(NULL)), lastSeen(new map<int, bool>), robotColor(color), nextRobot(NULL), controllerfd(-1), team(0) {}
+  RobotObject(int newid, double newx, double newy, double newa, double newvx, double newvy, Index aLoc, int curStep, string color) : id(newid), lastStep(curStep), x(newx), y(newy), angle(newa), vx(newvx), vy(newvy), arrayLocation(aLoc), lastCollision(time(NULL)), lastSeen(new map<int, bool>), robotColor(color), nextRobot(NULL), controllerfd(-1), team(0) {}
 };
 
 struct ArrayObject{
@@ -62,6 +63,12 @@ struct ArrayObject{
   PuckStackObject * lastPuckStack;
   
   ArrayObject() : pucks(NULL), robots(NULL), lastRobot(NULL), lastPuckStack(NULL) {}
+};
+
+struct ColorObject{
+  double r, g, b;
+  
+  ColorObject(int newr, int newg, int newb) : r(newr), g(newg), b(newb) {}
 };
 
 class AreaEngine {
@@ -77,6 +84,8 @@ ArrayObject** robotArray;
 map<int, RobotObject*> robots;
 map<int, ServerRobot*> updates;
 cairo_t *stepImageDrawer;
+
+  ColorObject colorFromTeam(int teamId);
   
 public:
   cairo_surface_t *stepImage; //contains the image of the last step called with generateImage=true
