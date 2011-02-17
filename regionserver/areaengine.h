@@ -38,6 +38,7 @@ struct PuckStackObject{
 struct RobotObject{
   int id, lastStep;
   double x, y;
+  double angle;
   double vx, vy;
   bool holdingPuck;
   Index arrayLocation;
@@ -48,8 +49,8 @@ struct RobotObject{
   int controllerfd;
  
   
-  RobotObject(int newid, double newx, double newy, Index aLoc, int curStep, string color) : id(newid), lastStep(curStep), x(newx), y(newy), vx(0), vy(0), arrayLocation(aLoc), lastCollision(time(NULL)), lastSeen(new map<int, bool>), robotColor(color), nextRobot(NULL), controllerfd(-1) {}
-  RobotObject(int newid, double newx, double newy, double newvx, double newvy, Index aLoc, int curStep, string color) : id(newid), lastStep(curStep), x(newx), y(newy), vx(newvx), vy(newvy), arrayLocation(aLoc), lastCollision(time(NULL)), lastSeen(new map<int, bool>), robotColor(color), nextRobot(NULL), controllerfd(-1) {}
+  RobotObject(int newid, double newx, double newy, double newa, Index aLoc, int curStep, string color) : id(newid), lastStep(curStep), x(newx), y(newy), angle(newa), vx(0), vy(0), arrayLocation(aLoc), lastCollision(time(NULL)), lastSeen(new map<int, bool>), robotColor(color), nextRobot(NULL), controllerfd(-1) {}
+  RobotObject(int newid, double newx, double newy, double newa, double newvx, double newvy, Index aLoc, int curStep, string color) : id(newid), lastStep(curStep), x(newx), y(newy), angle(newa), vx(newvx), vy(newvy), arrayLocation(aLoc), lastCollision(time(NULL)), lastSeen(new map<int, bool>), robotColor(color), nextRobot(NULL), controllerfd(-1) {}
 };
 
 struct ArrayObject{
@@ -70,7 +71,7 @@ int elementSize;  //in pucks
 double viewDist, viewAng;
 int coolDown; //cooldown before being able to change velocities
 int** puckArray;
-double maxSpeed; //a bound on the speed of robots. Should be passed by the clock.
+double maxSpeed, maxRotate; //a bound on the speed of robots. Should be passed by the clock.
 ArrayObject** robotArray;
 map<int, RobotObject*> robots;
   
@@ -86,12 +87,17 @@ public:
   bool Collides(double x1, double y1, double x2, double y2);
   
   void AddRobot(RobotObject * oldRobot);
-  RobotObject* AddRobot(int robotId, double newx, double newy, double newvx, double newvy, int atStep, string newColor);
+  RobotObject* AddRobot(int robotId, double newx, double newy, double newa, double newvx, double newvy, int atStep, string newColor);
   
   bool RemoveRobot(int robotId, int xInd, int yInd, bool freeMem);
   
-  AreaEngine(int robotSize, int regionSize, int minElementSize, double viewDistance, double viewAngle, double maxSpeed);
+  AreaEngine(int robotSize, int regionSize, int minElementSize, double viewDistance, double viewAngle, double maximumSpeed, double maximumRotate);
   ~AreaEngine();
+  
+  //Robot modifiers
+  bool ChangeVelocity(int robotId, double newvx, double newvy); //Allows strafing, if we may want it
+  bool ChangeAngle(int robotId, double newangle);  //Allows turning
+  //note, I could have added a changeMovement function that gets the robot to move like in Vaughn's code. However, it requires some trig calculations and such. Therein, it would be better if the clients' code (if it turns out we can't have strafing) restricts movement, and calculates the appropriate changeVelocity and changeAngle calls.
 
 };
 
