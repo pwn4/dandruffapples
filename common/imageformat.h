@@ -1,0 +1,8 @@
+#ifndef _IMAGEFORMAT_H_
+#define _IMAGEFORMAT_H_
+
+#define IMAGEFORMAT CAIRO_FORMAT_A8
+#define IMAGEWIDTH 625
+#define IMAGEHEIGHT 625
+
+#endif
