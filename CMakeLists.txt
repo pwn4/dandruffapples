@@ -2,6 +2,12 @@ project(dandruffapples)
 
 cmake_minimum_required(VERSION 2.8)
 
+IF(NOT CMAKE_BUILD_TYPE)
+  SET(CMAKE_BUILD_TYPE RelWithDebInfo CACHE STRING
+      "Choose the type of build, options are: None Debug Release RelWithDebInfo MinSizeRel."
+      FORCE)
+ENDIF(NOT CMAKE_BUILD_TYPE)
+
 find_package(PkgConfig)
 
 add_definitions(-Wall -Wextra)
