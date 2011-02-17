@@ -28,7 +28,7 @@ void MessageQueue::push(MessageType typeTag, const google::protobuf::MessageLite
 
   // Work out sizes
   size_t msglen = message.ByteSize();
-  size_t blocklen = msglen + sizeof(uint8_t) + sizeof(uint16_t);
+  size_t blocklen = msglen + sizeof(uint8_t) + sizeof(uint32_t);
 
   // Ensure we have a place to put it
   if(_bufsize < _appendpt + blocklen) {
@@ -60,8 +60,8 @@ void MessageQueue::push(MessageType typeTag, const google::protobuf::MessageLite
 
   // Enter message into buffer
   _buffer[_appendpt] = typeTag;
-  *(uint16_t*)(_buffer + _appendpt + sizeof(uint8_t)) = htons(msglen);
-  message.SerializeWithCachedSizesToArray(_buffer + _appendpt + sizeof(uint8_t) + sizeof(uint16_t));
+  *(uint32_t*)(_buffer + _appendpt + sizeof(uint8_t)) = htonl(msglen);
+  message.SerializeWithCachedSizesToArray(_buffer + _appendpt + sizeof(uint8_t) + sizeof(uint32_t));
 
   _appendpt += blocklen;
 }
