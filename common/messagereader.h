@@ -23,7 +23,7 @@ protected:
   int _fd;
   uint8_t *_buffer;
   size_t _bufsize, _typepos, _lenpos, _bufpos;
-  uint16_t _msglen;
+  uint32_t _msglen;
   uint8_t _type;
   
 public:
