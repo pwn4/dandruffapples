@@ -459,6 +459,7 @@ void run() {
 								pngviewers.begin(); i != pngviewers.end(); ++i) {
 							if (c->fd == (*i)->fd) {
 								pngviewers.erase(i);
+								close(c->fd);
 								cout << "png viewer with fd=" << c->fd
 										<< " disconnected" << endl;
 								break;
