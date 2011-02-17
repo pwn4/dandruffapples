@@ -41,6 +41,28 @@
                 <property name="homogeneous">True</property>
               </packing>
             </child>
+            <child>
+              <object class="GtkSeparatorToolItem" id="vsep">
+                <property name="visible">True</property>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="homogeneous">True</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkToolButton" id="Exit">
+                <property name="visible">True</property>
+                <property name="label" translatable="yes">Quit</property>
+                <property name="use_underline">True</property>
+                <property name="stock_id">gtk-quit</property>
+                <signal name="clicked" handler="gtk_main_quit"/>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="homogeneous">True</property>
+              </packing>
+            </child>
           </object>
           <packing>
             <property name="expand">False</property>
@@ -48,10 +70,23 @@
           </packing>
         </child>
         <child>
-          <object class="GtkHBox" id="pngHbox">
+          <object class="GtkScrolledWindow" id="scrolledWindow">
             <property name="visible">True</property>
+            <property name="can_focus">True</property>
+            <property name="hscrollbar_policy">automatic</property>
+            <property name="vscrollbar_policy">automatic</property>
             <child>
-              <placeholder/>
+              <object class="GtkViewport" id="viewport">
+                <property name="visible">True</property>
+                <child>
+                  <object class="GtkTable" id="table">
+                    <property name="visible">True</property>
+                    <child>
+                      <placeholder/>
+                    </child>
+                  </object>
+                </child>
+              </object>
             </child>
           </object>
           <packing>
