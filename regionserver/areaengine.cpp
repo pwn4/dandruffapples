@@ -329,6 +329,9 @@ bool AreaEngine::RemoveRobot(int robotId, int xInd, int yInd, bool freeMem){
 }
 
 bool AreaEngine::ChangeVelocity(int robotId, double newvx, double newvy){
+  if(robots.find(robotId) == robots.end())
+    return false;
+
   //enforce max speed
   double len = sqrt(newvx*newvx + newvy*newvy);
   if(len > maxSpeed)
@@ -336,8 +339,6 @@ bool AreaEngine::ChangeVelocity(int robotId, double newvx, double newvy){
     newvx *= (maxSpeed/len);
     newvy *= (maxSpeed/len);
   }
-  if(robots.find(robotId) == robots.end())
-    return false;
   
   robots[robotId]->vx = newvx;
   robots[robotId]->vy = newvy;
