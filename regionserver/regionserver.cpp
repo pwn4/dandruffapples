@@ -21,6 +21,7 @@ This program communications with clients, controllers, PNGviewers, other regions
 #include <string.h>
 #include <stdlib.h>
 #include <math.h>
+#include <cairo.h>
 
 #include <google/protobuf/message_lite.h>
 
@@ -47,10 +48,8 @@ This program communications with clients, controllers, PNGviewers, other regions
 #include "areaengine.h"
 
 #include "../common/helper.h"
-#include <Magick++.h>
 
 using namespace std;
-using namespace Magick;
 /////////////////Variables and Declarations/////////////////
 const char *configFileName;
 
@@ -186,7 +185,7 @@ void run() {
   puckstack.set_y(1);
 
   RegionRender png;
-  Blob blob;
+  cairo_surface_t *surface;
 
   //server variables
   MessageWriter logWriter(logfd);
@@ -298,8 +297,8 @@ void run() {
 
               if(timestep.timestep() % 200 == 0) {
                 // Only generate an image for one in 200 timesteps
-                blob = regionarea->stepImage;
-                png.set_image(blob.data(), blob.length());
+            	surface = regionarea->stepImage;
+                png.set_image((void*)surface, sizeof(*surface));
                 png.set_timestep(timestep.timestep());
                 for(vector<net::EpollConnection*>::iterator i = pngviewers.begin();
                     i != pngviewers.end(); ++i) {

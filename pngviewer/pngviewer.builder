@@ -53,6 +53,7 @@
             <child>
               <object class="GtkDrawingArea" id="pngDraw1">
                 <property name="visible">True</property>
+                <property name="app_paintable">True</property>
               </object>
               <packing>
                 <property name="position">0</property>
@@ -61,6 +62,7 @@
             <child>
               <object class="GtkDrawingArea" id="pngDraw2">
                 <property name="visible">True</property>
+                <property name="app_paintable">True</property>
               </object>
               <packing>
                 <property name="position">1</property>
