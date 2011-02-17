@@ -72,7 +72,7 @@ bool MessageReader::doRead(MessageType *type, size_t *len, const void **buffer) 
     if(_lenpos == sizeof(_msglen)) {
       // We just finished reading message length
       // Handle byte ordering
-      _msglen = ntohs(_msglen);
+      _msglen = ntohl(_msglen);
       // Be sure we have enough space for the entire message
       while(_bufsize < _msglen) {
         _bufsize *= 2;
