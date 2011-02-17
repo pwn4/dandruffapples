@@ -6,11 +6,11 @@
 #include <stdlib.h>
 #include <time.h>
 #include <map>
-#include <Magick++.h>
+#include <gtk/gtk.h>
+#include <cairo.h>
 #include <string>
 
 using namespace std;
-using namespace Magick;
 
 #define TOP_LEFT 0
 #define TOP 1
@@ -74,9 +74,11 @@ int** puckArray;
 double maxSpeed, maxRotate; //a bound on the speed of robots. Should be passed by the clock.
 ArrayObject** robotArray;
 map<int, RobotObject*> robots;
+map<int, ServerRobot*> updates;
+cairo_t *stepImageDrawer;
   
 public:
-  Blob stepImage; //contains the image of the last step called with generateImage=true
+  cairo_surface_t *stepImage; //contains the image of the last step called with generateImage=true
   int curStep;
   Index getRobotIndices(double x, double y);
   
