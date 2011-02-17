@@ -54,6 +54,10 @@ AreaEngine::AreaEngine(int robotSize, int regionSize, int minElementSize, double
   maxSpeed = maximumSpeed;
   maxRotate = maximumRotate;
   
+  //init our surface
+  stepImage = cairo_image_surface_create (IMAGEFORMAT , IMAGEWIDTH, IMAGEHEIGHT);
+  stepImageDrawer = cairo_create (stepImage);
+  
   //create our storage array with element size determined by our parameters
   //ensure regionSize can be split nicely
   if((regionSize/robotSize)*robotSize != regionSize)
@@ -117,10 +121,6 @@ void AreaEngine::Step(bool generateImage){
   Index topLeft, botRight;
   map<int, bool> *nowSaw;
   map<int, RobotObject*>::iterator robotIt;
-  
-  //init our surface
-  stepImage = cairo_image_surface_create (IMAGEFORMAT , IMAGEWIDTH, IMAGEHEIGHT);
-  stepImageDrawer = cairo_create (stepImage);
   
   //iterate through our region's robots and simulate them
   for(robotIt=robots.begin() ; robotIt != robots.end(); robotIt++)
