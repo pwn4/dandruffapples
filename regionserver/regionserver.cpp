@@ -202,7 +202,8 @@ void run() {
   double viewDistance = 20;
   double viewAngle = 360;
   double maxSpeed = 4;
-  AreaEngine* regionarea = new AreaEngine(robotDiameter, regionSideLen, minElementSize, viewDistance, viewAngle, maxSpeed);
+  double maxRotate = 2;
+  AreaEngine* regionarea = new AreaEngine(robotDiameter, regionSideLen, minElementSize, viewDistance, viewAngle, maxSpeed, maxRotate);
   //create robots for benchmarking!
   int numRobots = 0;
   int wantRobots = 1000;
