@@ -9,6 +9,6 @@ message ServerRobot {
   optional fixed32 controllerIp = 8;
   repeated bool viewLostId = 9; // robot specified by seenById can no 
                                 // longer see this robot
-  repeated fixed32 seenById = 10; // list of robots viewing
+  repeated fixed32 seenById = 10; // list of robots now viewing
 
 }
