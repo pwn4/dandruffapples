@@ -188,7 +188,7 @@ void run() {
 
   WorldInfo worldinfo;
   TimestepUpdate timestep;
-  ClientRobot clientRobot;
+  ServerRobot serverrobot;
   ClaimTeam claimteam;
 
   bool foundFirstTeam = false;
@@ -328,8 +328,10 @@ void run() {
 
                 break;
               case MSG_SERVERROBOT:
-                cout << "Received ServerRobot update!" << endl;
-                // update robot position global variables
+                serverrobot.ParseFromArray(buffer, len);
+                cout << "Received ServerRobot of ID #" << serverrobot.id()
+                     << endl; 
+                // Update ownRobot data.
                 break;
               default:
                 cout << "Unknown message!" << endl;
