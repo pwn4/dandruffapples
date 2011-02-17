@@ -36,6 +36,7 @@
 #include "../common/messagewriter.h"
 
 #include "../common/helper.h"
+#include "../common/imageformat.h"
 #include <gtk/gtk.h>
 #include <cairo.h>
 
@@ -43,8 +44,6 @@ using namespace std;
 
 struct regionConnection: net::connection {
 	RegionInfo info;
-	//temporary int
-	int num;
 
 	regionConnection(int fd, RegionInfo info_) :
 		net::connection(fd), info(info_) {
@@ -77,12 +76,13 @@ void loadConfigFile(const char *configFileName, char* clockip) {
 
 //display the png that we received from a region server in its pngDrawingArea space
 void displayPng(int serverNum, RegionRender render) {
+
 	cairo_t *cr = gdk_cairo_create(pngDrawingArea.at(serverNum)->widget.window);
+	cairo_surface_t *image = cairo_image_surface_create_for_data((unsigned char*)render.image().c_str(), IMAGEFORMAT, IMAGEWIDTH, IMAGEHEIGHT, cairo_format_stride_for_width(IMAGEFORMAT, IMAGEWIDTH) );
 
-	//cairo_set_source_surface(cr, image, 0, 0);
-	//cairo_paint(cr);
-
-	//cairo_destroy(cr);
+	cairo_set_source_surface(cr, image, 0, 0);
+	cairo_paint(cr);
+	cairo_destroy(cr);
 }
 
 //handler for region received messages
@@ -104,6 +104,7 @@ gboolean io_regionmessage(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 	case MSG_REGIONRENDER: {
 		RegionRender render;
 		render.ParseFromArray(buffer, len);
+		cout<<"length of image is: "<<render.image().length()<<endl;
 #ifdef DEBUG
 		debug << "Received MSG_REGIONRENDER update and the timestep is # "
 				<< render.timestep() << endl;
