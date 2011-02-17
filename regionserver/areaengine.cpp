@@ -113,7 +113,7 @@ void AreaEngine::Step(bool generateImage){
   map<int, RobotObject*>::iterator robotIt;
   
   //init our surface
-  stepImage = cairo_image_surface_create (CAIRO_FORMAT_RGB24 , 625, 625);
+  stepImage = cairo_image_surface_create (CAIRO_FORMAT_A8 , 625, 625);
   stepImageDrawer = cairo_create (stepImage);
   
   //iterate through our region's robots and simulate them
