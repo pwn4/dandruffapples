@@ -42,6 +42,13 @@ public:
 	ClientConnection(int id_, int epoll, int flags, int fd, Type type) : net::EpollConnection(epoll, flags, fd, type), id(id_) {}
 };
 
+class ServerConnection : public net::EpollConnection {
+public:
+	size_t id;
+
+	ServerConnection(int id_, int epoll, int flags, int fd, Type type) : net::EpollConnection(epoll, flags, fd, type), id(id_) {}
+};
+
 
 struct lookup_pair {
   net::EpollConnection *server;
@@ -111,7 +118,7 @@ int main(int argc, char** argv)
   ClaimTeam claimteam;
   Claim claimrobot;
   vector<ClientConnection*> clients;
-  vector<net::EpollConnection*> servers;
+  vector<ServerConnection*> servers;
 
   #define MAX_EVENTS 128
   struct epoll_event events[MAX_EVENTS];
@@ -157,23 +164,23 @@ int main(int argc, char** argv)
                 } else {
                   cout << "Connected to a Region Server" << endl;
                 }
-                net::EpollConnection *newServer = new net::EpollConnection(
-                    epoll, EPOLLIN, regionfd, net::connection::REGION);
+                ServerConnection *newServer = new ServerConnection(
+                    worldinfo.region(i).id(), epoll, EPOLLIN, regionfd, 
+                    net::connection::REGION);
                 servers.push_back(newServer);
-
-                // TODO: Get real regionId from the RegionInfo message.
 
                 // Populate lookup table.
                 for(vector<NoTeamRobot>::iterator j = unassignedRobots.begin();
                     j != unassignedRobots.end(); ++j) {
-                  if (j->regionId == i) {
+                  if (j->regionId == (int)newServer->id) {
                     robots[j->robotId].server = newServer;
                     robots[j->robotId].client = NULL;
                     cout << "Assigned robot " << j->robotId << " to regionserver "
-                         << i << endl;
+                         << newServer->id << endl;
                   }
                 }
               }
+
 
               break;
             }
@@ -194,9 +201,21 @@ int main(int argc, char** argv)
               } else {
                 cout << "Connected to a Region Server" << endl;
               }
-              net::EpollConnection *newServer = new net::EpollConnection(
-                  epoll, EPOLLIN, regionfd, net::connection::REGION);
+              ServerConnection *newServer = new ServerConnection(
+                  regioninfo.id(), epoll, EPOLLIN, regionfd, 
+                  net::connection::REGION);
               servers.push_back(newServer);
+
+              // Populate lookup table.
+              for(vector<NoTeamRobot>::iterator i = unassignedRobots.begin();
+                  i != unassignedRobots.end(); ++i) {
+                if (i->regionId == (int)newServer->id) {
+                  robots[i->robotId].server = newServer;
+                  robots[i->robotId].client = NULL;
+                  cout << "Assigned robot " << i->robotId << " to regionserver "
+                       << newServer->id << endl;
+                }
+              }
               break;
             }
 
@@ -351,16 +370,10 @@ int main(int argc, char** argv)
 				//ready to write
         switch(c->type) {
         case net::connection::CLIENT:
-          if(c->queue.doWrite()) {
-            c->set_writing(false);
-          }
-          break;
+          // Fall through...
         case net::connection::CLOCK:
           // Sending ClaimTeam messages
-          if(c->queue.doWrite()) {
-            c->set_writing(false);
-          }
-          break;
+          // Fall through...
         case net::connection::REGION:
           if(c->queue.doWrite()) {
             c->set_writing(false);
