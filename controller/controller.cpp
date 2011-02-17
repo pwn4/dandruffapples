@@ -300,8 +300,12 @@ int main(int argc, char** argv)
               net::EpollConnection *client = robots[serverrobot.id()].server;
               cout << "Received server robot with ID #" << serverrobot.id()
                    << endl;
-              client->queue.push(MSG_SERVERROBOT, serverrobot);
-              client->set_writing(true);
+              if (client == NULL) {
+                cout << "No client has claimed this robot yet!\n";
+              } else {
+                client->queue.push(MSG_SERVERROBOT, serverrobot);
+                client->set_writing(true);
+              }
               break;
             }
 
@@ -353,6 +357,11 @@ int main(int argc, char** argv)
           break;
         case net::connection::CLOCK:
           // Sending ClaimTeam messages
+          if(c->queue.doWrite()) {
+            c->set_writing(false);
+          }
+          break;
+        case net::connection::REGION:
           if(c->queue.doWrite()) {
             c->set_writing(false);
           }

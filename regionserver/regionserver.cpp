@@ -26,6 +26,7 @@ This program communications with clients, controllers, PNGviewers, other regions
 
 #include "../common/timestep.pb.h"
 #include "../common/net.h"
+#include "../common/clientrobot.pb.h"
 #include "../common/serverrobot.pb.h"
 #include "../common/puckstack.pb.h"
 #include "../common/messagewriter.h"
@@ -180,6 +181,7 @@ void run() {
   //handle logging to file initializations
   PuckStack puckstack;
   ServerRobot serverrobot;
+  ClientRobot clientrobot;
   puckstack.set_x(1);
   puckstack.set_y(1);
 
@@ -333,9 +335,25 @@ void run() {
               cerr << "Unexpected readable socket!" << endl;
             }
           }
+          break;
         }
         case net::connection::CONTROLLER:
         {
+          MessageType type;
+          size_t len;
+          const void *buffer;
+          if(c->reader.doRead(&type, &len, &buffer)) {
+            switch(type) {
+            case MSG_CLIENTROBOT:
+              clientrobot.ParseFromArray(buffer, len);
+              cout << "Received ClientRobot message with robotId #"
+                   << clientrobot.id() << endl;
+              break; 
+            default:
+              cerr << "Unexpected readable message from Controller\n";
+              break;
+            }
+          }
           
           break;
         }
@@ -358,7 +376,7 @@ void run() {
           net::set_blocking(fd, false);
           try {
             net::EpollConnection *newconn = new net::EpollConnection(epoll, 
-                EPOLLOUT, fd, net::connection::CONTROLLER);
+                EPOLLIN, fd, net::connection::CONTROLLER);
             controllers.push_back(newconn);
           } catch(SystemError e) {
             cerr << e.what() << endl;
