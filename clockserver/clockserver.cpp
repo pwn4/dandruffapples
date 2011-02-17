@@ -126,6 +126,7 @@ int main(int argc, char **argv) {
   time_t lastSecond = time(NULL);
   int timeSteps = 0;
   unsigned regionId = 0;
+  int numConnectedServers = 0;
   
   long totalpersecond = 0, number = 0;
   long values[1000];
@@ -163,6 +164,7 @@ int main(int argc, char **argv) {
               RegionInfo *region = worldinfo.add_region();
               region->ParseFromArray(buffer, len);
               region->set_address(c->addr);
+              region->set_id(numConnectedServers++);
 
               for(vector<RegionConnection*>::iterator i = controllers.begin();
                   i != controllers.end(); ++i) {

@@ -42,6 +42,13 @@ public:
 	ClientConnection(int id_, int epoll, int flags, int fd, Type type) : net::EpollConnection(epoll, flags, fd, type), id(id_) {}
 };
 
+class ServerConnection : public net::EpollConnection {
+public:
+	size_t id;
+
+	ServerConnection(int id_, int epoll, int flags, int fd, Type type) : net::EpollConnection(epoll, flags, fd, type), id(id_) {}
+};
+
 
 struct lookup_pair {
   net::EpollConnection *server;
@@ -49,6 +56,18 @@ struct lookup_pair {
 };
 
 lookup_pair robots[ROBOT_LOOKUP_SIZE];
+
+struct NoTeamRobot {
+  int robotId;
+  int regionId;
+  int teamId;
+  
+  NoTeamRobot(int robotId_, int regionId_, int teamId_) : robotId(robotId_),
+     regionId(regionId_), teamId(teamId_) {}
+};
+
+vector<NoTeamRobot> unassignedRobots;
+
 
 const char *configFileName;
 int clockfd, listenfd, clientfd;
@@ -73,14 +92,14 @@ int main(int argc, char** argv)
 {
   size_t clientcount = 0;
   helper::Config config(argc, argv);
-	configFileName=(config.getArg("-c").length() == 0 ? "config" : config.getArg("-c").c_str());
-	loadConfigFile();
+  configFileName=(config.getArg("-c").length() == 0 ? "config" : config.getArg("-c").c_str());
+  loadConfigFile();
 
-	// Print a starting message
-	printf("--== Controller Server Software ==-\n");
-	
-	clockfd = net::do_connect(clockip, CONTROLLERS_PORT);
-	cout << "Connected to Clock Server" << endl;
+  // Print a starting message
+  printf("--== Controller Server Software ==-\n");
+
+  clockfd = net::do_connect(clockip, CONTROLLERS_PORT);
+  cout << "Connected to Clock Server" << endl;
     
   listenfd = net::do_listen(CLIENTS_PORT);
   net::set_blocking(listenfd, false);
@@ -99,6 +118,7 @@ int main(int argc, char** argv)
   ClaimTeam claimteam;
   Claim claimrobot;
   vector<ClientConnection*> clients;
+  vector<ServerConnection*> servers;
 
   #define MAX_EVENTS 128
   struct epoll_event events[MAX_EVENTS];
@@ -121,15 +141,83 @@ int main(int argc, char** argv)
           if(c->reader.doRead(&type, &len, &buffer)) {
             switch(type) {
             case MSG_WORLDINFO:
+            {
               worldinfo.ParseFromArray(buffer, len);
               cout << "Got world info." << endl;
+              
+              // Get the robot information.
+              for (int i = 0; i < worldinfo.robot_size(); i++) {
+                unassignedRobots.push_back(NoTeamRobot(worldinfo.robot(i).id(),
+                    worldinfo.robot(i).region(), worldinfo.robot(i).team()));
+              }
+
+              // Get the RegionServer connections.
+              for (int i = 0; i < worldinfo.region_size(); i++) {
+                struct in_addr addr;
+                addr.s_addr = worldinfo.region(i).address();
+                int regionfd = net::do_connect(addr,
+                    worldinfo.region(i).controllerport());
+                if (regionfd < 0) {
+                  cout << "Failed to connect to a Region Server.\n";
+                } else if (regionfd == 0) {
+                  cout << "Invalid Region Server address\n";
+                } else {
+                  cout << "Connected to a Region Server" << endl;
+                }
+                ServerConnection *newServer = new ServerConnection(
+                    worldinfo.region(i).id(), epoll, EPOLLIN, regionfd, 
+                    net::connection::REGION);
+                servers.push_back(newServer);
+
+                // Populate lookup table.
+                for(vector<NoTeamRobot>::iterator j = unassignedRobots.begin();
+                    j != unassignedRobots.end(); ++j) {
+                  if (j->regionId == (int)newServer->id) {
+                    robots[j->robotId].server = newServer;
+                    robots[j->robotId].client = NULL;
+                    cout << "Assigned robot " << j->robotId << " to regionserver "
+                         << newServer->id << endl;
+                  }
+                }
+              }
+
+
               break;
+            }
 
             case MSG_REGIONINFO:
-							//should add connections to region servers
+            {
+              // TODO: Make a function perform the identical code here and in
+              //       the MSG_WORLDINFO case.
               regioninfo.ParseFromArray(buffer, len);
-              cout << "Got region info." << endl;
+              cout << "Got a new RegionInfo message! Trying to connect...\n";
+              struct in_addr addr;
+              addr.s_addr = regioninfo.address();
+              int regionfd = net::do_connect(addr, regioninfo.controllerport());
+              if (regionfd < 0) {
+                cout << "Failed to connect to a Region Server.\n";
+              } else if (regionfd == 0) {
+                cout << "Invalid Region Server address\n";
+              } else {
+                cout << "Connected to a Region Server" << endl;
+              }
+              ServerConnection *newServer = new ServerConnection(
+                  regioninfo.id(), epoll, EPOLLIN, regionfd, 
+                  net::connection::REGION);
+              servers.push_back(newServer);
+
+              // Populate lookup table.
+              for(vector<NoTeamRobot>::iterator i = unassignedRobots.begin();
+                  i != unassignedRobots.end(); ++i) {
+                if (i->regionId == (int)newServer->id) {
+                  robots[i->robotId].server = newServer;
+                  robots[i->robotId].client = NULL;
+                  cout << "Assigned robot " << i->robotId << " to regionserver "
+                       << newServer->id << endl;
+                }
+              }
               break;
+            }
 
             case MSG_TIMESTEPUPDATE:
               timestep.ParseFromArray(buffer, len);
@@ -149,8 +237,17 @@ int main(int argc, char** argv)
               if(claimteam.granted()) {
                 cout << "Client " << client << " granted team " << claimteam.id()
                      << "." << endl;
-                // TODO: Send list of robots to client
-                // TODO: Update lookup table
+
+                // Update lookup table. 
+                for(vector<NoTeamRobot>::iterator i = unassignedRobots.begin();
+                    i != unassignedRobots.end(); ++i) {
+                  if (i->teamId == (int)claimteam.id()) {
+                    robots[i->robotId].client = clients[client];
+                    cout << "Assigned robot " << i->robotId << " to client "
+                         << client << endl;
+                    // TODO: Erase unassignedRobot entries when done.
+                  }
+                }
               } else {
                 cout << "Client " << client << "'s request for team "
                      << claimteam.id() << " was rejected." << endl;
@@ -159,6 +256,7 @@ int main(int argc, char** argv)
               claimteam.clear_clientid();
               clients[client]->queue.push(MSG_CLAIMTEAM, claimteam);
               clients[client]->set_writing(true);
+
               break;
             }
 
@@ -190,7 +288,6 @@ int main(int argc, char** argv)
 
             case MSG_CLAIMTEAM:
             {
-              bool foundMatch = false;
               // Forward to the clock
               claimteam.ParseFromArray(buffer, len);
               claimteam.set_clientid(((ClientConnection*)c)->id);
@@ -222,8 +319,12 @@ int main(int argc, char** argv)
               net::EpollConnection *client = robots[serverrobot.id()].server;
               cout << "Received server robot with ID #" << serverrobot.id()
                    << endl;
-              client->queue.push(MSG_SERVERROBOT, serverrobot);
-              client->set_writing(true);
+              if (client == NULL) {
+                cout << "No client has claimed this robot yet!\n";
+              } else {
+                client->queue.push(MSG_SERVERROBOT, serverrobot);
+                client->set_writing(true);
+              }
               break;
             }
 
@@ -269,12 +370,11 @@ int main(int argc, char** argv)
 				//ready to write
         switch(c->type) {
         case net::connection::CLIENT:
-          if(c->queue.doWrite()) {
-            c->set_writing(false);
-          }
-          break;
+          // Fall through...
         case net::connection::CLOCK:
           // Sending ClaimTeam messages
+          // Fall through...
+        case net::connection::REGION:
           if(c->queue.doWrite()) {
             c->set_writing(false);
           }
