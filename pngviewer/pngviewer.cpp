@@ -90,6 +90,26 @@ cairo_status_t reader(void *blob, unsigned char *data, unsigned int length)
 //display the png that we received from a region server in its pngDrawingArea space
 void displayPng(int serverNum, RegionRender render) {
 	Blob blob((void*) render.image().c_str(), render.image().length());
+	Image blobImage;
+	blobImage.read(blob);
+	Pixels blobDots(blobImage);
+	
+  PixelPacket *pixel_cache = blobImage.getPixels(0,0,blobImage.columns(),blobImage.rows());
+
+  PixelPacket *pixel;
+  //iterate through the pixels
+  for(ssize_t row = 0; row < blobImage.rows(); row++)
+    for(ssize_t column = 0; column < blobImage.columns(); column++)
+    {
+      pixel = pixel_cache+row*blobImage.columns()+column;
+      
+      //NOTE: color values range from 0 to 65535 (not 255). all values 65535=white.
+      //if(pixel->red != 65535 || pixel->green != 65535 || pixel->blue != 65535)
+      //  printf("%d %d %d\n", pixel->red, pixel->green, pixel->blue);
+    }
+	
+	//cairo code to be integrated?
+  /*
 	cairo_t *cr = gdk_cairo_create(pngDrawingArea.at(serverNum)->widget.window);
 
 	cairo_surface_t *image = cairo_image_surface_create_from_png_stream(reader, &blob);
@@ -97,7 +117,7 @@ void displayPng(int serverNum, RegionRender render) {
 	cairo_set_source_surface(cr, image, 10, 10);
 	cairo_paint(cr);
 
-	cairo_destroy(cr);
+	cairo_destroy(cr);*/
 }
 
 //handler for region received messages
