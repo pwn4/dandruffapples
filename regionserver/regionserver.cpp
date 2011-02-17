@@ -206,9 +206,9 @@ void run() {
   int wantRobots = 1000;
   //regionarea->AddRobot(10, 0, 1, 0, 0, 0);
   //regionarea->AddRobot(12, 15.8, 1, 0, 0, 0);
-  for(int i = 3*robotDiameter; i < regionSideLen-3*(robotDiameter) && numRobots < wantRobots; i += 3*(robotDiameter))
-    for(int j = 3*robotDiameter; j < regionSideLen-3*(robotDiameter) && numRobots < wantRobots; j += 3*(robotDiameter))
-        regionarea->AddRobot(numRobots++, i, j, 0, 0, 0, (numRobots % 3 == 0 ? "red" : ((numRobots+1) % 3 == 0 ? "blue" : "green")));
+  for(int i = 3*robotDiameter; i < regionSideLen-3*(robotDiameter) && numRobots < wantRobots; i += 10*(robotDiameter))
+    for(int j = 3*robotDiameter; j < regionSideLen-3*(robotDiameter) && numRobots < wantRobots; j += 10*(robotDiameter))
+        regionarea->AddRobot(numRobots++, i, j, 0, 0, 0, 0, (numRobots % 3 == 0 ? "red" : ((numRobots+1) % 3 == 0 ? "blue" : "green")));
 
     cout << numRobots << " robots created." << endl;
   MessageWriter writer(clockfd);
