@@ -200,8 +200,6 @@ void AreaEngine::Step(bool generateImage){
         AreaEngine::RemoveRobot(curRobot->id, oldIndices.x, oldIndices.y, false);
       }
     }
-    //draw to the blob
-    newPNG.write(&stepImage);
   }else{
     //move the robots, now that we know they won't collide
     for(robotIt=robots.begin() ; robotIt != robots.end(); robotIt++)
