@@ -316,7 +316,7 @@ int main(int argc, char** argv)
             {
               serverrobot.ParseFromArray(buffer, len);
               // Forward to the correct client
-              net::EpollConnection *client = robots[serverrobot.id()].server;
+              net::EpollConnection *client = robots[serverrobot.id()].client;
               cout << "Received server robot with ID #" << serverrobot.id()
                    << endl;
               if (client == NULL) {
