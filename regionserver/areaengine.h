@@ -44,11 +44,12 @@ struct RobotObject{
   time_t lastCollision;
   map<int, bool> *lastSeen;
   string robotColor;
-  
   RobotObject * nextRobot;
+  int controllerfd;
+ 
   
-  RobotObject(int newid, double newx, double newy, Index aLoc, int curStep, string color) : id(newid), lastStep(curStep), x(newx), y(newy), vx(0), vy(0), arrayLocation(aLoc), lastCollision(time(NULL)), lastSeen(new map<int, bool>), robotColor(color), nextRobot(NULL) {}
-  RobotObject(int newid, double newx, double newy, double newvx, double newvy, Index aLoc, int curStep, string color) : id(newid), lastStep(curStep), x(newx), y(newy), vx(newvx), vy(newvy), arrayLocation(aLoc), lastCollision(time(NULL)), lastSeen(new map<int, bool>), robotColor(color), nextRobot(NULL) {}
+  RobotObject(int newid, double newx, double newy, Index aLoc, int curStep, string color) : id(newid), lastStep(curStep), x(newx), y(newy), vx(0), vy(0), arrayLocation(aLoc), lastCollision(time(NULL)), lastSeen(new map<int, bool>), robotColor(color), nextRobot(NULL), controllerfd(-1) {}
+  RobotObject(int newid, double newx, double newy, double newvx, double newvy, Index aLoc, int curStep, string color) : id(newid), lastStep(curStep), x(newx), y(newy), vx(newvx), vy(newvy), arrayLocation(aLoc), lastCollision(time(NULL)), lastSeen(new map<int, bool>), robotColor(color), nextRobot(NULL), controllerfd(-1) {}
 };
 
 struct ArrayObject{
@@ -71,7 +72,7 @@ int coolDown; //cooldown before being able to change velocities
 int** puckArray;
 double maxSpeed; //a bound on the speed of robots. Should be passed by the clock.
 ArrayObject** robotArray;
-vector<RobotObject*> robots;
+map<int, RobotObject*> robots;
   
 public:
   Blob stepImage; //contains the image of the last step called with generateImage=true
