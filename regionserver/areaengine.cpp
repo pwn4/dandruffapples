@@ -8,7 +8,8 @@
 #include <time.h>
 #include <sys/time.h>
 #include <math.h>
-#include <Magick++.h>
+#include <gtk/gtk.h>
+#include <cairo.h>
 
 using namespace std;
 
@@ -111,6 +112,10 @@ void AreaEngine::Step(bool generateImage){
   map<int, bool> *nowSaw;
   map<int, RobotObject*>::iterator robotIt;
   
+  //init our surface
+  stepImage = cairo_image_surface_create (CAIRO_FORMAT_RGB24 , 625, 625);
+  stepImageDrawer = cairo_create (stepImage);
+  
   //iterate through our region's robots and simulate them
   for(robotIt=robots.begin() ; robotIt != robots.end(); robotIt++)
   {
@@ -158,10 +163,14 @@ void AreaEngine::Step(bool generateImage){
   }
   
   if(generateImage){
-    //clear the blob
-	  Image newPNG("625x625", "white");
-	  newPNG.magick("png");
-	  newPNG.depth(8);
+    //clear the image
+    cairo_set_source_rgb (stepImageDrawer, 1, 1, 1);
+    cairo_paint (stepImageDrawer); 
+    
+    cairo_set_source_rgb(stepImageDrawer, .1, .1, .1);
+    cairo_set_line_width (stepImageDrawer, 1);
+    //cairo_set_line_cap  (cr, CAIRO_LINE_CAP_ROUND); /* Round dot*/
+
 	  int drawX, drawY;
 
 	  //move the robots, now that we know they won't collide
@@ -175,7 +184,11 @@ void AreaEngine::Step(bool generateImage){
       drawY = (curRobot->y / (regionRatio))*625;
       //don't draw the overlaps
       if(drawX >= regionRatio/regionBounds && drawX < 625 && drawY >= regionRatio/regionBounds && drawY < 625)
-        newPNG.pixelColor(drawX, drawY, curRobot->robotColor);
+      {
+        cairo_move_to (stepImageDrawer, drawX, drawY);
+        cairo_line_to (stepImageDrawer, drawX, drawY);
+        cairo_stroke (stepImageDrawer);
+      }
       //check if the robot moves through a[][]
       Index oldIndices = curRobot->arrayLocation;
       curRobot->arrayLocation = getRobotIndices(curRobot->x, curRobot->y);
