@@ -107,15 +107,15 @@ void AreaEngine::Step(bool generateImage){
   
   //some worker variables
   Index topLeft, botRight;
-  map<int, bool>::iterator setIterator;
   map<int, bool> *nowSaw;
+  map<int, RobotObject*>::iterator robotIt;
   
   //iterate through our region's robots and simulate them
-  for(size_t i = 0; i < robots.size(); i++)
+  for(robotIt=robots.begin() ; robotIt != robots.end(); robotIt++)
   {
     //NOTE: addrobot changes should only be taken in at the end of a timestep, AFTER simulation.
   
-    RobotObject * curRobot = robots[i];
+    RobotObject * curRobot = (*robotIt).second;
     
     //this is the big one. This is the O(N^2) terror. Thankfully, in the worst case (current implementation)
     //it runs (viewingdist*360degrees)/robotsize.
@@ -163,9 +163,9 @@ void AreaEngine::Step(bool generateImage){
 	  int drawX, drawY;
 
 	  //move the robots, now that we know they won't collide
-    for(size_t i = 0; i < robots.size(); i++)
+    for(robotIt=robots.begin() ; robotIt != robots.end(); robotIt++)
     {
-      RobotObject * curRobot = robots[i];
+      RobotObject * curRobot = (*robotIt).second;
       curRobot->x += curRobot->vx;
       curRobot->y += curRobot->vy;
       //repaint the robot
@@ -188,9 +188,9 @@ void AreaEngine::Step(bool generateImage){
     newPNG.write(&stepImage);
   }else{
     //move the robots, now that we know they won't collide
-    for(size_t i = 0; i < robots.size(); i++)
+    for(robotIt=robots.begin() ; robotIt != robots.end(); robotIt++)
     {
-      RobotObject * curRobot = robots[i];
+      RobotObject * curRobot = (*robotIt).second;
       curRobot->x += curRobot->vx;
       curRobot->y += curRobot->vy;
       //check if the robot moves through a[][]
@@ -207,10 +207,10 @@ void AreaEngine::Step(bool generateImage){
   
   //check for sight. Theoretically runs in O(n^2)+O(n)+O(m). In reality, runs O((viewdist*360degrees/robotsize)*robotsinregion)+O(2*(viewdist*360degrees/robotsize))
   //THIS IS THE BOTTLENECK RIGHT NOW
-  for(size_t i = 0; i < robots.size(); i++)
+  for(robotIt=robots.begin() ; robotIt != robots.end(); robotIt++)
   {
   
-    RobotObject * curRobot = robots[i];
+    RobotObject * curRobot = (*robotIt).second;
     nowSaw = curRobot->lastSeen;
     
     //may make this better. don't need to check full 360 degrees if we only see a cone
@@ -275,7 +275,7 @@ RobotObject* AreaEngine::AddRobot(int robotId, double newx, double newy, double 
   RobotObject* newRobot = new RobotObject(robotId, newx, newy, newvx, newvy, robotIndices, atStep, newColor);
 
   //add the robot to our robots vector (used for timestepping)
-  robots.push_back(newRobot);
+  robots.insert(pair<int, RobotObject*>(robotId, newRobot));
   
   //find where it belongs in a[][] and add it
   ArrayObject *element = &robotArray[robotIndices.x][robotIndices.y];
