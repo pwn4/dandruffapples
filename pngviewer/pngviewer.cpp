@@ -1,6 +1,8 @@
 /*////////////////////////////////////////////////////////////////////////////////////////////////
  PNGViewer program
- This program communications with clock servers and region servers
+ This program communications with the clock server and region servers
+ It gets the region server list from the clock server, connects to all the region servers,
+ receives all of the PNGs every so often and displays them in a GUI for the user to watch.
  //////////////////////////////////////////////////////////////////////////////////////////////////*/
 #include <sstream>
 #include <iostream>
@@ -26,14 +28,12 @@
 #include "../common/regionrender.pb.h"
 #include "../common/ports.h"
 #include "../common/messagereader.h"
-#include "../common/messagequeue.h"
+#include "../common/messagewriter.h"
 #include "../common/net.h"
+#include "../common/types.h"
 #include "../common/except.h"
 #include "../common/parseconf.h"
 #include "../common/timestep.pb.h"
-#include "../common/serverrobot.pb.h"
-#include "../common/puckstack.pb.h"
-#include "../common/messagewriter.h"
 
 #include "../common/helper.h"
 #include "../common/imageconstants.h"
@@ -51,9 +51,20 @@ struct regionConnection: net::connection {
 
 };
 
+struct region {
+	regionConnection regionConn;
+	bool viewed;
+	int showInRow;
+	int showInColumn;
+
+	region(int fd, RegionInfo info, bool viewed_) :
+		regionConn(fd, info), viewed(viewed_) {
+	}
+};
+
 //variable declarations
 ofstream debug;
-vector<regionConnection*> regions;
+vector<region*> regions;
 vector<GtkDrawingArea*> pngDrawingArea;
 GtkBuilder *builder;
 
@@ -72,25 +83,33 @@ void loadConfigFile(const char *configFileName, char* clockip) {
 	strcpy(clockip, configuration["CLOCKIP"].c_str());
 }
 
-
-
 //display the png that we received from a region server in its pngDrawingArea space
-void displayPng(int serverNum, RegionRender render) {
+void displayPng(int regionNum, RegionRender render) {
 
 	//temporary: Don't crash the program if we have more region servers
 	//sending PNGs to us than we can draw at once
-	if( serverNum > pngDrawingArea.size())
+	if(!regions.at(regionNum)->viewed)
 		return;
 
 	//temporary: inefficient calling this here all the time
-	gtk_widget_set_size_request(GTK_WIDGET(pngDrawingArea.at(serverNum)), IMAGEWIDTH, IMAGEHEIGHT);
+	gtk_widget_set_size_request(GTK_WIDGET(pngDrawingArea.at(regionNum)),
+			IMAGEWIDTH, IMAGEHEIGHT);
 
-	cairo_t *cr = gdk_cairo_create(pngDrawingArea.at(serverNum)->widget.window);
-	cairo_surface_t *image = cairo_image_surface_create_for_data((unsigned char*)render.image().c_str(), IMAGEFORMAT, IMAGEWIDTH, IMAGEHEIGHT, cairo_format_stride_for_width(IMAGEFORMAT, IMAGEWIDTH) );
+	cairo_t *cr = gdk_cairo_create(pngDrawingArea.at(regionNum)->widget.window);
+	cairo_surface_t *image =
+			cairo_image_surface_create_for_data(
+					(unsigned char*) render.image().c_str(), IMAGEFORMAT,
+					IMAGEWIDTH, IMAGEHEIGHT, cairo_format_stride_for_width(
+							IMAGEFORMAT, IMAGEWIDTH));
 
 	cairo_set_source_surface(cr, image, 0, 0);
 	cairo_paint(cr);
 	cairo_destroy(cr);
+}
+
+//go through all the viewable regions and map them to a specific spot on the grid
+void mapRegionsToDraw()
+{
 }
 
 //handler for region received messages
@@ -99,14 +118,16 @@ gboolean io_regionmessage(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 	MessageType type;
 	size_t len;
 	const void *buffer;
+	int regionNum = 0;
 
-	int serverNum=0;
 	//get the region number that we are receiving a PNG from
-	for (vector<regionConnection*>::iterator it = regions.begin(); it
-			!= regions.end() && (*it)->fd != g_io_channel_unix_get_fd(ioch); it++, serverNum++){}
+	for (vector<region*>::iterator it = regions.begin(); it != regions.end()
+			&& (*it)->regionConn.fd != g_io_channel_unix_get_fd(ioch); it++, regionNum++) {
+	}
 
 	for (bool complete = false; !complete;)
-		complete = regions.at(serverNum)->reader.doRead(&type, &len, &buffer);
+		complete = regions.at(regionNum)->regionConn.reader.doRead(&type, &len,
+				&buffer);
 
 	switch (type) {
 	case MSG_REGIONRENDER: {
@@ -117,7 +138,7 @@ gboolean io_regionmessage(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 		debug << "Received MSG_REGIONRENDER update and the timestep is # "
 				<< render.timestep() << endl;
 #endif
-		displayPng(serverNum, render);
+		displayPng(regionNum, render);
 
 		break;
 	}
@@ -159,6 +180,30 @@ gboolean io_clockmessage(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 		int regionFd = net::do_connect(addr, regioninfo.renderport());
 		net::set_blocking(regionFd, false);
 
+		//store the region server mapping
+		regions.push_back(new region(regionFd, regioninfo, true));
+
+		if (regions.size() > PNGVIEWER_MAX_VIEWS_ROWS
+				* PNGVIEWER_MAX_VIEWS_COLUMNS) {
+
+			MessageWriter writer(regionFd);
+			regions.at(regions.size() - 1)->viewed = false;
+			SendMorePngs sendMore;
+			sendMore.set_enable(false);
+			writer.init(MSG_SENDMOREPNGS, sendMore);
+
+			for (bool complete = false; !complete;) {
+				complete = writer.doWrite();
+			}
+
+#ifdef DEBUG
+		debug << "Too many region servers are trying to send. Disabling:  " << regioninfo.address()
+				<< " " << regioninfo.renderport() << endl;
+#endif
+		}
+		else
+			mapRegionsToDraw();
+
 		if (regionFd < 0) {
 #ifdef DEBUG
 			debug << "Critical Error: Failed to connect to a region server: "
@@ -166,23 +211,20 @@ gboolean io_clockmessage(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 #endif
 			exit(1);
 		}
-		//store the region server mapping
-		regionConnection *newregion =
-				new regionConnection(regionFd, regioninfo);
-		regions.push_back(newregion);
 
-		//create a new handler to wait for when the server sends a new png to us
+		//create a new handler to wait for when the server sends a new PNG to us
 		g_io_add_watch(g_io_channel_unix_new(regionFd), G_IO_IN,
 				io_regionmessage, NULL);
 #ifdef DEBUG
-		debug << "Connected to region server: " << addr.s_addr << endl;
+		debug << "Connected to region server: " << addr.s_addr << " at ( "
+				<< regioninfo.draw_x() << ", " << regioninfo.draw_y() << " )"
+				<< endl;
 #endif
 
 		break;
 	}
 
-	default:
-	{
+	default: {
 #ifdef DEBUG
 		debug << "Unexpected readable message type from clock! Type:" << type
 				<< endl;
@@ -212,43 +254,47 @@ void on_Properties_toggled(GtkWidget *widget, gpointer window) {
 	GtkWidget *propertiesWindow =
 			GTK_WIDGET(gtk_builder_get_object( builder, "propertiesWindow" ));
 
-	if (gtk_toggle_tool_button_get_active(
-			GTK_TOGGLE_TOOL_BUTTON(propertiesWindow))) {
+	if (gtk_toggle_tool_button_get_active(GTK_TOGGLE_TOOL_BUTTON(widget))) {
 		gtk_widget_show_all(propertiesWindow);
 	} else {
 		gtk_widget_hide_all(propertiesWindow);
 	}
 }
 
-//initializations for the things that will be drawn
-void drawer() {
+//initializations and simple modifications for the things that will be drawn
+void initializeDrawers() {
 	g_type_init();
 
 	GtkWidget *window = GTK_WIDGET(gtk_builder_get_object( builder, "window" ));
-	GtkToggleToolButton	*navigation =
+	GtkToggleToolButton
+			*navigation =
 					GTK_TOGGLE_TOOL_BUTTON(gtk_builder_get_object( builder, "Navigation" ));
+	GtkToggleToolButton
+			*properties =
+					GTK_TOGGLE_TOOL_BUTTON(gtk_builder_get_object( builder, "Properties" ));
 	GtkWidget *table = GTK_WIDGET(gtk_builder_get_object( builder, "table" ));
-	gtk_table_resize(GTK_TABLE(table), PNGVIEWER_MAX_VIEWS_ROWS, PNGVIEWER_MAX_VIEWS_COLUMNS);
+	gtk_table_resize(GTK_TABLE(table), PNGVIEWER_MAX_VIEWS_ROWS,
+			PNGVIEWER_MAX_VIEWS_COLUMNS);
 
-	//change the color of the window's background to black
+	//change the color of the main window's background to black
 	GdkColor bgColor;
 	bgColor.red = 0;
 	bgColor.green = 0;
 	bgColor.blue = 0;
 	gtk_widget_modify_bg(GTK_WIDGET(window), GTK_STATE_NORMAL, &bgColor);
 
-	//create a PNGVIEWER_MAX_VIEWS GtkDrawingAreas
-	for(int i=0; i<PNGVIEWER_MAX_VIEWS_ROWS; i++)
-	{
-		for(int j=0; j<PNGVIEWER_MAX_VIEWS_COLUMNS; j++)
-		{
+	//create a grid to display the received PNGs
+	for (int i = 0; i < PNGVIEWER_MAX_VIEWS_ROWS; i++) {
+		for (int j = 0; j < PNGVIEWER_MAX_VIEWS_COLUMNS; j++) {
 			GtkDrawingArea* area = GTK_DRAWING_AREA(gtk_drawing_area_new());
-			gtk_table_attach_defaults(GTK_TABLE(table), GTK_WIDGET(area), j, j+1, i, i+1 );
+			gtk_table_attach_defaults(GTK_TABLE(table), GTK_WIDGET(area), j, j
+					+ 1, i, i + 1);
 			pngDrawingArea.push_back(GTK_DRAWING_AREA(area));
 		}
 	}
 
 	g_signal_connect(navigation, "toggled", G_CALLBACK(on_Navigation_toggled), (gpointer) window);
+	g_signal_connect(properties, "toggled", G_CALLBACK(on_Properties_toggled), (gpointer) window);
 
 	gtk_widget_show_all(window);
 
@@ -267,6 +313,7 @@ int main(int argc, char* argv[]) {
 			+ "pngviewer.builder";
 	builder = gtk_builder_new();
 	gtk_builder_add_from_file(builder, builderPath.c_str(), NULL);
+	//todo: this probably does not do anything
 	gtk_builder_connect_signals(builder, NULL);
 
 	const char *configFileName = (config.getArg("-c").length() == 0 ? "config"
@@ -281,7 +328,7 @@ int main(int argc, char* argv[]) {
 	int clockfd = net::do_connect(clockip, PNG_VIEWER_PORT);
 	net::set_blocking(clockfd, false);
 
-	//adder handler for the clock
+	//handle clock messages
 	MessageReader clockReader(clockfd);
 	g_io_add_watch(g_io_channel_unix_new(clockfd), G_IO_IN, io_clockmessage,
 			(gpointer) &clockReader);
@@ -298,7 +345,7 @@ int main(int argc, char* argv[]) {
 	debug << "Connected to Clock Server " << clockip << endl;
 #endif
 
-	drawer();
+	initializeDrawers();
 
 	debug.close();
 	g_object_unref(G_OBJECT( builder ));
