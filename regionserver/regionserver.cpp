@@ -59,7 +59,6 @@ char clockip[40] = "127.0.0.1";
 int controllerPort = CONTROLLERS_PORT;
 int pngviewerPort = PNG_VIEWER_PORT;
 int regionPort = REGIONS_PORT;
-
 ////////////////////////////////////////////////////////////
 
 void loadConfigFile() {
@@ -119,6 +118,10 @@ char *parse_port(char *input) {
 
 //the main function
 void run() {
+	bool sendMorePngs = false;
+	time_t timeCache;
+
+	//this is only here to generate random numbers for the logging
 	srand(time(NULL));
 
 	// Disregard SIGPIPE so we can handle things normally
@@ -248,12 +251,20 @@ void run() {
 
 	//enter the main loop
 	while (true) {
+		//cache the time, so we don't call it several times
+		timeCache = time(NULL);
 
 		//check if its time to output
-		if (time(NULL) > lastSecond) {
-			cout << timeSteps << " timesteps/second." << endl;
+		if (timeCache > lastSecond) {
+			cout << timeSteps << " timesteps/second";
+
+			//remove me later: temporary message for debugging
+			if (sendMorePngs)
+				cout << " and we are generating PNGs";
+			cout << endl;
+
 			timeSteps = 0;
-			lastSecond = time(NULL);
+			lastSecond = timeCache;
 		}
 
 		//wait on epoll
@@ -296,9 +307,8 @@ void run() {
 
 							timeSteps++; //Note: only use this for this temp stat taking. use regionarea->curStep for syncing
 
-
-							if (regionarea->curStep % 20 == 0) {
-								// Only generate an image for one in 200 timesteps
+							if (regionarea->curStep % 20 == 0 && sendMorePngs) {
+								// Only generate an image for one in 20 timesteps
 								surface = regionarea->stepImage;
 								unsigned char *surfaceData =
 										cairo_image_surface_get_data(surface);
@@ -411,24 +421,50 @@ void run() {
 					break;
 				}
 				case net::connection::PNGVIEWER_LISTEN: {
-					// Accept a new pngviewer
-					int fd = accept(c->fd, NULL, NULL);
-					if (fd < 0) {
-						throw SystemError("Failed to accept png viewer");
-					}
-					net::set_blocking(fd, false);
+					//we get a message from the pngviewer server
+					MessageType type;
+					size_t len;
+					const void *buffer;
 
+					//check for a message that disables the sending of PNGs to the pngviewer
 					try {
-						net::EpollConnection *newconn =
-								new net::EpollConnection(epoll, EPOLLOUT, fd,
-										net::connection::PNGVIEWER);
-						pngviewers.push_back(newconn);
-					} catch (SystemError e) {
-						cerr << e.what() << endl;
-						return;
-					}
+						//first check if we are receiving an actual message or a new connection
+						if (c->reader.doRead(&type, &len, &buffer)) {
+							switch (type) {
+							case MSG_SENDMOREPNGS: {
+								SendMorePngs doWeSend;
+								doWeSend.ParseFromArray(buffer, len);
 
-					cout << "Got png viewer connection." << endl;
+								sendMorePngs = doWeSend.enable();
+							}
+							default:
+								cerr
+										<< "Unexpected message from the pngviewer!"
+										<< endl;
+								break;
+							}
+						}
+					} catch (SystemError e) {
+						//We failed to read a message, so it's a new connection from the pngviewer
+						int fd = accept(c->fd, NULL, NULL);
+						if (fd < 0) {
+							throw SystemError("Failed to accept png viewer");
+						}
+						net::set_blocking(fd, false);
+
+						try {
+							net::EpollConnection *newconn =
+									new net::EpollConnection(epoll, EPOLLOUT,
+											fd, net::connection::PNGVIEWER);
+							pngviewers.push_back(newconn);
+							sendMorePngs = true;
+						} catch (SystemError e) {
+							cerr << e.what() << endl;
+							return;
+						}
+
+						cout << "Got png viewer connection." << endl;
+					}
 					break;
 				}
 
@@ -462,6 +498,11 @@ void run() {
 								close(c->fd);
 								cout << "png viewer with fd=" << c->fd
 										<< " disconnected" << endl;
+
+								//don't even bother sending more PNGs if we have no one to send them to
+								if (pngviewers.size() == 0)
+									sendMorePngs = false;
+
 								break;
 							}
 						}

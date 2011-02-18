@@ -2,3 +2,7 @@ message RegionRender {
   required uint64 timestep = 1;
   required bytes image = 2;
 }
+
+message SendMorePngs{
+  required bool enable=1;
+}
