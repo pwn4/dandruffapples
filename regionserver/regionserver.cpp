@@ -195,7 +195,7 @@ void run() {
   WorldInfo worldinfo;
   RegionInfo regioninfo;
   //Region Area Variables (should be set by clock server)
-  int regionSideLen = 2000;
+  int regionSideLen = 2500;
   int robotDiameter = 4;
   int minElementSize =  4;
   double viewDistance = 20;
