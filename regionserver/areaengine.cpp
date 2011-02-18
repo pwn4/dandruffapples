@@ -244,11 +244,11 @@ void AreaEngine::Step(bool generateImage){
         
         if(newIndices.x == 1)
           transx += regionRatio;
-        else
+        else if(newIndices.x == regionBounds)
           transx -= regionRatio;
         if(newIndices.y == 1)
           transy += regionRatio;
-        else
+        else if(newIndices.y == regionBounds)
           transy -= regionRatio;
           
         informNeighbour.set_x(transx);
