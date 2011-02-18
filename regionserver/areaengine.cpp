@@ -134,8 +134,8 @@ void AreaEngine::Step(bool generateImage){
     
     //collisions first - just check, and zero velocities if they would have collided
     //calculate the bounds of the a[][] elements we need to check
-    topLeft = getRobotIndices(curRobot->x-maxSpeed, curRobot->y-maxSpeed);
-    botRight = getRobotIndices(curRobot->x+maxSpeed, curRobot->y+maxSpeed);
+    topLeft = getRobotIndices(curRobot->x-(maxSpeed+robotRatio/2), curRobot->y-(maxSpeed+robotRatio/2));
+    botRight = getRobotIndices(curRobot->x+(maxSpeed+robotRatio/2), curRobot->y+(maxSpeed+robotRatio/2));
 
     for(int j = topLeft.x; j <= botRight.x; j++)
       for(int k = topLeft.y; k <= botRight.y; k++)
@@ -403,4 +403,12 @@ bool AreaEngine::ChangeAngle(int robotId, double newangle){
   return true;
 }
 
+//tell the areaengine that a socket handle is open to write updates to
+void AreaEngine::SetNeighbour(int placement, int socketHandle){
+
+}
+
+void AreaEngine::GotServerRobot(ServerRobot message){
+
+}
 
