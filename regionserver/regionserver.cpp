@@ -327,6 +327,12 @@ void run() {
                   // its right.
                   for (int j = 0; j < worldinfo.region(i).position_size();
                        j++) {
+                    // Inform AreaEngine who our neighbours are.
+                    regionarea->SetNeighbour((int)worldinfo.region(i).position(j),
+                        newconn);
+
+                    // Flip Positions to tell other RegionServers that I am
+                    // your new neighbour.
                     switch (worldinfo.region(i).position(j)) {
                     case RegionInfo_Position_TOP_LEFT:
                       worldinfo.mutable_region(i)->set_position(j, 
@@ -491,6 +497,9 @@ void run() {
                    << " is trying to tell us he's our neighbour! He be here:\n";
               for (int i = 0; i < regioninfo.position_size(); i++) {
                 cout << "  Position: " << regioninfo.position(i) << endl;
+                
+                // Inform AreaEngine of our new neighbour.
+                regionarea->SetNeighbour((int)regioninfo.position(i), c);
               }
               break;
             }
