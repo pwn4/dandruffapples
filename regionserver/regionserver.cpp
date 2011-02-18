@@ -213,7 +213,7 @@ void run() {
 	int wantRobots = 1000;
 	//regionarea->AddRobot(numRobots++, 10, 10, 0, .1, 0, 0, "red");
 	//regionarea->AddRobot(numRobots++, 1800, 10, 0, -.1, 0, 0, "red");
-	for (int i = 3 * robotDiameter; i < regionSideLen - 3 * (robotDiameter)
+	for (int i = 600 * robotDiameter; i < regionSideLen - 3 * (robotDiameter)
 			&& numRobots < wantRobots; i += 5 * (robotDiameter))
 		for (int j = 3 * robotDiameter; j < regionSideLen - 3 * (robotDiameter)
 				&& numRobots < wantRobots; j += 5 * (robotDiameter))
