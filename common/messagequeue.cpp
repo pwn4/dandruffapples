@@ -27,12 +27,12 @@ void MessageQueue::push(MessageType typeTag, const google::protobuf::MessageLite
   }
 
   // Work out sizes
-  size_t msglen = message.ByteSize();
-  size_t blocklen = msglen + sizeof(uint8_t) + sizeof(uint32_t);
+  int msglen = message.ByteSize();
+  int blocklen = msglen + sizeof(uint8_t) + sizeof(uint32_t);
 
   // Ensure we have a place to put it
   if(_bufsize < _appendpt + blocklen) {
-    size_t datalen = remaining();
+    int datalen = remaining();
     if(_writept > 0 &&
        blocklen < _writept + (_bufsize - _appendpt)) {
       // We have enough discontinuous space; rearrange it.  We could
@@ -43,7 +43,7 @@ void MessageQueue::push(MessageType typeTag, const google::protobuf::MessageLite
       _writept = 0;
     } else {
       // We need a bigger buffer
-      size_t newsize = _bufsize ? _bufsize * 2 : 256;
+      int newsize = _bufsize ? _bufsize * 2 : 256;
       while(newsize < datalen + blocklen) {
         newsize *= 2;
       }
@@ -61,6 +61,7 @@ void MessageQueue::push(MessageType typeTag, const google::protobuf::MessageLite
   // Enter message into buffer
   _buffer[_appendpt] = typeTag;
   *(uint32_t*)(_buffer + _appendpt + sizeof(uint8_t)) = htonl(msglen);
+  cout << (message.ByteSize()+ _appendpt + sizeof(uint8_t) + sizeof(uint32_t)) << "|" << 
   message.SerializeWithCachedSizesToArray(_buffer + _appendpt + sizeof(uint8_t) + sizeof(uint32_t));
 
   _appendpt += blocklen;

@@ -22,7 +22,7 @@ class MessageReader {
 protected:
   int _fd;
   uint8_t *_buffer;
-  size_t _bufsize, _typepos, _lenpos, _bufpos;
+  int _bufsize, _typepos, _lenpos, _bufpos;
   uint32_t _msglen;
   uint8_t _type;
   
@@ -31,7 +31,7 @@ public:
   MessageReader(const MessageReader&);
   ~MessageReader();
 
-  bool doRead(MessageType *type, size_t *len, const void **buffer);
+  bool doRead(MessageType *type, int *len, const void **buffer);
 };
 
 #endif

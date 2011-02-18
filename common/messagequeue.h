@@ -17,7 +17,7 @@
 class MessageQueue {
 protected:
   int _fd;
-  size_t _bufsize, _appendpt, _writept;
+  int _bufsize, _appendpt, _writept;
   uint8_t *_buffer;
 
 public:
@@ -28,7 +28,7 @@ public:
   void push(MessageType typeTag, const google::protobuf::MessageLite &message);
 
   bool doWrite();
-  inline size_t remaining() const { return _appendpt - _writept; }
+  inline int remaining() const { return _appendpt - _writept; }
   inline bool writing() const { return remaining(); }
 };
 

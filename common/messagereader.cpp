@@ -26,7 +26,7 @@ MessageReader::~MessageReader() {
   free(_buffer);
 }
 
-bool MessageReader::doRead(MessageType *type, size_t *len, const void **buffer) {
+bool MessageReader::doRead(MessageType *type, int *len, const void **buffer) {
   ssize_t bytes;
   // Read type, if necessary
   if(_typepos < sizeof(_type)) {

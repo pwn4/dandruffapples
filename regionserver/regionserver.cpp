@@ -385,7 +385,7 @@ void run() {
 						case MSG_TIMESTEPUPDATE: {
 							timestep.ParseFromArray(buffer, len);
 
-							if (regionarea->curStep % 20 == 0)
+							if (regionarea->curStep % 20 == 0 && sendMorePngs)
 								regionarea->Step(true);
 							else
 								regionarea->Step(false);
