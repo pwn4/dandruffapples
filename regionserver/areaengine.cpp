@@ -119,6 +119,10 @@ void AreaEngine::Step(bool generateImage){
   
     RobotObject * curRobot = (*robotIt).second;
     
+    //if the robot is from the future, don't check it
+    if(curRobot->lastStep == curStep)
+      continue;
+    
     //this is the big one. This is the O(N^2) terror. Thankfully, in the worst case (current implementation)
     //it runs (viewingdist*360degrees)/robotsize.
     //So it's really not all that bad. Benchmarks! Will improve later, too.
@@ -136,22 +140,44 @@ void AreaEngine::Step(bool generateImage){
 
         RobotObject *otherRobot = element->robots;
         //check'em
-        while(otherRobot != NULL){         
-          if(curRobot->id != otherRobot->id && AreaEngine::Collides(curRobot->x+curRobot->vx, curRobot->y+curRobot->vy, otherRobot->x+otherRobot->vx, otherRobot->y+otherRobot->vy))
-          {
-            //they would have collided. Set their speeds to zero. Lock their speed by updating the current timestamp
-            curRobot->vx = 0;
-            curRobot->vy = 0;
-            otherRobot->vx = 0;
-            otherRobot->vy = 0;
-            
-            //here we will send messages to these robots and those watching that they've stopped
-            //TODO:add this networking code
-            
-            //the lastCollision time_t variable is checked by setVelocity when it's called
-            curRobot->lastCollision = time(NULL);
-            otherRobot->lastCollision = curRobot->lastCollision;
-            
+        while(otherRobot != NULL){    
+          if(curRobot->id != otherRobot->id){
+            if(otherRobot->lastStep != curStep){
+              if(AreaEngine::Collides(curRobot->x+curRobot->vx, curRobot->y+curRobot->vy, otherRobot->x+otherRobot->vx, otherRobot->y+otherRobot->vy))
+              {
+                //they would have collided. Set their speeds to zero. Lock their speed by updating the current timestamp
+                curRobot->vx = 0;
+                curRobot->vy = 0;
+                otherRobot->vx = 0;
+                otherRobot->vy = 0;
+                
+                //here we will send messages to these robots and those watching that they've stopped
+                //TODO:add this networking code
+                
+                //the lastCollision time_t variable is checked by setVelocity when it's called
+                curRobot->lastCollision = time(NULL);
+                otherRobot->lastCollision = curRobot->lastCollision;
+                
+              }
+            }else{
+              //we're dealing with a future robot (anomaly)... in theory this should never collide
+              if(AreaEngine::Collides(curRobot->x+curRobot->vx, curRobot->y+curRobot->vy, otherRobot->x, otherRobot->y))
+              {
+                //they would have collided. Set their speeds to zero. Lock their speed by updating the current timestamp
+                curRobot->vx = 0;
+                curRobot->vy = 0;
+                otherRobot->vx = 0;
+                otherRobot->vy = 0;
+                
+                //here we will send messages to these robots and those watching that they've stopped
+                //TODO:add this networking code
+                
+                //the lastCollision time_t variable is checked by setVelocity when it's called
+                curRobot->lastCollision = time(NULL);
+                otherRobot->lastCollision = curRobot->lastCollision;
+                
+              }
+            }
           }
           otherRobot = otherRobot->nextRobot;
         }
@@ -176,8 +202,14 @@ void AreaEngine::Step(bool generateImage){
   for(robotIt=robots.begin() ; robotIt != robots.end(); robotIt++)
   {
     RobotObject * curRobot = (*robotIt).second;
+    //if the robot is from the future, don't move it
+    if(curRobot->lastStep == curStep)
+      continue;
+      
     curRobot->x += curRobot->vx;
     curRobot->y += curRobot->vy;
+    curRobot->lastStep = curStep;
+    
     if(generateImage){
       //repaint the robot
       drawX = ((curRobot->x-(regionRatio/regionBounds)) / regionRatio)*IMAGEWIDTH;
@@ -211,6 +243,7 @@ void AreaEngine::Step(bool generateImage){
         informNeighbour.set_y(curRobot->y);
         informNeighbour.set_velocityx(curRobot->vx);
         informNeighbour.set_velocityy(curRobot->vy);
+        informNeighbour.set_laststep(curStep);
         if(newIndices.x == 0 && neighbours[LEFT] != NULL){
 					neighbours[LEFT]->queue.push(MSG_SERVERROBOT, informNeighbour);
 					neighbours[LEFT]->set_writing(true);
@@ -285,6 +318,15 @@ void AreaEngine::Step(bool generateImage){
             otherRobot = otherRobot->nextRobot;
           }
         }
+  }
+  
+  //FORCE all updates to neighbors to occur before we finish the step (necessary for synchronization)
+  for(int i = 0; i < 8; i++)
+  {
+    if(neighbours[i] != NULL){
+      while((*neighbours)->queue.remaining() != 0)
+        (*neighbours)->queue.doWrite();
+    }
   }
 }
 
