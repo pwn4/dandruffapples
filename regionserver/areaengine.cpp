@@ -171,6 +171,12 @@ void AreaEngine::Step(bool generateImage){
     //clear the image
     cairo_set_source_rgb (stepImageDrawer, 1, 1, 1);
     cairo_paint (stepImageDrawer); 
+    
+    //perhaps just for now, outline the region's boundaries. That way we can see them in the viewer
+    cairo_rectangle (stepImageDrawer, 0, 0, IMAGEWIDTH, IMAGEHEIGHT);
+    //set the color
+    cairo_set_source_rgb(stepImageDrawer, .6, .6, .6);
+    cairo_stroke (stepImageDrawer);
 
 	  int drawX, drawY;
 	  
@@ -181,10 +187,10 @@ void AreaEngine::Step(bool generateImage){
       curRobot->x += curRobot->vx;
       curRobot->y += curRobot->vy;
       //repaint the robot
-      drawX = ((curRobot->x-(regionRatio/regionBounds)) / regionRatio)*625.0;
-      drawY = ((curRobot->y-(regionRatio/regionBounds)) / regionRatio)*625.0;
+      drawX = ((curRobot->x-(regionRatio/regionBounds)) / regionRatio)*IMAGEWIDTH;
+      drawY = ((curRobot->y-(regionRatio/regionBounds)) / regionRatio)*IMAGEHEIGHT;
       //don't draw the overlaps
-      if(drawX >= 0 && drawX < 625 && drawY >= 0 && drawY < 625)
+      if(drawX >= 0 && drawX < IMAGEWIDTH && drawY >= 0 && drawY < IMAGEHEIGHT)
       {
         cairo_rectangle (stepImageDrawer, drawX, drawY, 1, 1);
         //set the color
