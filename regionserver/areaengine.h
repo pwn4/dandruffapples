@@ -71,6 +71,7 @@ struct ColorObject{
   ColorObject(int newr, int newg, int newb) : r(newr), g(newg), b(newb) {}
 };
 
+
 class AreaEngine {
 protected:
 int robotRatio, regionRatio;    //robotDiameter:puckDiameter, regionSideLength:puckDiameter
@@ -110,6 +111,10 @@ public:
   bool ChangeVelocity(int robotId, double newvx, double newvy); //Allows strafing, if we may want it
   bool ChangeAngle(int robotId, double newangle);  //Allows turning
   //note, I could have added a changeMovement function that gets the robot to move like in Vaughn's code. However, it requires some trig calculations and such. Therein, it would be better if the clients' code (if it turns out we can't have strafing) restricts movement, and calculates the appropriate changeVelocity and changeAngle calls.
+
+  void SetNeighbour(int placement, int socketHandle);
+  
+  void GotServerRobot(ServerRobot message);
 
 };
 
