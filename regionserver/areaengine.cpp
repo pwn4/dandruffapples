@@ -68,7 +68,7 @@ AreaEngine::AreaEngine(int robotSize, int regionSize, int minElementSize, double
   elementSize = regionRatio/regionBounds;
   //add two for the overlaps in regions
   robotArray = new ArrayObject*[regionBounds+2];
-  for(int i = 0; i < regionBounds; i++)
+  for(int i = 0; i < regionBounds + 2; i++)
     robotArray[i] = new ArrayObject[regionBounds+2];
   
 }
