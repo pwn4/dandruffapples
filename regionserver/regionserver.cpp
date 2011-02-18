@@ -198,7 +198,7 @@ void run() {
 	//Region Area Variables (should be set by clock server)
 	int regionSideLen = 2500;
 	int robotDiameter = 4;
-	int minElementSize = 4;
+	int minElementSize = 50;
 	double viewDistance = 20;
 	double viewAngle = 360;
 	double maxSpeed = 4;
@@ -211,9 +211,9 @@ void run() {
 	//regionarea->AddRobot(numRobots++, 10, 10, 0, .1, 0, 0, "red");
 	//regionarea->AddRobot(numRobots++, 1800, 10, 0, -.1, 0, 0, "red");
 	for (int i = 3 * robotDiameter; i < regionSideLen - 3 * (robotDiameter)
-			&& numRobots < wantRobots; i += 10 * (robotDiameter))
+			&& numRobots < wantRobots; i += 5 * (robotDiameter))
 		for (int j = 3 * robotDiameter; j < regionSideLen - 3 * (robotDiameter)
-				&& numRobots < wantRobots; j += 10 * (robotDiameter))
+				&& numRobots < wantRobots; j += 5 * (robotDiameter))
 			regionarea->AddRobot(numRobots++, i, j, 0, .1, 0, 0, (numRobots % 3
 					== 0 ? "red"
 					: ((numRobots + 1) % 3 == 0 ? "blue" : "green")));
