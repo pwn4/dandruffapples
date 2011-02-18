@@ -302,6 +302,29 @@ void run() {
                   cout << "My id: " << worldinfo.region(region).id() << endl;
                 }
               } 
+
+              // Connect to existing RegionServers.
+              for (int i = 0; i < worldinfo.region_size() - 1; i++) {
+
+                if (worldinfo.region(i).position_size() > 0) {
+                  // TODO: Change position
+                  struct in_addr addr;
+                  addr.s_addr = worldinfo.region(i).address();
+                  int regionfd = net::do_connect(addr,
+                      worldinfo.region(i).regionport());
+                  if (regionfd < 0) {
+                    cout << "Failed to connect to regionserver.\n";
+                  } else if (regionfd == 0) {
+                    cout << "Invalid regionserver address.\n";
+                  } else {
+                    cout << "Connected to regionserver" << endl;
+                  }
+                  net::EpollConnection *newconn =
+                      new net::EpollConnection(epoll, EPOLLIN, regionfd,
+                          net::connection::REGION);
+                  borderRegions.push_back(newconn);
+                }
+              }
 							break;
 						}
 						case MSG_REGIONINFO: {
@@ -410,6 +433,22 @@ void run() {
 					break;
 				}
 				case net::connection::REGION_LISTEN: {
+					int fd = accept(c->fd, NULL, NULL);
+					if (fd < 0) {
+						throw SystemError("Failed to accept regionserver");
+					}
+					net::set_blocking(fd, false); // TODO: change?
+					try {
+						net::EpollConnection *newconn =
+								new net::EpollConnection(epoll, EPOLLIN, fd,
+										net::connection::REGION);
+						borderRegions.push_back(newconn);
+					} catch (SystemError e) {
+						cerr << e.what() << endl;
+						return;
+					}
+
+					cout << "Got regionserver connection." << endl;
 
 					break;
 				}
