@@ -305,9 +305,7 @@ void run() {
 
               // Connect to existing RegionServers.
               for (int i = 0; i < worldinfo.region_size() - 1; i++) {
-
                 if (worldinfo.region(i).position_size() > 0) {
-                  // TODO: Change position
                   struct in_addr addr;
                   addr.s_addr = worldinfo.region(i).address();
                   int regionfd = net::do_connect(addr,
@@ -323,13 +321,59 @@ void run() {
                       new net::EpollConnection(epoll, EPOLLIN, regionfd,
                           net::connection::REGION);
                   borderRegions.push_back(newconn);
+
+                  // Reverse all the positions. If we are connecting to the
+                  // server on our left, we want to tell it that we are on
+                  // its right.
+                  for (int j = 0; j < worldinfo.region(i).position_size();
+                       j++) {
+                    switch (worldinfo.region(i).position(j)) {
+                    case RegionInfo_Position_TOP_LEFT:
+                      worldinfo.mutable_region(i)->set_position(j, 
+                          RegionInfo_Position_BOTTOM_RIGHT);
+                      break;
+                    case RegionInfo_Position_TOP:
+                      worldinfo.mutable_region(i)->set_position(j, 
+                          RegionInfo_Position_BOTTOM);
+                      break;
+                    case RegionInfo_Position_TOP_RIGHT:
+                      worldinfo.mutable_region(i)->set_position(j, 
+                          RegionInfo_Position_BOTTOM_LEFT);
+                      break;
+                    case RegionInfo_Position_RIGHT:
+                      worldinfo.mutable_region(i)->set_position(j, 
+                          RegionInfo_Position_LEFT);
+                      break;
+                    case RegionInfo_Position_BOTTOM_RIGHT:
+                      worldinfo.mutable_region(i)->set_position(j, 
+                          RegionInfo_Position_TOP_LEFT);
+                      break;
+                    case RegionInfo_Position_BOTTOM:
+                      worldinfo.mutable_region(i)->set_position(j, 
+                          RegionInfo_Position_TOP);
+                      break;
+                    case RegionInfo_Position_BOTTOM_LEFT:
+                      worldinfo.mutable_region(i)->set_position(j, 
+                          RegionInfo_Position_TOP_RIGHT);
+                      break;
+                    case RegionInfo_Position_LEFT:
+                      worldinfo.mutable_region(i)->set_position(j, 
+                          RegionInfo_Position_RIGHT);
+                      break;
+                    default:
+                      cout << "Some issue with Position flipping\n";
+                      break;
+                    }
+                  }
+                  newconn->queue.push(MSG_REGIONINFO, worldinfo.region(i));
+                  newconn->set_writing(true);
                 }
               }
 							break;
 						}
 						case MSG_REGIONINFO: {
 							regioninfo.ParseFromArray(buffer, len);
-							cout << "Got region info." << endl;
+							cout << "Got region info from ClockServer." << endl;
 							break;
 						}
 						case MSG_TIMESTEPUPDATE: {
@@ -440,6 +484,16 @@ void run() {
 						    break;
 						  }
 					  
+            case MSG_REGIONINFO: 
+            {
+              regioninfo.ParseFromArray(buffer, len);
+              cout << "Hey bro! Server #" << regioninfo.id()
+                   << " is trying to tell us he's our neighbour! He be here:\n";
+              for (int i = 0; i < regioninfo.position_size(); i++) {
+                cout << "  Position: " << regioninfo.position(i) << endl;
+              }
+              break;
+            }
 					  default:
 							cerr << "Unexpected readable message from Region\n";
 							break;
@@ -452,7 +506,7 @@ void run() {
 					if (fd < 0) {
 						throw SystemError("Failed to accept regionserver");
 					}
-					net::set_blocking(fd, false); // TODO: change?
+					net::set_blocking(fd, false);
 					try {
 						net::EpollConnection *newconn =
 								new net::EpollConnection(epoll, EPOLLIN, fd,
@@ -543,12 +597,14 @@ void run() {
 			} else if (events[i].events & EPOLLOUT) {
 				switch (c->type) {
 				case net::connection::REGION:
-
-					break;
+          // fall through...
 				case net::connection::CONTROLLER:
 					// fall through...
 				case net::connection::CLOCK:
-					// fall through...
+          if (c->queue.doWrite()) {
+            c->set_writing(false);
+          }
+          break;
 				case net::connection::PNGVIEWER:
 					// Perform write
 					try {
