@@ -420,8 +420,7 @@ void run() {
 
 							break;
 						default:
-							cerr
-									<< "Unexpected readable message from Controller\n";
+							cerr << "Unexpected readable message from Controller\n";
 							break;
 						}
 					}
@@ -429,7 +428,23 @@ void run() {
 					break;
 				}
 				case net::connection::REGION: {
-
+          MessageType type;
+					size_t len;
+					const void *buffer;
+					if (c->reader.doRead(&type, &len, &buffer)) {
+						switch (type) {
+						  case MSG_SERVERROBOT: {
+						    ServerRobot serverrobot;
+						    serverrobot.ParseFromArray(buffer, len);
+						    regionarea->GotServerRobot(serverrobot);
+						    break;
+						  }
+					  
+					  default:
+							cerr << "Unexpected readable message from Region\n";
+							break;
+						}
+				  }
 					break;
 				}
 				case net::connection::REGION_LISTEN: {
