@@ -65,7 +65,7 @@ int main(int argc, char **argv) {
   int ** drawGrid = new int*[server_cols];
   for(int i = 0; i < server_cols; i++)
     drawGrid[i] = new int[server_rows];
-    
+  int freeX = 0, freeY = 0;
 
   bool *teamclaimed;
   {                             // Create initial world state
@@ -161,6 +161,14 @@ int main(int argc, char **argv) {
               region->ParseFromArray(buffer, len);
               region->set_address(c->addr);
               region->set_id(numConnectedServers++);
+              //calculate where to draw it
+              region->set_draw_x(freeX++);
+              region->set_draw_y(freeY);
+              if(freeX == server_cols)
+              {
+                freeX = 0;
+                freeY++;
+              }
 
               for(vector<RegionConnection*>::iterator i = controllers.begin();
                   i != controllers.end(); ++i) {
@@ -276,6 +284,10 @@ int main(int argc, char **argv) {
 
         case RegionConnection::REGION_LISTEN:
         {
+          //if we have all the region servers we need, 'ignore' any more
+          if(numConnectedServers == server_count)
+            break;
+        
           // Accept a new region server
           struct sockaddr_in addr;
           socklen_t addr_size = sizeof(addr);
