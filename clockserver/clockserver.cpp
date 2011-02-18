@@ -42,13 +42,113 @@ unsigned server_count = 1;
 int server_rows = 1;
 int server_cols = 1;
 
+WorldInfo worldinfo;
+
+bool moveUpIfNoElementExists(int thisRow, int numRows, int thisCol, 
+    int numColsInLastRow) {
+  // Check if this is the last row, and not the only one.
+  if (thisRow == numRows - 1 && thisRow != 0) {
+    // Check if there is an element here, if not, move up.
+    if (thisCol >= numColsInLastRow) {
+      // No element here
+      return true; // Move up 
+    }
+  }
+  return false;
+}
+void addPositions(int newServerRow, int newServerCol, int numRows, 
+                  int numCols, int numColsInLastRow) {
+  int thisRow;
+  int thisCol;
+  int serverid;
+
+  // TOP_LEFT:
+  thisRow = (newServerRow - 1) % numRows;
+  thisCol = (newServerCol - 1) % numCols;
+  if (moveUpIfNoElementExists(thisRow, numRows, thisCol,
+      numColsInLastRow)) {
+    thisCol--; // Move up
+  }
+  serverid = ((thisRow * server_cols) + thisCol);
+  worldinfo.mutable_region(serverid)->add_position(RegionInfo_Position_TOP_LEFT);
+  
+  // TOP:
+  thisRow = (newServerRow - 1) % numRows;
+  thisCol = newServerCol;
+  if (moveUpIfNoElementExists(thisRow, numRows, thisCol,
+      numColsInLastRow)) {
+    thisCol--; // Move up
+  }
+  serverid = ((thisRow * server_cols) + thisCol);
+  worldinfo.mutable_region(serverid)->add_position(RegionInfo_Position_TOP);
+  
+  // TOP_RIGHT:
+  thisRow = (newServerRow - 1) % numRows;
+  thisCol = (newServerCol + 1) % numCols;
+  if (moveUpIfNoElementExists(thisRow, numRows, thisCol,
+      numColsInLastRow)) {
+    thisCol--; // Move up
+  }
+  serverid = ((thisRow * server_cols) + thisCol);
+  worldinfo.mutable_region(serverid)->add_position(RegionInfo_Position_TOP_RIGHT);
+  
+  // RIGHT:
+  thisRow = newServerRow;
+  thisCol = (newServerCol + 1) % numCols;
+  if (moveUpIfNoElementExists(thisRow, numRows, thisCol,
+      numColsInLastRow)) {
+    thisCol--; // Move up
+  }
+  serverid = ((thisRow * server_cols) + thisCol);
+  worldinfo.mutable_region(serverid)->add_position(RegionInfo_Position_RIGHT);
+  
+  // BOTTOM_RIGHT:
+  thisRow = (newServerRow + 1) % numRows;
+  thisCol = (newServerCol + 1) % numCols;
+  if (moveUpIfNoElementExists(thisRow, numRows, thisCol,
+      numColsInLastRow)) {
+    thisCol--; // Move up
+  }
+  serverid = ((thisRow * server_cols) + thisCol);
+  worldinfo.mutable_region(serverid)->add_position(RegionInfo_Position_BOTTOM_RIGHT);
+  
+  // BOTTOM:
+  thisRow = (newServerRow + 1) % numRows;
+  thisCol = newServerCol;
+  if (moveUpIfNoElementExists(thisRow, numRows, thisCol,
+      numColsInLastRow)) {
+    thisCol--; // Move up
+  }
+  serverid = ((thisRow * server_cols) + thisCol);
+  worldinfo.mutable_region(serverid)->add_position(RegionInfo_Position_BOTTOM);
+  
+  // BOTTOM_LEFT:
+  thisRow = (newServerRow + 1) % numRows;
+  thisCol = (newServerCol - 1) % numCols;
+  if (moveUpIfNoElementExists(thisRow, numRows, thisCol,
+      numColsInLastRow)) {
+    thisCol--; // Move up
+  }
+  serverid = ((thisRow * server_cols) + thisCol);
+  worldinfo.mutable_region(serverid)->add_position(RegionInfo_Position_BOTTOM_LEFT);
+  
+  // LEFT:
+  thisRow = newServerRow; 
+  thisCol = (newServerCol - 1) % numCols;
+  if (moveUpIfNoElementExists(thisRow, numRows, thisCol,
+      numColsInLastRow)) {
+    thisCol--; // Move up
+  }
+  serverid = ((thisRow * server_cols) + thisCol);
+  worldinfo.mutable_region(serverid)->add_position(RegionInfo_Position_LEFT);
+}
+
 int main(int argc, char **argv) {
 	helper::Config config(argc, argv);
 	configFileName=(config.getArg("-c").length() == 0 ? "config" : config.getArg("-c").c_str());
 	cout<<"Using config file: "<<configFileName<<endl;
 
   //loadConfigFile();
-  WorldInfo worldinfo;
   conf configuration = parseconf(configFileName);
   if(configuration.find("SERVERROWS") == configuration.end() ||
      configuration.find("SERVERCOLS") == configuration.end() ||
@@ -122,7 +222,7 @@ int main(int argc, char **argv) {
   time_t lastSecond = time(NULL);
   int timeSteps = 0;
   unsigned regionId = 0;
-  int numConnectedServers = 0;
+  int numPositionedServers = 0;
   
   long totalpersecond = 0, number = 0;
   long values[1000];
@@ -160,15 +260,45 @@ int main(int argc, char **argv) {
               RegionInfo *region = worldinfo.add_region();
               region->ParseFromArray(buffer, len);
               region->set_address(c->addr);
-              region->set_id(numConnectedServers++);
+              region->set_id(numPositionedServers);
+
               //calculate where to draw it
               region->set_draw_x(freeX++);
               region->set_draw_y(freeY);
+              numPositionedServers++;
+
               if(freeX == server_cols)
               {
                 freeX = 0;
                 freeY++;
               }
+
+              // Assume servers populate from left to right, then from top 
+              // to bottom.
+              int numRows = ((numPositionedServers - 1) / server_cols) + 1;
+              int numCols = numPositionedServers < server_cols ? 
+                  numPositionedServers : server_cols;
+              int numColsInLastRow = numPositionedServers % server_cols;
+              int newServerCol = (numPositionedServers - 1) % server_cols;
+              int newServerRow = (numPositionedServers - 1) / server_cols;
+
+              // New server has no neighbours initially.
+              for(int i = 0; i < numPositionedServers - 1; i++) { 
+                worldinfo.mutable_region(i)->clear_position();
+              }
+
+              // Go through all the connected servers' RegionInfo messages, 
+              // and set Position if it is a neighbour of the new server.
+              // For example, if 1 is above 4, then we set Position of
+              // 1 to be TOP. 
+              if (numPositionedServers > 1) {
+                addPositions(newServerRow, newServerCol, numRows, 
+                    numCols, numColsInLastRow);
+              }
+
+              // Send WorldInfo to the new RegionServer
+              c->queue.push(MSG_WORLDINFO, worldinfo);
+              c->set_writing(true);
 
               for(vector<RegionConnection*>::iterator i = controllers.begin();
                   i != controllers.end(); ++i) {
@@ -285,7 +415,7 @@ int main(int argc, char **argv) {
         case RegionConnection::REGION_LISTEN:
         {
           //if we have all the region servers we need, 'ignore' any more
-          if(numConnectedServers == server_count)
+          if(connected == server_count)
             break;
         
           // Accept a new region server

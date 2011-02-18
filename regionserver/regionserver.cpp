@@ -279,6 +279,18 @@ void run() {
 						case MSG_WORLDINFO: {
 							worldinfo.ParseFromArray(buffer, len);
 							cout << "Got world info." << endl;
+              for (int region = 0; region < worldinfo.region_size();
+                   region++) {
+                for (int pos = 0; pos < worldinfo.region(region).position_size();
+                    pos++) {
+                  cout << "Server #" << worldinfo.region(region).id()
+                       << " position: ";
+                  cout << worldinfo.region(region).position(pos) << endl;
+                }
+                if (region == worldinfo.region_size() - 1) {
+                  cout << "My id: " << worldinfo.region(region).id() << endl;
+                }
+              } 
 							break;
 						}
 						case MSG_REGIONINFO: {

@@ -14,7 +14,7 @@ message RegionInfo {
     BOTTOM_LEFT = 6;
     LEFT = 7;
   }
-  optional Position position = 6;
+  repeated Position position = 6;
   optional uint32 draw_x = 7;
   optional uint32 draw_y = 8;
 }
