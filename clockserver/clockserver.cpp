@@ -44,18 +44,6 @@ int server_cols = 1;
 
 WorldInfo worldinfo;
 
-bool moveUpIfNoElementExists(int thisRow, int numRows, int thisCol, 
-    int numColsInLastRow) {
-  // Check if this is the last row, and not the only one.
-  if (thisRow == numRows - 1 && thisRow != 0) {
-    // Check if there is an element here, if not, move up.
-    if (thisCol >= numColsInLastRow) {
-      // No element here
-      return true; // Move up 
-    }
-  }
-  return false;
-}
 void addPositions(int newServerRow, int newServerCol, int numRows, 
                   int numCols, int numColsInLastRow) {
   int thisRow;
@@ -63,82 +51,50 @@ void addPositions(int newServerRow, int newServerCol, int numRows,
   int serverid;
 
   // TOP_LEFT:
-  thisRow = (newServerRow - 1) % numRows;
-  thisCol = (newServerCol - 1) % numCols;
-  if (moveUpIfNoElementExists(thisRow, numRows, thisCol,
-      numColsInLastRow)) {
-    thisCol--; // Move up
-  }
+  thisRow = (newServerRow - 1 + numRows) % numRows;
+  thisCol = (newServerCol - 1 + numCols) % numCols;
   serverid = ((thisRow * server_cols) + thisCol);
   worldinfo.mutable_region(serverid)->add_position(RegionInfo_Position_TOP_LEFT);
   
   // TOP:
-  thisRow = (newServerRow - 1) % numRows;
+  thisRow = (newServerRow - 1 + numRows) % numRows;
   thisCol = newServerCol;
-  if (moveUpIfNoElementExists(thisRow, numRows, thisCol,
-      numColsInLastRow)) {
-    thisCol--; // Move up
-  }
   serverid = ((thisRow * server_cols) + thisCol);
   worldinfo.mutable_region(serverid)->add_position(RegionInfo_Position_TOP);
   
   // TOP_RIGHT:
-  thisRow = (newServerRow - 1) % numRows;
+  thisRow = (newServerRow - 1 + numRows) % numRows;
   thisCol = (newServerCol + 1) % numCols;
-  if (moveUpIfNoElementExists(thisRow, numRows, thisCol,
-      numColsInLastRow)) {
-    thisCol--; // Move up
-  }
   serverid = ((thisRow * server_cols) + thisCol);
   worldinfo.mutable_region(serverid)->add_position(RegionInfo_Position_TOP_RIGHT);
   
   // RIGHT:
   thisRow = newServerRow;
-  thisCol = (newServerCol + 1) % numCols;
-  if (moveUpIfNoElementExists(thisRow, numRows, thisCol,
-      numColsInLastRow)) {
-    thisCol--; // Move up
-  }
+  thisCol = (newServerCol + 1) % numColsInLastRow;
   serverid = ((thisRow * server_cols) + thisCol);
   worldinfo.mutable_region(serverid)->add_position(RegionInfo_Position_RIGHT);
   
   // BOTTOM_RIGHT:
-  thisRow = (newServerRow + 1) % numRows;
+  thisRow = 0;
   thisCol = (newServerCol + 1) % numCols;
-  if (moveUpIfNoElementExists(thisRow, numRows, thisCol,
-      numColsInLastRow)) {
-    thisCol--; // Move up
-  }
   serverid = ((thisRow * server_cols) + thisCol);
   worldinfo.mutable_region(serverid)->add_position(RegionInfo_Position_BOTTOM_RIGHT);
   
   // BOTTOM:
-  thisRow = (newServerRow + 1) % numRows;
+  thisRow = 0; 
   thisCol = newServerCol;
-  if (moveUpIfNoElementExists(thisRow, numRows, thisCol,
-      numColsInLastRow)) {
-    thisCol--; // Move up
-  }
   serverid = ((thisRow * server_cols) + thisCol);
   worldinfo.mutable_region(serverid)->add_position(RegionInfo_Position_BOTTOM);
   
   // BOTTOM_LEFT:
-  thisRow = (newServerRow + 1) % numRows;
-  thisCol = (newServerCol - 1) % numCols;
-  if (moveUpIfNoElementExists(thisRow, numRows, thisCol,
-      numColsInLastRow)) {
-    thisCol--; // Move up
-  }
+  thisRow = 0;
+  thisCol = (newServerCol - 1 + numCols) % numCols;
   serverid = ((thisRow * server_cols) + thisCol);
   worldinfo.mutable_region(serverid)->add_position(RegionInfo_Position_BOTTOM_LEFT);
   
   // LEFT:
   thisRow = newServerRow; 
-  thisCol = (newServerCol - 1) % numCols;
-  if (moveUpIfNoElementExists(thisRow, numRows, thisCol,
-      numColsInLastRow)) {
-    thisCol--; // Move up
-  }
+  thisCol = (newServerCol - 1 + numColsInLastRow) % numColsInLastRow;
   serverid = ((thisRow * server_cols) + thisCol);
   worldinfo.mutable_region(serverid)->add_position(RegionInfo_Position_LEFT);
 }
@@ -278,9 +234,9 @@ int main(int argc, char **argv) {
               int numRows = ((numPositionedServers - 1) / server_cols) + 1;
               int numCols = numPositionedServers < server_cols ? 
                   numPositionedServers : server_cols;
-              int numColsInLastRow = numPositionedServers % server_cols;
-              int newServerCol = (numPositionedServers - 1) % server_cols;
+              int numColsInLastRow = ((numPositionedServers - 1) % server_cols) + 1;
               int newServerRow = (numPositionedServers - 1) / server_cols;
+              int newServerCol = (numPositionedServers - 1) % server_cols;
 
               // New server has no neighbours initially.
               for(int i = 0; i < numPositionedServers - 1; i++) { 
