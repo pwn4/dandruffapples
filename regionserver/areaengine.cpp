@@ -1,16 +1,4 @@
 #include "areaengine.h"
-#include "../common/except.h"
-#include "../common/imageconstants.h"
-#include <algorithm>
-#include <iostream>
-#include <limits.h>
-#include <algorithm>
-#include <stdlib.h>
-#include <time.h>
-#include <sys/time.h>
-#include <math.h>
-#include <gtk/gtk.h>
-#include <cairo.h>
 
 using namespace std;
 
@@ -70,6 +58,9 @@ AreaEngine::AreaEngine(int robotSize, int regionSize, int minElementSize, double
   }
   
   //create the arrays
+  neighbours = new EpollConnection*[8];
+  for(int i = 0; i < 8; i++)
+    neighbours[i] = NULL;
   puckArray = new int*[regionRatio];
   for(int i = 0; i < regionRatio; i++)
     puckArray[i] = new int[regionRatio];
@@ -128,6 +119,10 @@ void AreaEngine::Step(bool generateImage){
   
     RobotObject * curRobot = (*robotIt).second;
     
+    //if the robot is from the future, don't check it
+    if(curRobot->lastStep == curStep)
+      continue;
+    
     //this is the big one. This is the O(N^2) terror. Thankfully, in the worst case (current implementation)
     //it runs (viewingdist*360degrees)/robotsize.
     //So it's really not all that bad. Benchmarks! Will improve later, too.
@@ -145,22 +140,44 @@ void AreaEngine::Step(bool generateImage){
 
         RobotObject *otherRobot = element->robots;
         //check'em
-        while(otherRobot != NULL){         
-          if(curRobot->id != otherRobot->id && AreaEngine::Collides(curRobot->x+curRobot->vx, curRobot->y+curRobot->vy, otherRobot->x+otherRobot->vx, otherRobot->y+otherRobot->vy))
-          {
-            //they would have collided. Set their speeds to zero. Lock their speed by updating the current timestamp
-            curRobot->vx = 0;
-            curRobot->vy = 0;
-            otherRobot->vx = 0;
-            otherRobot->vy = 0;
-            
-            //here we will send messages to these robots and those watching that they've stopped
-            //TODO:add this networking code
-            
-            //the lastCollision time_t variable is checked by setVelocity when it's called
-            curRobot->lastCollision = time(NULL);
-            otherRobot->lastCollision = curRobot->lastCollision;
-            
+        while(otherRobot != NULL){    
+          if(curRobot->id != otherRobot->id){
+            if(otherRobot->lastStep != curStep){
+              if(AreaEngine::Collides(curRobot->x+curRobot->vx, curRobot->y+curRobot->vy, otherRobot->x+otherRobot->vx, otherRobot->y+otherRobot->vy))
+              {
+                //they would have collided. Set their speeds to zero. Lock their speed by updating the current timestamp
+                curRobot->vx = 0;
+                curRobot->vy = 0;
+                otherRobot->vx = 0;
+                otherRobot->vy = 0;
+                
+                //here we will send messages to these robots and those watching that they've stopped
+                //TODO:add this networking code
+                
+                //the lastCollision time_t variable is checked by setVelocity when it's called
+                curRobot->lastCollision = time(NULL);
+                otherRobot->lastCollision = curRobot->lastCollision;
+                
+              }
+            }else{
+              //we're dealing with a future robot (anomaly)... in theory this should never collide
+              if(AreaEngine::Collides(curRobot->x+curRobot->vx, curRobot->y+curRobot->vy, otherRobot->x, otherRobot->y))
+              {
+                //they would have collided. Set their speeds to zero. Lock their speed by updating the current timestamp
+                curRobot->vx = 0;
+                curRobot->vy = 0;
+                otherRobot->vx = 0;
+                otherRobot->vy = 0;
+                
+                //here we will send messages to these robots and those watching that they've stopped
+                //TODO:add this networking code
+                
+                //the lastCollision time_t variable is checked by setVelocity when it's called
+                curRobot->lastCollision = time(NULL);
+                otherRobot->lastCollision = curRobot->lastCollision;
+                
+              }
+            }
           }
           otherRobot = otherRobot->nextRobot;
         }
@@ -177,15 +194,23 @@ void AreaEngine::Step(bool generateImage){
     //set the color
     cairo_set_source_rgb(stepImageDrawer, .6, .6, .6);
     cairo_stroke (stepImageDrawer);
-
-	  int drawX, drawY;
-	  
-	  //move the robots, now that we know they won't collide
-    for(robotIt=robots.begin() ; robotIt != robots.end(); robotIt++)
-    {
-      RobotObject * curRobot = (*robotIt).second;
-      curRobot->x += curRobot->vx;
-      curRobot->y += curRobot->vy;
+  }
+  
+  int drawX, drawY;
+  
+  //move the robots, now that we know they won't collide
+  for(robotIt=robots.begin() ; robotIt != robots.end(); robotIt++)
+  {
+    RobotObject * curRobot = (*robotIt).second;
+    //if the robot is from the future, don't move it
+    if(curRobot->lastStep == curStep)
+      continue;
+      
+    curRobot->x += curRobot->vx;
+    curRobot->y += curRobot->vy;
+    curRobot->lastStep = curStep;
+    
+    if(generateImage){
       //repaint the robot
       drawX = ((curRobot->x-(regionRatio/regionBounds)) / regionRatio)*IMAGEWIDTH;
       drawY = ((curRobot->y-(regionRatio/regionBounds)) / regionRatio)*IMAGEHEIGHT;
@@ -195,42 +220,57 @@ void AreaEngine::Step(bool generateImage){
         cairo_rectangle (stepImageDrawer, drawX, drawY, 1, 1);
         //set the color
         cairo_set_source_rgb(stepImageDrawer, 1, 0, 0);
-	      cairo_fill (stepImageDrawer);
-      }
-      //check if the robot moves through a[][]
-      Index oldIndices = curRobot->arrayLocation;
-      curRobot->arrayLocation = getRobotIndices(curRobot->x, curRobot->y);
-      if(curRobot->arrayLocation.x != oldIndices.x || curRobot->arrayLocation.y != oldIndices.y)
-      {
-        //the robot moved, so...if we no longer track it
-        if(curRobot->x < 0 || curRobot->y < 0 || curRobot->x > regionRatio+2*(regionRatio/regionBounds) || curRobot->y > regionRatio+2*(regionRatio/regionBounds))
-        {
-          AreaEngine::RemoveRobot(curRobot->id, oldIndices.x, oldIndices.y, true);
-        }else{
-          AreaEngine::AddRobot(curRobot);
-          AreaEngine::RemoveRobot(curRobot->id, oldIndices.x, oldIndices.y, false);
-        }
+        cairo_fill (stepImageDrawer);
       }
     }
-  }else{
-    //move the robots, now that we know they won't collide
-    for(robotIt=robots.begin() ; robotIt != robots.end(); robotIt++)
+    //check if the robot moves through a[][]
+    Index oldIndices = curRobot->arrayLocation;
+    Index newIndices = getRobotIndices(curRobot->x, curRobot->y);
+    curRobot->arrayLocation = newIndices;
+    if(newIndices.x != oldIndices.x || newIndices.y != oldIndices.y)
     {
-      RobotObject * curRobot = (*robotIt).second;
-      curRobot->x += curRobot->vx;
-      curRobot->y += curRobot->vy;
-      //check if the robot moves through a[][]
-      Index oldIndices = curRobot->arrayLocation;
-      curRobot->arrayLocation = getRobotIndices(curRobot->x, curRobot->y);
-      if(curRobot->arrayLocation.x != oldIndices.x || curRobot->arrayLocation.y != oldIndices.y)
+      //the robot moved, so...if we no longer track it
+      if(curRobot->x < 0 || curRobot->y < 0 || curRobot->x > regionRatio+2*(regionRatio/regionBounds) || curRobot->y > regionRatio+2*(regionRatio/regionBounds))
       {
-        //the robot moved, so...if we no longer track it
-        if(curRobot->x < 0 || curRobot->y < 0 || curRobot->x > regionRatio+2*(regionRatio/regionBounds) || curRobot->y > regionRatio+2*(regionRatio/regionBounds))
-        {
-          AreaEngine::RemoveRobot(curRobot->id, oldIndices.x, oldIndices.y, true);
-        }else{
-          AreaEngine::AddRobot(curRobot);
-          AreaEngine::RemoveRobot(curRobot->id, oldIndices.x, oldIndices.y, false);
+        AreaEngine::RemoveRobot(curRobot->id, oldIndices.x, oldIndices.y, true);
+      }else{
+        AreaEngine::AddRobot(curRobot);
+        AreaEngine::RemoveRobot(curRobot->id, oldIndices.x, oldIndices.y, false);
+        //check if we need to inform a neighbor that its entered an overlap
+        ServerRobot informNeighbour;
+        informNeighbour.set_id(curRobot->id);
+        informNeighbour.set_x(curRobot->x);
+        informNeighbour.set_y(curRobot->y);
+        informNeighbour.set_velocityx(curRobot->vx);
+        informNeighbour.set_velocityy(curRobot->vy);
+        informNeighbour.set_laststep(curStep);
+        if(newIndices.x == 0 && neighbours[LEFT] != NULL){
+					neighbours[LEFT]->queue.push(MSG_SERVERROBOT, informNeighbour);
+					neighbours[LEFT]->set_writing(true);
+					if(newIndices.y == 0 && neighbours[TOP_LEFT] != NULL){
+          	neighbours[TOP_LEFT]->queue.push(MSG_SERVERROBOT, informNeighbour);
+					  neighbours[TOP_LEFT]->set_writing(true);
+          }else if(newIndices.y == regionBounds+1 && neighbours[BOTTOM_LEFT] != NULL){
+					  neighbours[BOTTOM_LEFT]->queue.push(MSG_SERVERROBOT, informNeighbour);
+					  neighbours[BOTTOM_LEFT]->set_writing(true);
+          }
+        }else if(newIndices.x == regionBounds+1 && neighbours[RIGHT] != NULL){
+          neighbours[RIGHT]->queue.push(MSG_SERVERROBOT, informNeighbour);
+					neighbours[RIGHT]->set_writing(true);
+					if(newIndices.y == 0 && neighbours[TOP_RIGHT] != NULL){
+          	neighbours[TOP_RIGHT]->queue.push(MSG_SERVERROBOT, informNeighbour);
+					  neighbours[TOP_RIGHT]->set_writing(true);
+          }else if(newIndices.y == regionBounds+1 && neighbours[BOTTOM_RIGHT] != NULL){
+					  neighbours[BOTTOM_RIGHT]->queue.push(MSG_SERVERROBOT, informNeighbour);
+					  neighbours[BOTTOM_RIGHT]->set_writing(true);
+          }
+        }
+        if(newIndices.y == 0 && neighbours[TOP] != NULL){
+        	neighbours[TOP]->queue.push(MSG_SERVERROBOT, informNeighbour);
+					neighbours[TOP]->set_writing(true);
+        }else if(newIndices.y == regionBounds+1 && neighbours[BOTTOM] != NULL){
+					neighbours[BOTTOM]->queue.push(MSG_SERVERROBOT, informNeighbour);
+					neighbours[BOTTOM]->set_writing(true);
         }
       }
     }
@@ -278,6 +318,15 @@ void AreaEngine::Step(bool generateImage){
             otherRobot = otherRobot->nextRobot;
           }
         }
+  }
+  
+  //FORCE all updates to neighbors to occur before we finish the step (necessary for synchronization)
+  for(int i = 0; i < 8; i++)
+  {
+    if(neighbours[i] != NULL){
+      while((*neighbours)->queue.remaining() != 0)
+        (*neighbours)->queue.doWrite();
+    }
   }
 }
 
@@ -404,11 +453,23 @@ bool AreaEngine::ChangeAngle(int robotId, double newangle){
 }
 
 //tell the areaengine that a socket handle is open to write updates to
-void AreaEngine::SetNeighbour(int placement, int socketHandle){
-
+void AreaEngine::SetNeighbour(int placement, EpollConnection *socketHandle){
+  neighbours[placement] = socketHandle;
 }
 
 void AreaEngine::GotServerRobot(ServerRobot message){
-
+  if(robots.find(message.id()) == robots.end()){
+    //new robot
+    AddRobot(message.id(), message.x(), message.y(), message.angle(), message.velocityx(), message.velocityy(), curStep, "red");
+  }else{
+    //modify existing
+    RobotObject* curRobot = robots[message.id()];
+    
+    if(message.has_velocityx())
+      curRobot->vx = message.velocityx();
+      
+    if(message.has_velocityy())
+      curRobot->vy = message.velocityy();
+  }
 }
 
