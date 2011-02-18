@@ -73,7 +73,7 @@ AreaEngine::AreaEngine(int robotSize, int regionSize, int minElementSize, double
   puckArray = new int*[regionRatio];
   for(int i = 0; i < regionRatio; i++)
     puckArray[i] = new int[regionRatio];
-  regionBounds = max(regionRatio/robotRatio, regionRatio/minElementSize); 
+  regionBounds = min(regionRatio/robotRatio, regionRatio/minElementSize); 
   elementSize = regionRatio/regionBounds;
   //add two for the overlaps in regions
   regionRatio += 2;
