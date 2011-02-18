@@ -1,6 +1,14 @@
 #ifndef _AREAENGINE_H_
 #define _AREAENGINE_H_
 
+#include "../common/except.h"
+#include "../common/imageconstants.h"
+#include <algorithm>
+#include <iostream>
+#include <limits.h>
+#include <algorithm>
+#include <sys/time.h>
+#include <math.h>
 #include <cstddef>
 #include <vector>
 #include <stdlib.h>
@@ -10,8 +18,10 @@
 #include <cairo.h>
 #include <string>
 #include "../common/serverrobot.pb.h"
+#include "../common/net.h"
 
 using namespace std;
+using namespace net;
 
 #define TOP_LEFT 0
 #define TOP 1
@@ -84,6 +94,7 @@ double maxSpeed, maxRotate; //a bound on the speed of robots. Should be passed b
 ArrayObject** robotArray;
 map<int, RobotObject*> robots;
 map<int, ServerRobot*> updates;
+EpollConnection ** neighbours;
 cairo_t *stepImageDrawer;
 
   ColorObject colorFromTeam(int teamId);
@@ -112,7 +123,7 @@ public:
   bool ChangeAngle(int robotId, double newangle);  //Allows turning
   //note, I could have added a changeMovement function that gets the robot to move like in Vaughn's code. However, it requires some trig calculations and such. Therein, it would be better if the clients' code (if it turns out we can't have strafing) restricts movement, and calculates the appropriate changeVelocity and changeAngle calls.
 
-  void SetNeighbour(int placement, int socketHandle);
+  void SetNeighbour(int placement, EpollConnection* socketHandle);
   
   void GotServerRobot(ServerRobot message);
 
