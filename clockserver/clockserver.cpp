@@ -39,21 +39,8 @@ struct RegionConnection : public net::EpollConnection {
 const char *configFileName;
 
 unsigned server_count = 1;
-
-//this function loads the config file so that the server parameters don't need to be added every time
-void loadConfigFile()
-{
-	conf configuration = parseconf(configFileName);
-	char tmp[40] ;
-
-	//number of region servers required
-	if (configuration.find("NUMSERVERS") == configuration.end()) {
-		cerr << "Config file is missing an entry!" << endl;
-		exit(1);
-	}
-	strcpy(tmp, configuration["NUMSERVERS"].c_str());
-	server_count = atoi(tmp);
-}
+int server_rows = 1;
+int server_cols = 1;
 
 int main(int argc, char **argv) {
 	helper::Config config(argc, argv);
@@ -63,13 +50,22 @@ int main(int argc, char **argv) {
   //loadConfigFile();
   WorldInfo worldinfo;
   conf configuration = parseconf(configFileName);
-  if(configuration.find("NUMSERVERS") == configuration.end() ||
+  if(configuration.find("SERVERROWS") == configuration.end() ||
+     configuration.find("SERVERCOLS") == configuration.end() ||
      configuration.find("TEAMS") == configuration.end() ||
      configuration.find("ROBOTS_PER_TEAM") == configuration.end()) {
     cerr << "Config file is missing an entry!" << endl;
     return 1;
   }
-  server_count = strtol(configuration["NUMSERVERS"].c_str(), NULL, 10);
+  
+  //drawing setup
+  server_rows = strtol(configuration["SERVERROWS"].c_str(), NULL, 10);
+  server_cols = strtol(configuration["SERVERCOLS"].c_str(), NULL, 10);
+  server_count = server_rows*server_cols;
+  int ** drawGrid = new int*[server_cols];
+  for(int i = 0; i < server_cols; i++)
+    drawGrid[i] = new int[server_rows];
+    
 
   bool *teamclaimed;
   {                             // Create initial world state
@@ -281,7 +277,7 @@ int main(int argc, char **argv) {
         case RegionConnection::REGION_LISTEN:
         {
           // Accept a new region server
-          struct sockaddr_storage addr;
+          struct sockaddr_in addr;
           socklen_t addr_size = sizeof(addr);
           int fd = accept(c->fd, (struct sockaddr*)&addr, &addr_size);
           if(fd < 0) {
@@ -290,7 +286,7 @@ int main(int argc, char **argv) {
           net::set_blocking(fd, false);
 
           RegionConnection *newconn = new RegionConnection(epoll, EPOLLIN, fd, RegionConnection::REGION);
-          newconn->addr = ((struct sockaddr_in*)&addr)->sin_addr.s_addr;
+          newconn->addr = addr.sin_addr.s_addr;
           regions.push_back(newconn);
 
           cout << "Got region server connection." << endl;
@@ -302,7 +298,7 @@ int main(int argc, char **argv) {
         case RegionConnection::CONTROLLER_LISTEN:
         {
           // Accept a new controller
-          struct sockaddr_storage addr;
+          struct sockaddr_in addr;
           socklen_t addr_size = sizeof(addr);
           int fd = accept(c->fd, (struct sockaddr*)&addr, &addr_size);
           if(fd < 0) {
@@ -311,7 +307,7 @@ int main(int argc, char **argv) {
           net::set_blocking(fd, false);
 
           RegionConnection *newconn = new RegionConnection(epoll, EPOLLIN | EPOLLOUT, fd, RegionConnection::CONTROLLER);
-          newconn->addr = ((struct sockaddr_in*)&addr)->sin_addr.s_addr;
+          newconn->addr = addr.sin_addr.s_addr;
           controllers.push_back(newconn);
           
           newconn->queue.push(MSG_WORLDINFO, worldinfo);
@@ -322,7 +318,7 @@ int main(int argc, char **argv) {
         case RegionConnection::PNGVIEWER_LISTEN:
         {
           // Accept a new pngviewer
-          struct sockaddr_storage addr;
+          struct sockaddr_in addr;
           socklen_t addr_size = sizeof(addr);
           int fd = accept(c->fd, (struct sockaddr*)&addr, &addr_size);
           if(fd < 0) {
@@ -331,7 +327,7 @@ int main(int argc, char **argv) {
           net::set_blocking(fd, false);
 
           RegionConnection *newconn = new RegionConnection(epoll, EPOLLOUT, fd, RegionConnection::PNGVIEWER);
-          newconn->addr = ((struct sockaddr_in*)&addr)->sin_addr.s_addr;
+          newconn->addr = addr.sin_addr.s_addr;
           pngviewers.push_back(newconn);
 
           for(size_t i = 0; i < (unsigned)worldinfo.region_size(); ++i) {
