@@ -20,10 +20,10 @@ Index AreaEngine::getRobotIndices(double x, double y){
   if(rtn.y < 0)
     rtn.y = 0;
     
-  if(rtn.x >= regionBounds)
-    rtn.x = regionBounds-1;
+  if(rtn.x >= regionBounds+2)
+    rtn.x = regionBounds+1;
   if(rtn.y >= regionBounds)
-    rtn.y = regionBounds-1;
+    rtn.y = regionBounds+1;
     
   return rtn;
 }
@@ -67,10 +67,9 @@ AreaEngine::AreaEngine(int robotSize, int regionSize, int minElementSize, double
   regionBounds = min(regionRatio/robotRatio, regionRatio/minElementSize); 
   elementSize = regionRatio/regionBounds;
   //add two for the overlaps in regions
-  regionRatio += 2;
-  robotArray = new ArrayObject*[regionBounds];
+  robotArray = new ArrayObject*[regionBounds+2];
   for(int i = 0; i < regionBounds; i++)
-    robotArray[i] = new ArrayObject[regionBounds];
+    robotArray[i] = new ArrayObject[regionBounds+2];
   
 }
 
@@ -111,7 +110,7 @@ void AreaEngine::Step(bool generateImage){
   Index topLeft, botRight;
   map<int, bool> *nowSaw;
   map<int, RobotObject*>::iterator robotIt;
-  
+
   //iterate through our region's robots and simulate them
   for(robotIt=robots.begin() ; robotIt != robots.end(); robotIt++)
   {
@@ -230,7 +229,7 @@ void AreaEngine::Step(bool generateImage){
     if(newIndices.x != oldIndices.x || newIndices.y != oldIndices.y)
     {
       //the robot moved, so...if we no longer track it
-      if(curRobot->x < 0 || curRobot->y < 0 || curRobot->x > regionRatio+2*(regionRatio/regionBounds) || curRobot->y > regionRatio+2*(regionRatio/regionBounds))
+      if(curRobot->x < 0 || curRobot->y < 0 || curRobot->x > regionRatio+(2*(regionRatio/regionBounds)) || curRobot->y > regionRatio+(2*(regionRatio/regionBounds)))
       {
         AreaEngine::RemoveRobot(curRobot->id, oldIndices.x, oldIndices.y, true);
       }else{
@@ -258,6 +257,8 @@ void AreaEngine::Step(bool generateImage){
         informNeighbour.set_velocityx(curRobot->vx);
         informNeighbour.set_velocityy(curRobot->vy);
         informNeighbour.set_laststep(curStep);
+        if(curRobot->id == 999)
+        cout << newIndices.x << "|" << regionBounds << endl;
         if(newIndices.x == 1 && neighbours[LEFT] != NULL){
 					neighbours[LEFT]->queue.push(MSG_SERVERROBOT, informNeighbour);
 					neighbours[LEFT]->set_writing(true);
