@@ -77,6 +77,14 @@ void loadConfigFile(const char *configFileName, char* clockip) {
 //display the png that we received from a region server in its pngDrawingArea space
 void displayPng(int serverNum, RegionRender render) {
 
+	//temporary: Don't crash the program if we have more region servers
+	//sending PNGs to us than we can draw at once
+	if( serverNum > pngDrawingArea.size())
+		return;
+
+	//temporary: inefficient calling this here all the time
+	gtk_widget_set_size_request(GTK_WIDGET(pngDrawingArea.at(serverNum)), IMAGEWIDTH, IMAGEHEIGHT);
+
 	cairo_t *cr = gdk_cairo_create(pngDrawingArea.at(serverNum)->widget.window);
 	cairo_surface_t *image = cairo_image_surface_create_for_data((unsigned char*)render.image().c_str(), IMAGEFORMAT, IMAGEWIDTH, IMAGEHEIGHT, cairo_format_stride_for_width(IMAGEFORMAT, IMAGEWIDTH) );
 
@@ -213,9 +221,45 @@ void on_Properties_toggled(GtkWidget *widget, gpointer window) {
 }
 
 //initializations for the things that will be drawn
-void drawer(int argc, char* argv[], int clockfd) {
-	gtk_init(&argc, &argv);
+void drawer() {
 	g_type_init();
+
+	GtkWidget *window = GTK_WIDGET(gtk_builder_get_object( builder, "window" ));
+	GtkToggleToolButton	*navigation =
+					GTK_TOGGLE_TOOL_BUTTON(gtk_builder_get_object( builder, "Navigation" ));
+	GtkWidget *table = GTK_WIDGET(gtk_builder_get_object( builder, "table" ));
+	gtk_table_resize(GTK_TABLE(table), PNGVIEWER_MAX_VIEWS_ROWS, PNGVIEWER_MAX_VIEWS_COLUMNS);
+
+	//change the color of the window's background to black
+	GdkColor bgColor;
+	bgColor.red = 0;
+	bgColor.green = 0;
+	bgColor.blue = 0;
+	gtk_widget_modify_bg(GTK_WIDGET(window), GTK_STATE_NORMAL, &bgColor);
+
+	//create a PNGVIEWER_MAX_VIEWS GtkDrawingAreas
+	for(int i=0; i<PNGVIEWER_MAX_VIEWS_ROWS; i++)
+	{
+		for(int j=0; j<PNGVIEWER_MAX_VIEWS_COLUMNS; j++)
+		{
+			GtkDrawingArea* area = GTK_DRAWING_AREA(gtk_drawing_area_new());
+			gtk_table_attach_defaults(GTK_TABLE(table), GTK_WIDGET(area), j, j+1, i, i+1 );
+			pngDrawingArea.push_back(GTK_DRAWING_AREA(area));
+		}
+	}
+
+	g_signal_connect(navigation, "toggled", G_CALLBACK(on_Navigation_toggled), (gpointer) window);
+
+	gtk_widget_show_all(window);
+
+	gtk_main();
+}
+
+int main(int argc, char* argv[]) {
+	gtk_init(&argc, &argv);
+
+	char clockip[40];
+	helper::Config config(argc, argv);
 
 	//assume that the pngviewer.builder is in the same directory as the executable that we are running
 	string builderPath(argv[0]);
@@ -225,46 +269,8 @@ void drawer(int argc, char* argv[], int clockfd) {
 	gtk_builder_add_from_file(builder, builderPath.c_str(), NULL);
 	gtk_builder_connect_signals(builder, NULL);
 
-	GtkWidget *window = GTK_WIDGET(gtk_builder_get_object( builder, "window" ));
-	GtkToggleToolButton	*navigation =
-					GTK_TOGGLE_TOOL_BUTTON(gtk_builder_get_object( builder, "Navigation" ));
-	GtkWidget *pngHbox = GTK_WIDGET(gtk_builder_get_object( builder, "pngHbox" ));
-
-	//change the color of the window's background to black
-	GdkColor color;
-	color.red = 0;
-	color.green = 0;
-	color.blue = 0;
-	gtk_widget_modify_bg(GTK_WIDGET(window), GTK_STATE_NORMAL, &color);
-
-
-	//create a PNGVIEWER_MAX_VIEWS GtkDrawingAreas
-	for(int i=0; i<PNGVIEWER_MAX_VIEWS; i++)
-	{
-		GtkDrawingArea* area = GTK_DRAWING_AREA(gtk_drawing_area_new());
-		gtk_box_pack_start (GTK_BOX(pngHbox), GTK_WIDGET(area), true, true, 0);
-		pngDrawingArea.push_back(GTK_DRAWING_AREA(area));
-	}
-
-	MessageReader clockReader(clockfd);
-
-	//adder handler for the clock
-	g_io_add_watch(g_io_channel_unix_new(clockfd), G_IO_IN, io_clockmessage,
-			(gpointer) &clockReader);
-	g_signal_connect(navigation, "toggled", G_CALLBACK(on_Navigation_toggled), (gpointer) window);
-
-	gtk_widget_show_all(window);
-
-	gtk_main();
-}
-
-int main(int argc, char* argv[]) {
-	char clockip[40];
-	helper::Config config(argc, argv);
-
 	const char *configFileName = (config.getArg("-c").length() == 0 ? "config"
 			: config.getArg("-c").c_str());
-	int clockfd;
 	debug.open("/tmp/pngviewer_debug.txt", ios::out);
 #ifdef DEBUG
 	debug << "Using config file: " << configFileName << endl;
@@ -272,8 +278,13 @@ int main(int argc, char* argv[]) {
 	loadConfigFile(configFileName, clockip);
 
 	//connect to the clock server
-	clockfd = net::do_connect(clockip, PNG_VIEWER_PORT);
+	int clockfd = net::do_connect(clockip, PNG_VIEWER_PORT);
 	net::set_blocking(clockfd, false);
+
+	//adder handler for the clock
+	MessageReader clockReader(clockfd);
+	g_io_add_watch(g_io_channel_unix_new(clockfd), G_IO_IN, io_clockmessage,
+			(gpointer) &clockReader);
 
 	if (clockfd < 0) {
 #ifdef DEBUG
@@ -287,7 +298,7 @@ int main(int argc, char* argv[]) {
 	debug << "Connected to Clock Server " << clockip << endl;
 #endif
 
-	drawer(argc, argv, clockfd);
+	drawer();
 
 	debug.close();
 	g_object_unref(G_OBJECT( builder ));
