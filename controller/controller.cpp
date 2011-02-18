@@ -136,7 +136,7 @@ int main(int argc, char** argv)
         case net::connection::CLOCK:
         {
           MessageType type;
-          size_t len;
+          int len;
           const void *buffer;
           if(c->reader.doRead(&type, &len, &buffer)) {
             switch(type) {
@@ -270,7 +270,7 @@ int main(int argc, char** argv)
 				case net::connection::CLIENT:
         {
           MessageType type;
-          size_t len;
+          int len;
           const void *buffer;
           if(c->reader.doRead(&type, &len, &buffer)) {
             switch(type) {
@@ -308,7 +308,7 @@ int main(int argc, char** argv)
 				case net::connection::REGION:
         {
           MessageType type;
-          size_t len;
+          int len;
           const void *buffer;
           if(c->reader.doRead(&type, &len, &buffer)) {
             switch(type) {

@@ -88,7 +88,7 @@ void Logviewer::updateTimestep() {
   bool keepGoing = true;
 
   MessageType type;
-  size_t len;
+  int len;
   const void* buffer;
 
   while(keepGoing) {

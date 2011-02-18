@@ -215,7 +215,7 @@ void run() {
           case net::connection::CONTROLLER:
             // this should be the only type of messages
             MessageType type;
-            size_t len;
+            int len;
             const void *buffer;
             if(c->reader.doRead(&type, &len, &buffer)) {
               switch(type) {

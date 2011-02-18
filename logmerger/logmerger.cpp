@@ -69,7 +69,7 @@ void sortMergeLog(vector<Log> &inputLogsReader, MessageWriter logWriter,
 	PuckStack puckstack;
 	ServerRobot serverrobot;
 	MessageType type;
-	size_t len;
+	int len;
 	const void *buffer;
 	uint64_t nextTimeFrame;
 	int readingLogs = inputLogsReader.size();

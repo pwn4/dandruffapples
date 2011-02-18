@@ -116,7 +116,7 @@ void mapRegionsToDraw()
 gboolean io_regionmessage(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 	g_type_init();
 	MessageType type;
-	size_t len;
+	int len;
 	const void *buffer;
 	int regionNum = 0;
 
@@ -157,7 +157,7 @@ gboolean io_regionmessage(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 gboolean io_clockmessage(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 	g_type_init();
 	MessageType type;
-	size_t len;
+	int len;
 	const void *buffer;
 
 	MessageReader *clockReader = (MessageReader*) data;

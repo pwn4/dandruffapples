@@ -61,7 +61,6 @@ void MessageQueue::push(MessageType typeTag, const google::protobuf::MessageLite
   // Enter message into buffer
   _buffer[_appendpt] = typeTag;
   *(uint32_t*)(_buffer + _appendpt + sizeof(uint8_t)) = htonl(msglen);
-  cout << (message.ByteSize()+ _appendpt + sizeof(uint8_t) + sizeof(uint32_t)) << "|" << 
   message.SerializeWithCachedSizesToArray(_buffer + _appendpt + sizeof(uint8_t) + sizeof(uint32_t));
 
   _appendpt += blocklen;

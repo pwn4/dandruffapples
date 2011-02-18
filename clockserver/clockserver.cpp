@@ -200,7 +200,7 @@ int main(int argc, char **argv) {
         case RegionConnection::REGION:
         {
           MessageType type;
-          size_t len;
+          int len;
           const void *buffer;
           try {
             if(c->reader.doRead(&type, &len, &buffer)) {
@@ -331,7 +331,7 @@ int main(int argc, char **argv) {
         case RegionConnection::CONTROLLER:
         {
           MessageType type;
-          size_t len;
+          int len;
           const void *buffer;
           try {
             if(c->reader.doRead(&type, &len, &buffer)) {

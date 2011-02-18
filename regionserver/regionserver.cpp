@@ -283,7 +283,7 @@ void run() {
 				case net::connection::CLOCK: {
 					//we get a message from the clock server
 					MessageType type;
-					size_t len;
+					int len;
 					const void *buffer;
 					if (c->reader.doRead(&type, &len, &buffer)) {
 						switch (type) {
@@ -452,7 +452,7 @@ void run() {
 				}
 				case net::connection::CONTROLLER: {
 					MessageType type;
-					size_t len;
+					int len;
 					const void *buffer;
 					if (c->reader.doRead(&type, &len, &buffer)) {
 						switch (type) {
@@ -479,7 +479,7 @@ void run() {
 				}
 				case net::connection::REGION: {
           MessageType type;
-					size_t len;
+					int len;
 					const void *buffer;
 					if (c->reader.doRead(&type, &len, &buffer)) {
 						switch (type) {
@@ -552,7 +552,7 @@ void run() {
 				case net::connection::PNGVIEWER_LISTEN: {
 					//we get a message from the pngviewer server
 					MessageType type;
-					size_t len;
+					int len;
 					const void *buffer;
 
 					//check for a message that disables the sending of PNGs to the pngviewer
