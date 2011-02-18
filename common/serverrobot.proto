@@ -1,14 +1,16 @@
 message ServerRobot {  
   required fixed32 id = 1;
-  optional float velocity = 2;
-  optional float angle = 3; 
-  optional bool hasPuck = 4;
-  optional float x = 5;
-  optional float y = 6;
-  optional bool hasCollided = 7;
-  optional fixed32 controllerIp = 8;
-  repeated bool viewLostId = 9; // robot specified by seenById can no 
+  optional float velocityx = 2;
+  optional float velocityy = 3;
+  optional float angle = 4; 
+  optional bool hasPuck = 5;
+  optional float x = 6;
+  optional float y = 7;
+  optional bool hasCollided = 8;
+  optional fixed32 controllerIp = 9;
+  optional fixed32 lastStep = 10;
+  repeated bool viewLostId = 11; // robot specified by seenById can no 
                                 // longer see this robot
-  repeated fixed32 seenById = 10; // list of robots now viewing
+  repeated fixed32 seenById = 12; // list of robots now viewing
 
 }
