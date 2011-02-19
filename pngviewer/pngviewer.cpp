@@ -41,6 +41,8 @@
 #include <cairo.h>
 
 using namespace std;
+using namespace google;
+using namespace protobuf;
 
 struct regionConnection: net::connection {
 	RegionInfo info;
@@ -51,22 +53,29 @@ struct regionConnection: net::connection {
 
 };
 
-struct region {
-	regionConnection regionConn;
-	bool viewed;
-	int showInRow;
-	int showInColumn;
+//variable declarations
+/////////////////////////////////////////////////////
+vector<regionConnection*> regions;
+vector<GtkDrawingArea*> pngDrawingArea;
+bool horizontalView = true;
+GtkBuilder *builder;
+//this is the region that the navigation will move the grid around
+regionConnection *pivotRegion, *pivotRegionBuddy;
+uint32 worldServerRows = 0, worldServerColumns = 0;
 
-	region(int fd, RegionInfo info, bool viewed_) :
-		regionConn(fd, info), viewed(viewed_) {
-	}
+/* Position in a grid:
+ * ____
+ * |1|2|
+ * |3|_|
+ */
+enum Position {
+	TOP_LEFT = 0, TOP_RIGHT = 1, BOTTOM_LEFT = 2
 };
 
-//variable declarations
+#ifdef DEBUG
 ofstream debug;
-vector<region*> regions;
-vector<GtkDrawingArea*> pngDrawingArea;
-GtkBuilder *builder;
+#endif
+///////////////////////////////////////////////////////
 
 //load the config file
 void loadConfigFile(const char *configFileName, char* clockip) {
@@ -85,17 +94,14 @@ void loadConfigFile(const char *configFileName, char* clockip) {
 
 //display the png that we received from a region server in its pngDrawingArea space
 void displayPng(int regionNum, RegionRender render) {
+	int position = TOP_LEFT;
 
-	//temporary: Don't crash the program if we have more region servers
-	//sending PNGs to us than we can draw at once
-	if(!regions.at(regionNum)->viewed)
-		return;
+	if (horizontalView && regions.at(regionNum) == pivotRegionBuddy)
+		position = TOP_RIGHT;
+	else if (!horizontalView && regions.at(regionNum) == pivotRegionBuddy)
+		position = BOTTOM_LEFT;
 
-	//temporary: inefficient calling this here all the time
-	gtk_widget_set_size_request(GTK_WIDGET(pngDrawingArea.at(regionNum)),
-			IMAGEWIDTH, IMAGEHEIGHT);
-
-	cairo_t *cr = gdk_cairo_create(pngDrawingArea.at(regionNum)->widget.window);
+	cairo_t *cr = gdk_cairo_create(pngDrawingArea.at(position)->widget.window);
 	cairo_surface_t *image =
 			cairo_image_surface_create_for_data(
 					(unsigned char*) render.image().c_str(), IMAGEFORMAT,
@@ -107,11 +113,23 @@ void displayPng(int regionNum, RegionRender render) {
 	cairo_destroy(cr);
 }
 
-//go through all the viewable regions and map them to a specific spot on the grid
-void mapRegionsToDraw()
-{
-}
+//set whether a region with a given 'fd' will send or not send PNGs
+void sendPngs(regionConnection *stoppingRegion, bool send) {
+	MessageWriter writer(stoppingRegion->fd);
 
+	SendMorePngs sendMore;
+	sendMore.set_enable(send);
+	writer.init(MSG_SENDMOREPNGS, sendMore);
+#ifdef DEBUG
+	debug << "Telling server ( " << stoppingRegion->info.address() << ":"
+			<< stoppingRegion->info.renderport() << " ) to stop sending PNGs"
+			<< endl;
+#endif
+	for (bool complete = false; !complete;) {
+		complete = writer.doWrite();
+	}
+
+}
 //handler for region received messages
 gboolean io_regionmessage(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 	g_type_init();
@@ -121,35 +139,42 @@ gboolean io_regionmessage(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 	int regionNum = 0;
 
 	//get the region number that we are receiving a PNG from
-	for (vector<region*>::iterator it = regions.begin(); it != regions.end()
-			&& (*it)->regionConn.fd != g_io_channel_unix_get_fd(ioch); it++, regionNum++) {
+	for (vector<regionConnection*>::iterator it = regions.begin(); it
+			!= regions.end() && (*it)->fd != g_io_channel_unix_get_fd(ioch); it++, regionNum++) {
 	}
 
-	for (bool complete = false; !complete;)
-		complete = regions.at(regionNum)->regionConn.reader.doRead(&type, &len,
-				&buffer);
+	//if the server is not viewed then tell it to stop sending to us
+	if (!(regions.at(regionNum)->fd == pivotRegion->fd) && !(regions.at(
+			regionNum)->fd == pivotRegionBuddy->fd)) {
+		sendPngs(regions.at(regionNum), false);
+	} else {
+		for (bool complete = false; !complete;)
+			complete = regions.at(regionNum)->reader.doRead(&type, &len,
+					&buffer);
 
-	switch (type) {
-	case MSG_REGIONRENDER: {
-		RegionRender render;
-		render.ParseFromArray(buffer, len);
+		switch (type) {
+		case MSG_REGIONRENDER: {
+			RegionRender render;
+			render.ParseFromArray(buffer, len);
 
 #ifdef DEBUG
-		debug << "Received MSG_REGIONRENDER update and the timestep is # "
-				<< render.timestep() << endl;
+			debug << "Received render update from server: " << regions.at(
+					regionNum)->info.address() << ":"
+					<< regions.at(regionNum)->info.renderport()
+					<< " and the timestep is # " << render.timestep() << endl;
 #endif
-		displayPng(regionNum, render);
+			displayPng(regionNum, render);
 
-		break;
-	}
-	default: {
+			break;
+		}
+		default: {
 #ifdef DEBUG
-		debug << "Unexpected readable socket from region! Type:" << type << "|"
-				<< MSG_REGIONRENDER << endl;
+			debug << "Unexpected readable socket from region! Type:" << type
+					<< endl;
 #endif
+		}
+		}
 	}
-	}
-
 	return TRUE;
 }
 
@@ -170,44 +195,54 @@ gboolean io_clockmessage(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 		//we got regionserver information
 		RegionInfo regioninfo;
 		regioninfo.ParseFromArray(buffer, len);
-#ifdef DEBUG
-		debug << "Received MSG_REGIONINFO update! " << regioninfo.address()
-				<< " " << regioninfo.renderport() << endl;
-#endif
+
 		//connect to the server
 		struct in_addr addr;
 		addr.s_addr = regioninfo.address();
 		int regionFd = net::do_connect(addr, regioninfo.renderport());
 		net::set_blocking(regionFd, false);
 
-		//store the region server mapping
-		regions.push_back(new region(regionFd, regioninfo, true));
+		//when the PNG viewer starts it only shows a horizontal rectangle of PNGs from region servers (0,0) and (0,1)
+		if (regioninfo.draw_x() == 0 && regioninfo.draw_y() == 0) {
 
-		if (regions.size() > PNGVIEWER_MAX_VIEWS_ROWS
-				* PNGVIEWER_MAX_VIEWS_COLUMNS) {
-
-			MessageWriter writer(regionFd);
-			regions.at(regions.size() - 1)->viewed = false;
-			SendMorePngs sendMore;
-			sendMore.set_enable(false);
-			writer.init(MSG_SENDMOREPNGS, sendMore);
-
-			for (bool complete = false; !complete;) {
-				complete = writer.doWrite();
-			}
+			gtk_widget_set_size_request(GTK_WIDGET(pngDrawingArea.at(0)),
+					IMAGEWIDTH, IMAGEHEIGHT);
+			regions.push_back(new regionConnection(regionFd, regioninfo));
+			pivotRegion = regions.at(regions.size() - 1);
 
 #ifdef DEBUG
-		debug << "Too many region servers are trying to send. Disabling:  " << regioninfo.address()
-				<< " " << regioninfo.renderport() << endl;
+			debug << "The server in the top left is: " << regioninfo.address()
+					<< ":" << regioninfo.renderport() << endl;
+#endif
+		} else if (regioninfo.draw_x() == 1 && regioninfo.draw_y() == 0) {
+
+			gtk_widget_set_size_request(GTK_WIDGET(pngDrawingArea.at(1)),
+					IMAGEWIDTH, IMAGEHEIGHT);
+			regions.push_back(new regionConnection(regionFd, regioninfo));
+			pivotRegionBuddy = regions.at(regions.size() - 1);
+#ifdef DEBUG
+			debug << "The server in the top right is: " << regioninfo.address()
+					<< ":" << regioninfo.renderport() << endl;
+#endif
+		} else {
+			regions.push_back(new regionConnection(regionFd, regioninfo));
+#ifdef DEBUG
+			debug << "The server is disabled: " << regioninfo.address() << ":"
+					<< regioninfo.renderport() << endl;
 #endif
 		}
-		else
-			mapRegionsToDraw();
+
+		//calculate the size of the world from the largest x and y coordinates that we received from the clock server
+		if (regioninfo.draw_y() > worldServerRows)
+			worldServerRows = regioninfo.draw_y();
+		if (regioninfo.draw_x() > worldServerColumns)
+			worldServerColumns = regioninfo.draw_x();
 
 		if (regionFd < 0) {
 #ifdef DEBUG
 			debug << "Critical Error: Failed to connect to a region server: "
-					<< addr.s_addr << endl;
+					<< regioninfo.address() << ":" << regioninfo.renderport()
+					<< endl;
 #endif
 			exit(1);
 		}
@@ -216,14 +251,13 @@ gboolean io_clockmessage(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 		g_io_add_watch(g_io_channel_unix_new(regionFd), G_IO_IN,
 				io_regionmessage, NULL);
 #ifdef DEBUG
-		debug << "Connected to region server: " << addr.s_addr << " at ( "
+		debug << "Connected to region server: " << regioninfo.address() << ":"
+				<< regioninfo.renderport() << " located at ( "
 				<< regioninfo.draw_x() << ", " << regioninfo.draw_y() << " )"
 				<< endl;
 #endif
-
 		break;
 	}
-
 	default: {
 #ifdef DEBUG
 		debug << "Unexpected readable message type from clock! Type:" << type
@@ -233,6 +267,110 @@ gboolean io_clockmessage(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 	}
 
 	return TRUE;
+}
+
+//find and set the new pivotRegion and its buddy from the new coordinates
+void setNewRegionPivotAndBuddy(uint32 newPivotRegion[],
+		uint32 newPivotRegionBuddy[]) {
+
+#ifdef DEBUG
+	debug << "Changing pivotRegion to ("<<newPivotRegion[0]<<","<<newPivotRegion[1]<<") and pivotRegionBuddy to ("<<newPivotRegionBuddy[0]<<","<<newPivotRegionBuddy[1]<<")"<< endl;
+#endif
+
+	for (vector<regionConnection*>::iterator it = regions.begin(); it
+			!= regions.end(); it++) {
+
+		if ((*it)->info.draw_x() == newPivotRegion[0] && (*it)->info.draw_y()
+				== newPivotRegion[1])
+			pivotRegion = (*it);
+		else if ((*it)->info.draw_x() == newPivotRegionBuddy[0]
+				&& (*it)->info.draw_y() == newPivotRegionBuddy[1])
+			pivotRegionBuddy = (*it);
+	}
+}
+
+//up button handler
+void on_upButton_clicked(GtkWidget *widget, gpointer window) {
+	uint32 newPivotRegion[2] = { pivotRegion->info.draw_x(),
+			(pivotRegion->info.draw_y() + 1) % worldServerRows };
+	uint32 newPivotRegionBuddy[2] = { pivotRegionBuddy->info.draw_x(),
+			(pivotRegionBuddy->info.draw_y() + 1) % worldServerRows };
+
+	setNewRegionPivotAndBuddy(newPivotRegion, newPivotRegionBuddy);
+}
+
+//down button handler
+void on_downButton_clicked(GtkWidget *widget, gpointer window) {
+	uint32 tmp1, tmp2;
+
+	if ((int) pivotRegion->info.draw_y() - 1 < 0)
+		tmp1 = worldServerRows;
+	else
+		tmp1 = pivotRegion->info.draw_y() - 1;
+
+	if ((int) pivotRegionBuddy->info.draw_y() - 1 < 0)
+		tmp2 = worldServerRows;
+	else
+		tmp2 = pivotRegionBuddy->info.draw_y() - 1;
+
+	uint32 newPivotRegion[2] = { pivotRegion->info.draw_x(), tmp1 };
+	uint32 newPivotRegionBuddy[2] = { pivotRegionBuddy->info.draw_x(), tmp2 };
+
+	setNewRegionPivotAndBuddy(newPivotRegion, newPivotRegionBuddy);
+}
+
+//back button handler
+void on_backButton_clicked(GtkWidget *widget, gpointer window) {
+	uint32 tmp1, tmp2;
+
+	if ((int) pivotRegion->info.draw_x() - 1 < 0)
+		tmp1 = worldServerColumns;
+	else
+		tmp1 = pivotRegion->info.draw_x() - 1;
+
+	if ((int) pivotRegionBuddy->info.draw_x() - 1 < 0)
+		tmp2 = worldServerColumns;
+	else
+		tmp2 = pivotRegionBuddy->info.draw_x() - 1;
+
+	uint32 newPivotRegion[2] = { tmp1, pivotRegion->info.draw_y() };
+	uint32 newPivotRegionBuddy[2] = { tmp2, pivotRegionBuddy->info.draw_y() };
+
+	setNewRegionPivotAndBuddy(newPivotRegion, newPivotRegionBuddy);
+
+}
+
+//forward button handler
+void on_forwardButton_clicked(GtkWidget *widget, gpointer window) {
+	uint32 newPivotRegion[2] = { (pivotRegion->info.draw_x() + 1)
+			% worldServerColumns, pivotRegion->info.draw_y() };
+	uint32 newPivotRegionBuddy[2] = { (pivotRegionBuddy->info.draw_x() + 1)
+			% worldServerColumns, pivotRegionBuddy->info.draw_y() };
+
+	setNewRegionPivotAndBuddy(newPivotRegion, newPivotRegionBuddy);
+}
+
+//rotate button handler
+void on_rotateButton_clicked(GtkWidget *widget, gpointer window) {
+	horizontalView = !horizontalView;
+	uint32 newPivotRegionBuddy[2];
+
+	if (horizontalView) {
+		newPivotRegionBuddy[0] = (pivotRegion->info.draw_x() + 1)
+				% worldServerColumns;
+		newPivotRegionBuddy[1] = pivotRegion->info.draw_y();
+	} else {
+		newPivotRegionBuddy[0] = pivotRegion->info.draw_x();
+		newPivotRegionBuddy[1] = (pivotRegion->info.draw_y() + 1)
+				% worldServerRows;
+	}
+
+	for (vector<regionConnection*>::iterator it = regions.begin(); it
+			!= regions.end(); it++) {
+		if ((*it)->info.draw_x() == newPivotRegionBuddy[0]
+				&& (*it)->info.draw_y() == newPivotRegionBuddy[1])
+			pivotRegionBuddy = (*it);
+	}
 }
 
 //navigation button handler
@@ -248,44 +386,50 @@ void on_Navigation_toggled(GtkWidget *widget, gpointer window) {
 	}
 }
 
-//properties button handler
-void on_Properties_toggled(GtkWidget *widget, gpointer window) {
+//info button handler
+void on_Info_toggled(GtkWidget *widget, gpointer window) {
 
-	GtkWidget *propertiesWindow =
-			GTK_WIDGET(gtk_builder_get_object( builder, "propertiesWindow" ));
+	GtkWidget *infoWindow =
+			GTK_WIDGET(gtk_builder_get_object( builder, "infoWindow" ));
 
 	if (gtk_toggle_tool_button_get_active(GTK_TOGGLE_TOOL_BUTTON(widget))) {
-		gtk_widget_show_all(propertiesWindow);
+		gtk_widget_show_all(infoWindow);
 	} else {
-		gtk_widget_hide_all(propertiesWindow);
+		gtk_widget_hide_all(infoWindow);
 	}
 }
 
 //initializations and simple modifications for the things that will be drawn
 void initializeDrawers() {
 	g_type_init();
-
+	guint rows, columns;
 	GtkWidget *window = GTK_WIDGET(gtk_builder_get_object( builder, "window" ));
 	GtkToggleToolButton
 			*navigation =
 					GTK_TOGGLE_TOOL_BUTTON(gtk_builder_get_object( builder, "Navigation" ));
-	GtkToggleToolButton
-			*properties =
-					GTK_TOGGLE_TOOL_BUTTON(gtk_builder_get_object( builder, "Properties" ));
+	GtkToggleToolButton *info =
+			GTK_TOGGLE_TOOL_BUTTON(gtk_builder_get_object( builder, "Info" ));
 	GtkWidget *table = GTK_WIDGET(gtk_builder_get_object( builder, "table" ));
-	gtk_table_resize(GTK_TABLE(table), PNGVIEWER_MAX_VIEWS_ROWS,
-			PNGVIEWER_MAX_VIEWS_COLUMNS);
+	GtkWidget *upButton = GTK_WIDGET(gtk_builder_get_object( builder, "up" ));
+	GtkWidget *downButton =
+			GTK_WIDGET(gtk_builder_get_object( builder, "down" ));
+	GtkWidget *backButton =
+			GTK_WIDGET(gtk_builder_get_object( builder, "back" ));
+	GtkWidget *forwardButton =
+			GTK_WIDGET(gtk_builder_get_object( builder, "forward" ));
+	GtkWidget *rotateButton =
+			GTK_WIDGET(gtk_builder_get_object( builder, "rotate" ));
+
+	gtk_table_get_size(GTK_TABLE(table), &rows, &columns);
 
 	//change the color of the main window's background to black
 	GdkColor bgColor;
-	bgColor.red = 0;
-	bgColor.green = 0;
-	bgColor.blue = 0;
+	gdk_color_parse("black", &bgColor);
 	gtk_widget_modify_bg(GTK_WIDGET(window), GTK_STATE_NORMAL, &bgColor);
 
 	//create a grid to display the received PNGs
-	for (int i = 0; i < PNGVIEWER_MAX_VIEWS_ROWS; i++) {
-		for (int j = 0; j < PNGVIEWER_MAX_VIEWS_COLUMNS; j++) {
+	for (guint i = 0; i < rows; i++) {
+		for (guint j = 0; j < columns; j++) {
 			GtkDrawingArea* area = GTK_DRAWING_AREA(gtk_drawing_area_new());
 			gtk_table_attach_defaults(GTK_TABLE(table), GTK_WIDGET(area), j, j
 					+ 1, i, i + 1);
@@ -294,7 +438,12 @@ void initializeDrawers() {
 	}
 
 	g_signal_connect(navigation, "toggled", G_CALLBACK(on_Navigation_toggled), (gpointer) window);
-	g_signal_connect(properties, "toggled", G_CALLBACK(on_Properties_toggled), (gpointer) window);
+	g_signal_connect(info, "toggled", G_CALLBACK(on_Info_toggled), (gpointer) window);
+	g_signal_connect(upButton, "clicked", G_CALLBACK(on_upButton_clicked), (gpointer) window);
+	g_signal_connect(downButton, "clicked", G_CALLBACK(on_downButton_clicked), (gpointer) window);
+	g_signal_connect(backButton, "clicked", G_CALLBACK(on_backButton_clicked), (gpointer) window);
+	g_signal_connect(forwardButton, "clicked", G_CALLBACK(on_forwardButton_clicked), (gpointer) window);
+	g_signal_connect(rotateButton, "clicked", G_CALLBACK(on_rotateButton_clicked), (gpointer) window);
 
 	gtk_widget_show_all(window);
 
@@ -318,14 +467,20 @@ int main(int argc, char* argv[]) {
 
 	const char *configFileName = (config.getArg("-c").length() == 0 ? "config"
 			: config.getArg("-c").c_str());
-	debug.open("/tmp/pngviewer_debug.txt", ios::out);
 #ifdef DEBUG
+	debug.open(helper::pngViewerDebugLogName.c_str(), ios::out);
 	debug << "Using config file: " << configFileName << endl;
 #endif
 	loadConfigFile(configFileName, clockip);
 
 	//connect to the clock server
 	int clockfd = net::do_connect(clockip, PNG_VIEWER_PORT);
+
+	if (clockfd < 0) {
+		cerr << "Critical Error: Failed to connect to the clock server: "
+				<< clockip << endl;
+		exit(1);
+	}
 	net::set_blocking(clockfd, false);
 
 	//handle clock messages
@@ -333,21 +488,15 @@ int main(int argc, char* argv[]) {
 	g_io_add_watch(g_io_channel_unix_new(clockfd), G_IO_IN, io_clockmessage,
 			(gpointer) &clockReader);
 
-	if (clockfd < 0) {
-#ifdef DEBUG
-		debug << "Critical Error: Failed to connect to the clock server: "
-				<< clockip << endl;
-#endif
-		exit(1);
-	}
-
 #ifdef DEBUG
 	debug << "Connected to Clock Server " << clockip << endl;
 #endif
 
 	initializeDrawers();
 
+#ifdef DEBUG
 	debug.close();
+#endif
 	g_object_unref(G_OBJECT( builder ));
 
 	return 0;

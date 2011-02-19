@@ -30,11 +30,11 @@
               </packing>
             </child>
             <child>
-              <object class="GtkToggleToolButton" id="Properties">
+              <object class="GtkToggleToolButton" id="Info">
                 <property name="visible">True</property>
-                <property name="label" translatable="yes">Properties</property>
+                <property name="label" translatable="yes">Info</property>
                 <property name="use_underline">True</property>
-                <property name="stock_id">gtk-properties</property>
+                <property name="stock_id">gtk-info</property>
               </object>
               <packing>
                 <property name="expand">False</property>
@@ -81,6 +81,17 @@
                 <child>
                   <object class="GtkTable" id="table">
                     <property name="visible">True</property>
+                    <property name="n_rows">2</property>
+                    <property name="n_columns">2</property>
+                    <child>
+                      <placeholder/>
+                    </child>
+                    <child>
+                      <placeholder/>
+                    </child>
+                    <child>
+                      <placeholder/>
+                    </child>
                     <child>
                       <placeholder/>
                     </child>
@@ -172,7 +183,19 @@
               </packing>
             </child>
             <child>
-              <placeholder/>
+              <object class="GtkButton" id="rotate">
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="receives_default">True</property>
+                <property name="image">rotateImg</property>
+                <property name="image_position">top</property>
+              </object>
+              <packing>
+                <property name="left_attach">1</property>
+                <property name="right_attach">2</property>
+                <property name="top_attach">1</property>
+                <property name="bottom_attach">2</property>
+              </packing>
             </child>
             <child>
               <placeholder/>
@@ -210,7 +233,7 @@
     <property name="visible">True</property>
     <property name="stock">gtk-go-up</property>
   </object>
-  <object class="GtkWindow" id="propertiesWindow">
+  <object class="GtkWindow" id="infoWindow">
     <property name="title" translatable="yes"> </property>
     <property name="resizable">False</property>
     <property name="window_position">center-always</property>
@@ -222,5 +245,9 @@
         <property name="label" translatable="yes">testtesttesttesttest</property>
       </object>
     </child>
+  </object>
+  <object class="GtkImage" id="rotateImg">
+    <property name="visible">True</property>
+    <property name="stock">gtk-refresh</property>
   </object>
 </interface>
