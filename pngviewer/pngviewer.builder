@@ -112,9 +112,8 @@
   <object class="GtkWindow" id="navigationWindow">
     <property name="border_width">5</property>
     <property name="title"> </property>
-    <property name="resizable">False</property>
     <property name="window_position">center-always</property>
-    <property name="default_width">450</property>
+    <property name="default_width">150</property>
     <property name="default_height">250</property>
     <signal name="destroy" handler="gtk_widget_hide"/>
     <signal name="delete_event" handler="gtk_widget_hide"/>
@@ -122,7 +121,30 @@
       <object class="GtkVBox" id="vbox1">
         <property name="visible">True</property>
         <child>
-          <placeholder/>
+          <object class="GtkTable" id="worldGrid">
+            <property name="visible">True</property>
+            <property name="n_rows">2</property>
+            <property name="n_columns">2</property>
+            <property name="column_spacing">1</property>
+            <property name="row_spacing">1</property>
+            <property name="homogeneous">True</property>
+            <child>
+              <placeholder/>
+            </child>
+            <child>
+              <placeholder/>
+            </child>
+            <child>
+              <placeholder/>
+            </child>
+            <child>
+              <placeholder/>
+            </child>
+          </object>
+          <packing>
+            <property name="padding">1</property>
+            <property name="position">0</property>
+          </packing>
         </child>
         <child>
           <object class="GtkTable" id="table1">
@@ -213,6 +235,9 @@
             </child>
           </object>
           <packing>
+            <property name="expand">False</property>
+            <property name="fill">False</property>
+            <property name="padding">1</property>
             <property name="position">1</property>
           </packing>
         </child>

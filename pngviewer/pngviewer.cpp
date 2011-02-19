@@ -63,6 +63,7 @@ bool horizontalView = true;
 GtkBuilder *builder;
 bool runForTheFirstTime=true;
 uint32 worldServerRows = 0, worldServerColumns = 0;
+map<int, map<int, GtkDrawingArea*> > worldGrid;
 //this is the region that the navigation will move the grid around
 regionConnection *pivotRegion = NULL, *pivotRegionBuddy = NULL;
 
@@ -131,6 +132,37 @@ void sendPngs(regionConnection *stoppingRegion, bool send) {
 
 }
 
+void initializeToolbarButtons()
+{
+	gtk_widget_set_sensitive(GTK_WIDGET(gtk_builder_get_object( builder, "Navigation" )), true);
+	gtk_widget_set_sensitive(GTK_WIDGET(gtk_builder_get_object( builder, "Info" )), true);
+
+	int navigationWindowWidth, navigationWindowLength;
+	GtkWidget *navigationWindow = GTK_WIDGET(gtk_builder_get_object( builder, "navigationWindow" ));
+	GtkWidget *worldGridTable = GTK_WIDGET(gtk_builder_get_object( builder, "worldGrid" ));
+	gtk_table_resize(GTK_TABLE(worldGridTable), worldServerRows+1, worldServerColumns+1);
+
+	GdkColor bgColor;
+	gdk_color_parse("black", &bgColor);
+	gtk_widget_modify_bg(GTK_WIDGET(navigationWindow), GTK_STATE_NORMAL, &bgColor);
+
+	gtk_window_get_default_size(GTK_WINDOW(navigationWindow), &navigationWindowWidth, &navigationWindowLength );
+
+	gdk_color_parse("white", &bgColor);
+	for (guint i = 0; i < worldServerRows+1; i++) {
+		for (guint j = 0; j < worldServerColumns+1; j++) {
+			GtkDrawingArea* area = GTK_DRAWING_AREA(gtk_drawing_area_new());
+			gtk_widget_modify_fg(GTK_WIDGET(area), GTK_STATE_NORMAL, &bgColor);
+			gtk_widget_set_size_request(GTK_WIDGET(area), navigationWindowWidth/(worldServerColumns+1), navigationWindowLength/(worldServerRows+1));
+
+			gtk_table_attach_defaults(GTK_TABLE(worldGridTable), GTK_WIDGET(area), j, j + 1, i, i + 1);
+			worldGrid[i][j]=area;
+		}
+	}
+
+
+}
+
 //handler for region received messages
 gboolean io_regionmessage(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 	g_type_init();
@@ -164,8 +196,8 @@ gboolean io_regionmessage(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 			if(runForTheFirstTime)
 			{
 				runForTheFirstTime=false;
-				gtk_widget_set_sensitive(GTK_WIDGET(gtk_builder_get_object( builder, "Navigation" )), true);
-				gtk_widget_set_sensitive(GTK_WIDGET(gtk_builder_get_object( builder, "Info" )), true);
+
+				initializeToolbarButtons();
 			}
 
 			displayPng(regionNum, render);
@@ -478,6 +510,8 @@ void initializeDrawers() {
 	g_signal_connect(backButton, "clicked", G_CALLBACK(on_backButton_clicked), (gpointer) mainWindow);
 	g_signal_connect(forwardButton, "clicked", G_CALLBACK(on_forwardButton_clicked), (gpointer) mainWindow);
 	g_signal_connect(rotateButton, "clicked", G_CALLBACK(on_rotateButton_clicked), (gpointer) mainWindow);
+
+	gtk_widget_show_all(mainWindow);
 
 	gtk_main();
 }
