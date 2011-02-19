@@ -280,7 +280,6 @@ void run() {
 					if (c->reader.doRead(&type, &len, &buffer)) {
 						switch (type) {
 						case MSG_WORLDINFO: {
-              int myId;
 							worldinfo.ParseFromArray(buffer, len);
 							cout << "Got world info." << endl;
               for (int region = 0; region < worldinfo.region_size();
@@ -290,10 +289,6 @@ void run() {
                   cout << "Server #" << worldinfo.region(region).id()
                        << " position: ";
                   cout << worldinfo.region(region).position(pos) << endl;
-                }
-                if (region == worldinfo.region_size() - 1) {
-                  cout << "My id: " << worldinfo.region(region).id() << endl;
-                  myId = worldinfo.region(region).id();
                 }
               } 
 
@@ -370,15 +365,33 @@ void run() {
                   newconn->set_writing(true);
                 }
               }
-              int firstRobot = myId * wantRobots; 
+
+              // Find our robots, and add to the simulation
+              int lastRegionIndex = worldinfo.region_size() - 1;
+              int myId = worldinfo.region(lastRegionIndex).id();
+              vector<int> myRobotIds;
+              cout << "My id: " << myId << endl;
+              for (google::protobuf::RepeatedPtrField<const RobotInfo>
+                   ::iterator i = worldinfo.robot().begin();
+                   i != worldinfo.robot().end(); i++) {
+                if (i->region() == myId) {
+                  myRobotIds.push_back(i->id());
+                }
+              }
+              wantRobots = myRobotIds.size();
+              numRobots = 0;
+
               for (int i = 400 * robotDiameter; i < regionSideLen - 3 * (robotDiameter)
                   && numRobots < wantRobots; i += 5 * (robotDiameter))
                 for (int j = 3 * robotDiameter; j < regionSideLen - 3 * (robotDiameter)
-                    && numRobots < wantRobots; j += 5 * (robotDiameter))
-                  regionarea->AddRobot(numRobots++ + firstRobot, i, j, 0, .1, 0, 0, (numRobots % 3
-                      == 0 ? "red"
+                    && numRobots < wantRobots; j += 5 * (robotDiameter)) {
+                  regionarea->AddRobot(myRobotIds[numRobots++], i, j, 0, .1, 
+                      0, 0, (numRobots % 3 == 0 ? "red"
                       : ((numRobots + 1) % 3 == 0 ? "blue" : "green")));
+                }
+
               cout << numRobots << " robots created." << endl;
+
 							break;
 						}
 						case MSG_REGIONINFO: {
