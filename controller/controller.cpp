@@ -30,7 +30,7 @@
 #include "../common/except.h"
 #include "../common/helper.h"
 
-#define ROBOT_LOOKUP_SIZE 100
+#define ROBOT_LOOKUP_SIZE 250000
 
 using namespace std;
 
