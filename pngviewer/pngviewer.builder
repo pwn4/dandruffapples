@@ -20,6 +20,7 @@
             <child>
               <object class="GtkToggleToolButton" id="Navigation">
                 <property name="visible">True</property>
+                <property name="sensitive">False</property>
                 <property name="label" translatable="yes">Navigation</property>
                 <property name="use_underline">True</property>
                 <property name="stock_id">gtk-about</property>
@@ -32,6 +33,7 @@
             <child>
               <object class="GtkToggleToolButton" id="Info">
                 <property name="visible">True</property>
+                <property name="sensitive">False</property>
                 <property name="label" translatable="yes">Info</property>
                 <property name="use_underline">True</property>
                 <property name="stock_id">gtk-info</property>

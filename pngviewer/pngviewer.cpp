@@ -61,9 +61,11 @@ vector<regionConnection*> regions;
 vector<GtkDrawingArea*> pngDrawingArea;
 bool horizontalView = true;
 GtkBuilder *builder;
+bool runForTheFirstTime=true;
+uint32 worldServerRows = 0, worldServerColumns = 0;
 //this is the region that the navigation will move the grid around
 regionConnection *pivotRegion = NULL, *pivotRegionBuddy = NULL;
-uint32 worldServerRows = 0, worldServerColumns = 0;
+
 
 /* Position in a grid:
  * ____
@@ -128,6 +130,7 @@ void sendPngs(regionConnection *stoppingRegion, bool send) {
 	}
 
 }
+
 //handler for region received messages
 gboolean io_regionmessage(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 	g_type_init();
@@ -158,10 +161,18 @@ gboolean io_regionmessage(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 					<< regions.at(regionNum)->info.renderport() << " and the timestep is # " << render.timestep()
 					<< endl;
 #endif
+			if(runForTheFirstTime)
+			{
+				runForTheFirstTime=false;
+				gtk_widget_set_sensitive(GTK_WIDGET(gtk_builder_get_object( builder, "Navigation" )), true);
+				gtk_widget_set_sensitive(GTK_WIDGET(gtk_builder_get_object( builder, "Info" )), true);
+			}
+
 			displayPng(regionNum, render);
 
 			break;
 		}
+
 		default: {
 #ifdef DEBUG
 			debug << "Unexpected readable socket from region! Type:" << type << endl;
@@ -169,6 +180,7 @@ gboolean io_regionmessage(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 		}
 		}
 	}
+
 	return TRUE;
 }
 
@@ -433,7 +445,7 @@ void on_Info_toggled(GtkWidget *widget, gpointer window) {
 void initializeDrawers() {
 	g_type_init();
 	guint rows, columns;
-	GtkWidget *window = GTK_WIDGET(gtk_builder_get_object( builder, "window" ));
+	GtkWidget *mainWindow = GTK_WIDGET(gtk_builder_get_object( builder, "window" ));
 	GtkToggleToolButton *navigation = GTK_TOGGLE_TOOL_BUTTON(gtk_builder_get_object( builder, "Navigation" ));
 	GtkToggleToolButton *info = GTK_TOGGLE_TOOL_BUTTON(gtk_builder_get_object( builder, "Info" ));
 	GtkWidget *table = GTK_WIDGET(gtk_builder_get_object( builder, "table" ));
@@ -448,7 +460,7 @@ void initializeDrawers() {
 	//change the color of the main window's background to black
 	GdkColor bgColor;
 	gdk_color_parse("black", &bgColor);
-	gtk_widget_modify_bg(GTK_WIDGET(window), GTK_STATE_NORMAL, &bgColor);
+	gtk_widget_modify_bg(GTK_WIDGET(mainWindow), GTK_STATE_NORMAL, &bgColor);
 
 	//create a grid to display the received PNGs
 	for (guint i = 0; i < rows; i++) {
@@ -459,15 +471,13 @@ void initializeDrawers() {
 		}
 	}
 
-	g_signal_connect(navigation, "toggled", G_CALLBACK(on_Navigation_toggled), (gpointer) window);
-	g_signal_connect(info, "toggled", G_CALLBACK(on_Info_toggled), (gpointer) window);
-	g_signal_connect(upButton, "clicked", G_CALLBACK(on_upButton_clicked), (gpointer) window);
-	g_signal_connect(downButton, "clicked", G_CALLBACK(on_downButton_clicked), (gpointer) window);
-	g_signal_connect(backButton, "clicked", G_CALLBACK(on_backButton_clicked), (gpointer) window);
-	g_signal_connect(forwardButton, "clicked", G_CALLBACK(on_forwardButton_clicked), (gpointer) window);
-	g_signal_connect(rotateButton, "clicked", G_CALLBACK(on_rotateButton_clicked), (gpointer) window);
-
-	gtk_widget_show_all(window);
+	g_signal_connect(navigation, "toggled", G_CALLBACK(on_Navigation_toggled), (gpointer) mainWindow);
+	g_signal_connect(info, "toggled", G_CALLBACK(on_Info_toggled), (gpointer) mainWindow);
+	g_signal_connect(upButton, "clicked", G_CALLBACK(on_upButton_clicked), (gpointer) mainWindow);
+	g_signal_connect(downButton, "clicked", G_CALLBACK(on_downButton_clicked), (gpointer) mainWindow);
+	g_signal_connect(backButton, "clicked", G_CALLBACK(on_backButton_clicked), (gpointer) mainWindow);
+	g_signal_connect(forwardButton, "clicked", G_CALLBACK(on_forwardButton_clicked), (gpointer) mainWindow);
+	g_signal_connect(rotateButton, "clicked", G_CALLBACK(on_rotateButton_clicked), (gpointer) mainWindow);
 
 	gtk_main();
 }
@@ -485,7 +495,6 @@ int main(int argc, char* argv[]) {
 	builderPath = builderPath.substr(0, builderPath.find_last_of("//") + 1) + "pngviewer.builder";
 	builder = gtk_builder_new();
 	gtk_builder_add_from_file(builder, builderPath.c_str(), NULL);
-	//todo: this probably does not do anything
 	gtk_builder_connect_signals(builder, NULL);
 
 	const char *configFileName = (config.getArg("-c").length() == 0 ? "config" : config.getArg("-c").c_str());
