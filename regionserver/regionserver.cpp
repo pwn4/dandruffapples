@@ -368,16 +368,16 @@ void run() {
                   newconn->queue.push(MSG_REGIONINFO, worldinfo.region(i));
                   newconn->set_writing(true);
                 }
-                int firstRobot = myId * wantRobots; 
-                for (int i = 500 * robotDiameter; i < regionSideLen - 3 * (robotDiameter)
-                    && numRobots < wantRobots; i += 5 * (robotDiameter))
-                  for (int j = 3 * robotDiameter; j < regionSideLen - 3 * (robotDiameter)
-                      && numRobots < wantRobots; j += 5 * (robotDiameter))
-                    regionarea->AddRobot(numRobots++ + firstRobot, i, j, 0, .1, 0, 0, (numRobots % 3
-                        == 0 ? "red"
-                        : ((numRobots + 1) % 3 == 0 ? "blue" : "green")));
-	              cout << numRobots << " robots created." << endl;
               }
+              int firstRobot = myId * wantRobots; 
+              for (int i = 500 * robotDiameter; i < regionSideLen - 3 * (robotDiameter)
+                  && numRobots < wantRobots; i += 5 * (robotDiameter))
+                for (int j = 3 * robotDiameter; j < regionSideLen - 3 * (robotDiameter)
+                    && numRobots < wantRobots; j += 5 * (robotDiameter))
+                  regionarea->AddRobot(numRobots++ + firstRobot, i, j, 0, .1, 0, 0, (numRobots % 3
+                      == 0 ? "red"
+                      : ((numRobots + 1) % 3 == 0 ? "blue" : "green")));
+              cout << numRobots << " robots created." << endl;
 							break;
 						}
 						case MSG_REGIONINFO: {
