@@ -12,19 +12,22 @@ using namespace std;
 //for regionservers just to think of things in terms of
 //their own region
 
-Index AreaEngine::getRobotIndices(double x, double y){    
+//getRobotIndices. Clip boolean dicatates whether we trim to valid values only
+Index AreaEngine::getRobotIndices(double x, double y, bool clip){    
   Index rtn (x/elementSize, y/elementSize);
   
-  if(rtn.x < 0)
-    rtn.x = 0;
-  if(rtn.y < 0)
-    rtn.y = 0;
-    
-  if(rtn.x >= regionBounds+2)
-    rtn.x = regionBounds+1;
-  if(rtn.y >= regionBounds)
-    rtn.y = regionBounds+1;
-    
+  if(clip){
+    if(rtn.x < 0)
+      rtn.x = 0;
+    if(rtn.y < 0)
+      rtn.y = 0;
+      
+    if(rtn.x >= regionBounds+2)
+      rtn.x = regionBounds+1;
+    if(rtn.y >= regionBounds)
+      rtn.y = regionBounds+1;
+  }
+  
   return rtn;
 }
 
@@ -110,7 +113,7 @@ void AreaEngine::Step(bool generateImage){
   Index topLeft, botRight;
   map<int, bool> *nowSaw;
   map<int, RobotObject*>::iterator robotIt;
-
+  
   MessageType type;
 	int len;
 	const void *buffer;
@@ -153,8 +156,8 @@ void AreaEngine::Step(bool generateImage){
     
     //collisions first - just check, and zero velocities if they would have collided
     //calculate the bounds of the a[][] elements we need to check
-    topLeft = getRobotIndices(curRobot->x-(maxSpeed+robotRatio/2), curRobot->y-(maxSpeed+robotRatio/2));
-    botRight = getRobotIndices(curRobot->x+(maxSpeed+robotRatio/2), curRobot->y+(maxSpeed+robotRatio/2));
+    topLeft = getRobotIndices(curRobot->x-(maxSpeed+robotRatio/2), curRobot->y-(maxSpeed+robotRatio/2), true);
+    botRight = getRobotIndices(curRobot->x+(maxSpeed+robotRatio/2), curRobot->y+(maxSpeed+robotRatio/2), true);
 
     for(int j = topLeft.x; j <= botRight.x; j++)
       for(int k = topLeft.y; k <= botRight.y; k++)
@@ -222,13 +225,16 @@ void AreaEngine::Step(bool generateImage){
   
   int drawX, drawY;
   
-  //move the robots, now that we know they won't collide
-  for(robotIt=robots.begin() ; robotIt != robots.end(); robotIt++)
+  //move the robots, now that we know they won't collide. Because we may remove a robot, we have to increment ourselves
+  for(robotIt=robots.begin() ; robotIt != robots.end(); )
   {
     RobotObject * curRobot = (*robotIt).second;
     //if the robot is from the future, don't move it
     if(curRobot->lastStep == curStep)
+    {
+      robotIt++;
       continue;
+    }
       
     curRobot->x += curRobot->vx;
     curRobot->y += curRobot->vy;
@@ -249,17 +255,20 @@ void AreaEngine::Step(bool generateImage){
     }
     //check if the robot moves through a[][]
     Index oldIndices = curRobot->arrayLocation;
-    Index newIndices = getRobotIndices(curRobot->x, curRobot->y);
-    curRobot->arrayLocation = newIndices;
+    Index newIndices = getRobotIndices(curRobot->x, curRobot->y, false);
+
     if(newIndices.x != oldIndices.x || newIndices.y != oldIndices.y)
     {
       //the robot moved, so...if we no longer track it
-      if(curRobot->x < 0 || curRobot->y < 0 || curRobot->x > regionRatio+(2*(regionRatio/regionBounds)) || curRobot->y > regionRatio+(2*(regionRatio/regionBounds)))
+      if(newIndices.x < 0 || newIndices.y < 0 || newIndices.x >= regionBounds+2 || newIndices.y >= regionBounds+2)
       {
         AreaEngine::RemoveRobot(curRobot->id, oldIndices.x, oldIndices.y, true);
+        robots.erase(robotIt++);
+        continue;
       }else{
-        AreaEngine::AddRobot(curRobot);
+        curRobot->arrayLocation = newIndices;
         AreaEngine::RemoveRobot(curRobot->id, oldIndices.x, oldIndices.y, false);
+        AreaEngine::AddRobot(curRobot);
         //check if we need to inform a neighbor that its entered an overlap
         ServerRobot informNeighbour;
         informNeighbour.set_id(curRobot->id);
@@ -317,6 +326,7 @@ void AreaEngine::Step(bool generateImage){
         }
       }
     }
+    robotIt++;
   }
 
   //check for sight. Theoretically runs in O(n^2)+O(n)+O(m). In reality, runs O((viewdist*360degrees/robotsize)*robotsinregion)+O(2*(viewdist*360degrees/robotsize))
@@ -328,8 +338,8 @@ void AreaEngine::Step(bool generateImage){
     nowSaw = curRobot->lastSeen;
     
     //may make this better. don't need to check full 360 degrees if we only see a cone
-    topLeft = getRobotIndices(curRobot->x-viewDist, curRobot->y-viewDist);
-    botRight = getRobotIndices(curRobot->x+viewDist, curRobot->y+viewDist);
+    topLeft = getRobotIndices(curRobot->x-viewDist, curRobot->y-viewDist, true);
+    botRight = getRobotIndices(curRobot->x+viewDist, curRobot->y+viewDist, true);
 
     for(int j = topLeft.x; j <= botRight.x; j++)
       for(int k = topLeft.y; k <= botRight.y; k++)
@@ -376,9 +386,9 @@ void AreaEngine::Step(bool generateImage){
 //add a robot to the system. returns the robotobject that is created for convenience
 //overload
 void AreaEngine::AddRobot(RobotObject * oldRobot){
-  
   //find where it belongs in a[][] and add it
   ArrayObject *element = &robotArray[oldRobot->arrayLocation.x][oldRobot->arrayLocation.y];
+
   //check if the area is empty first
   if(element->lastRobot == NULL)
   {
@@ -388,12 +398,12 @@ void AreaEngine::AddRobot(RobotObject * oldRobot){
     element->lastRobot->nextRobot = oldRobot;
     element->lastRobot = oldRobot;
   }
-
+  oldRobot->nextRobot = NULL;
 }
 
 RobotObject* AreaEngine::AddRobot(int robotId, double newx, double newy, double newa, double newvx, double newvy, int atStep, string newColor){
   //O(1) insertion
-  Index robotIndices = getRobotIndices(newx, newy);
+  Index robotIndices = getRobotIndices(newx, newy, true);
   RobotObject* newRobot = new RobotObject(robotId, newx, newy, newa, newvx, newvy, robotIndices, atStep, newColor);
 
   //add the robot to our robots vector (used for timestepping)
@@ -410,6 +420,7 @@ RobotObject* AreaEngine::AddRobot(int robotId, double newx, double newy, double 
     element->lastRobot->nextRobot = newRobot;
     element->lastRobot = newRobot;
   }
+  newRobot->nextRobot = NULL;
   
   return newRobot;
 }
@@ -418,18 +429,17 @@ RobotObject* AreaEngine::AddRobot(int robotId, double newx, double newy, double 
 bool AreaEngine::RemoveRobot(int robotId, int xInd, int yInd, bool freeMem){
   //O(1) Deletion. Would be O(m), but m (robots in area) is bounded by a constant, so actually O(1)
 
-  ArrayObject element = robotArray[xInd][yInd];
+  ArrayObject *element = &robotArray[xInd][yInd];
   //check if the area is empty first
-  if(element.robots == NULL)
+  if(element->robots == NULL)
     return false;
 
-  RobotObject *curRobot = element.robots;
+  RobotObject *curRobot = element->robots;
   //check it if its first
   if(curRobot->id == robotId)
   {
-    element.robots = curRobot->nextRobot;
+    element->robots = curRobot->nextRobot;
     if(freeMem){
-      robots.erase(curRobot->id);
       delete curRobot;
     }
     return true;
@@ -443,7 +453,6 @@ bool AreaEngine::RemoveRobot(int robotId, int xInd, int yInd, bool freeMem){
       //we've found it. Stitch up the list and return
       lastRobot->nextRobot = curRobot->nextRobot;
       if(freeMem){
-        robots.erase(curRobot->id);
         delete curRobot;
       }
       return true;
