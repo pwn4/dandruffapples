@@ -210,22 +210,10 @@ void run() {
 			minElementSize, viewDistance, viewAngle, maxSpeed, maxRotate);
 	//create robots for benchmarking!
 	int numRobots = 0;
-  int newrobotid = 0;
-  if (strcmp(configFileName, "config2")) {
-    newrobotid = 2000;
-  }
 	int wantRobots = 1000;
 	//regionarea->AddRobot(numRobots++, 10, 10, 0, .1, 0, 0, "red");
 	//regionarea->AddRobot(numRobots++, 1800, 10, 0, -.1, 0, 0, "red");
-	for (int i = 500 * robotDiameter; i < regionSideLen - 3 * (robotDiameter)
-			&& numRobots < wantRobots; i += 5 * (robotDiameter))
-		for (int j = 3 * robotDiameter; j < regionSideLen - 3 * (robotDiameter)
-				&& numRobots < wantRobots; j += 5 * (robotDiameter))
-			regionarea->AddRobot(numRobots++ + newrobotid, i, j, 0, .1, 0, 0, (numRobots % 3
-					== 0 ? "red"
-					: ((numRobots + 1) % 3 == 0 ? "blue" : "green")));
 
-	cout << numRobots << " robots created." << endl;
 	MessageWriter writer(clockfd);
 	MessageReader reader(clockfd);
 	int timeSteps = 0;
@@ -292,6 +280,7 @@ void run() {
 					if (c->reader.doRead(&type, &len, &buffer)) {
 						switch (type) {
 						case MSG_WORLDINFO: {
+              int myId;
 							worldinfo.ParseFromArray(buffer, len);
 							cout << "Got world info." << endl;
               for (int region = 0; region < worldinfo.region_size();
@@ -304,6 +293,7 @@ void run() {
                 }
                 if (region == worldinfo.region_size() - 1) {
                   cout << "My id: " << worldinfo.region(region).id() << endl;
+                  myId = worldinfo.region(region).id();
                 }
               } 
 
@@ -378,6 +368,15 @@ void run() {
                   newconn->queue.push(MSG_REGIONINFO, worldinfo.region(i));
                   newconn->set_writing(true);
                 }
+                int firstRobot = myId * wantRobots; 
+                for (int i = 500 * robotDiameter; i < regionSideLen - 3 * (robotDiameter)
+                    && numRobots < wantRobots; i += 5 * (robotDiameter))
+                  for (int j = 3 * robotDiameter; j < regionSideLen - 3 * (robotDiameter)
+                      && numRobots < wantRobots; j += 5 * (robotDiameter))
+                    regionarea->AddRobot(numRobots++ + firstRobot, i, j, 0, .1, 0, 0, (numRobots % 3
+                        == 0 ? "red"
+                        : ((numRobots + 1) % 3 == 0 ? "blue" : "green")));
+	              cout << numRobots << " robots created." << endl;
               }
 							break;
 						}
