@@ -111,6 +111,31 @@ void AreaEngine::Step(bool generateImage){
   map<int, bool> *nowSaw;
   map<int, RobotObject*>::iterator robotIt;
 
+  MessageType type;
+	int len;
+	const void *buffer;
+  //FORCE all updates FROM neighbors to be entered before we start the step (necessary for synchronization)
+  for(int i = 0; i < 8; i++)
+  {
+    if(neighbours[i] != NULL){
+      while((*neighbours)->reader.doRead(&type, &len, &buffer))
+      {
+        switch (type) {
+				  case MSG_SERVERROBOT: {
+				    ServerRobot serverrobot;
+				    serverrobot.ParseFromArray(buffer, len);
+				    GotServerRobot(serverrobot);
+				    break;
+				  }
+
+			    default:
+					cerr << "Unexpected readable message from Region\n";
+					break;
+				}
+      }
+    }
+  }
+
   //iterate through our region's robots and simulate them
   for(robotIt=robots.begin() ; robotIt != robots.end(); robotIt++)
   {
