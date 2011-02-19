@@ -102,7 +102,7 @@ cairo_t *stepImageDrawer;
 public:
   cairo_surface_t *stepImage; //contains the image of the last step called with generateImage=true
   int curStep;
-  Index getRobotIndices(double x, double y);
+  Index getRobotIndices(double x, double y, bool clip);
   
   void Step(bool generateImage);
   
