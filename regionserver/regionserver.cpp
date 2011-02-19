@@ -210,7 +210,7 @@ void run() {
 			minElementSize, viewDistance, viewAngle, maxSpeed, maxRotate);
 	//create robots for benchmarking!
 	int numRobots = 0;
-	int wantRobots = 1000;
+	int wantRobots = 10000;
 	//regionarea->AddRobot(numRobots++, 10, 10, 0, .1, 0, 0, "red");
 	//regionarea->AddRobot(numRobots++, 1800, 10, 0, -.1, 0, 0, "red");
 
@@ -370,7 +370,7 @@ void run() {
                 }
               }
               int firstRobot = myId * wantRobots; 
-              for (int i = 500 * robotDiameter; i < regionSideLen - 3 * (robotDiameter)
+              for (int i = 100 * robotDiameter; i < regionSideLen - 3 * (robotDiameter)
                   && numRobots < wantRobots; i += 5 * (robotDiameter))
                 for (int j = 3 * robotDiameter; j < regionSideLen - 3 * (robotDiameter)
                     && numRobots < wantRobots; j += 5 * (robotDiameter))
