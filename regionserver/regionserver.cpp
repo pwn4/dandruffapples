@@ -7,6 +7,7 @@
 #include <cstdio>
 #include <cstring>
 #include <cerrno>
+#include <map>
 
 #include <unistd.h>
 #include <sys/socket.h>
@@ -60,6 +61,17 @@ int controllerPort = CONTROLLERS_PORT;
 int pngviewerPort = PNG_VIEWER_PORT;
 int regionPort = REGIONS_PORT;
 ////////////////////////////////////////////////////////////
+
+//need to tell whether a bool has been initialized or not
+struct Bool {
+	bool value;
+	bool initialized;
+
+	Bool() :
+		initialized(false) {
+	}
+	;
+};
 
 void loadConfigFile() {
 	//load the config file
@@ -118,8 +130,9 @@ char *parse_port(char *input) {
 
 //the main function
 void run() {
-	bool sendMorePngs = false;
+	map<int, Bool> sendMorePngs;
 	time_t timeCache;
+	bool generateImage;
 
 	//this is only here to generate random numbers for the logging
 	srand(time(NULL));
@@ -175,11 +188,9 @@ void run() {
 	}
 
 	// Add clock and client sockets to epoll
-	net::EpollConnection clockconn(epoll, EPOLLIN, clockfd,
-			net::connection::CLOCK), controllerconn(epoll, EPOLLIN,
-			controllerfd, net::connection::CONTROLLER_LISTEN), regionconn(
-			epoll, EPOLLIN, regionfd, net::connection::REGION_LISTEN), pngconn(
-			epoll, EPOLLIN, pngfd, net::connection::PNGVIEWER_LISTEN);
+	net::EpollConnection clockconn(epoll, EPOLLIN, clockfd, net::connection::CLOCK), controllerconn(epoll, EPOLLIN,
+			controllerfd, net::connection::CONTROLLER_LISTEN), regionconn(epoll, EPOLLIN, regionfd,
+			net::connection::REGION_LISTEN), pngconn(epoll, EPOLLIN, pngfd, net::connection::PNGVIEWER_LISTEN);
 
 	//handle logging to file initializations
 	PuckStack puckstack;
@@ -206,8 +217,8 @@ void run() {
 	double viewAngle = 360;
 	double maxSpeed = 4;
 	double maxRotate = 2;
-	AreaEngine* regionarea = new AreaEngine(robotDiameter, regionSideLen,
-			minElementSize, viewDistance, viewAngle, maxSpeed, maxRotate);
+	AreaEngine* regionarea = new AreaEngine(robotDiameter, regionSideLen, minElementSize, viewDistance, viewAngle,
+			maxSpeed, maxRotate);
 	//create robots for benchmarking!
 	int numRobots = 0;
 	int wantRobots = 1000;
@@ -248,12 +259,7 @@ void run() {
 
 		//check if its time to output
 		if (timeCache > lastSecond) {
-			cout << timeSteps << " timesteps/second";
-
-			//remove me later: temporary message for debugging
-			if (sendMorePngs)
-				cout << " and we are generating PNGs";
-			cout << endl;
+			cout << timeSteps << " timesteps/second" << endl;
 
 			timeSteps = 0;
 			lastSecond = timeCache;
@@ -268,8 +274,7 @@ void run() {
 
 		//check our events that were triggered
 		for (size_t i = 0; i < (unsigned) eventcount; i++) {
-			net::EpollConnection *c =
-					(net::EpollConnection*) events[i].data.ptr;
+			net::EpollConnection *c = (net::EpollConnection*) events[i].data.ptr;
 			if (events[i].events & EPOLLIN) {
 				switch (c->type) {
 				case net::connection::CLOCK: {
@@ -282,115 +287,100 @@ void run() {
 						case MSG_WORLDINFO: {
 							worldinfo.ParseFromArray(buffer, len);
 							cout << "Got world info." << endl;
-              for (int region = 0; region < worldinfo.region_size();
-                   region++) {
-                for (int pos = 0; pos < worldinfo.region(region).position_size();
-                    pos++) {
-                  cout << "Server #" << worldinfo.region(region).id()
-                       << " position: ";
-                  cout << worldinfo.region(region).position(pos) << endl;
-                }
-              } 
+							for (int region = 0; region < worldinfo.region_size(); region++) {
+								for (int pos = 0; pos < worldinfo.region(region).position_size(); pos++) {
+									cout << "Server #" << worldinfo.region(region).id() << " position: ";
+									cout << worldinfo.region(region).position(pos) << endl;
+								}
+							}
 
-              // Connect to existing RegionServers.
-              for (int i = 0; i < worldinfo.region_size() - 1; i++) {
-                if (worldinfo.region(i).position_size() > 0) {
-                  struct in_addr addr;
-                  addr.s_addr = worldinfo.region(i).address();
-                  int regionfd = net::do_connect(addr,
-                      worldinfo.region(i).regionport());
-                  net::set_blocking(regionfd, false);
-                  if (regionfd < 0) {
-                    cout << "Failed to connect to regionserver.\n";
-                  } else if (regionfd == 0) {
-                    cout << "Invalid regionserver address.\n";
-                  } else {
-                    cout << "Connected to regionserver" << endl;
-                  }
-                  net::EpollConnection *newconn =
-                      new net::EpollConnection(epoll, EPOLLIN, regionfd,
-                          net::connection::REGION);
-                  borderRegions.push_back(newconn);
+							// Connect to existing RegionServers.
+							for (int i = 0; i < worldinfo.region_size() - 1; i++) {
+								if (worldinfo.region(i).position_size() > 0) {
+									struct in_addr addr;
+									addr.s_addr = worldinfo.region(i).address();
+									int regionfd = net::do_connect(addr, worldinfo.region(i).regionport());
+									net::set_blocking(regionfd, false);
+									if (regionfd < 0) {
+										cout << "Failed to connect to regionserver.\n";
+									} else if (regionfd == 0) {
+										cout << "Invalid regionserver address.\n";
+									} else {
+										cout << "Connected to regionserver" << endl;
+									}
+									net::EpollConnection *newconn = new net::EpollConnection(epoll, EPOLLIN, regionfd,
+											net::connection::REGION);
+									borderRegions.push_back(newconn);
 
-                  // Reverse all the positions. If we are connecting to the
-                  // server on our left, we want to tell it that we are on
-                  // its right.
-                  for (int j = 0; j < worldinfo.region(i).position_size();
-                       j++) {
-                    // Inform AreaEngine who our neighbours are.
-                    regionarea->SetNeighbour((int)worldinfo.region(i).position(j),
-                        newconn);
+									// Reverse all the positions. If we are connecting to the
+									// server on our left, we want to tell it that we are on
+									// its right.
+									for (int j = 0; j < worldinfo.region(i).position_size(); j++) {
+										// Inform AreaEngine who our neighbours are.
+										regionarea->SetNeighbour((int) worldinfo.region(i).position(j), newconn);
 
-                    // Flip Positions to tell other RegionServers that I am
-                    // your new neighbour.
-                    switch (worldinfo.region(i).position(j)) {
-                    case RegionInfo_Position_TOP_LEFT:
-                      worldinfo.mutable_region(i)->set_position(j, 
-                          RegionInfo_Position_BOTTOM_RIGHT);
-                      break;
-                    case RegionInfo_Position_TOP:
-                      worldinfo.mutable_region(i)->set_position(j, 
-                          RegionInfo_Position_BOTTOM);
-                      break;
-                    case RegionInfo_Position_TOP_RIGHT:
-                      worldinfo.mutable_region(i)->set_position(j, 
-                          RegionInfo_Position_BOTTOM_LEFT);
-                      break;
-                    case RegionInfo_Position_RIGHT:
-                      worldinfo.mutable_region(i)->set_position(j, 
-                          RegionInfo_Position_LEFT);
-                      break;
-                    case RegionInfo_Position_BOTTOM_RIGHT:
-                      worldinfo.mutable_region(i)->set_position(j, 
-                          RegionInfo_Position_TOP_LEFT);
-                      break;
-                    case RegionInfo_Position_BOTTOM:
-                      worldinfo.mutable_region(i)->set_position(j, 
-                          RegionInfo_Position_TOP);
-                      break;
-                    case RegionInfo_Position_BOTTOM_LEFT:
-                      worldinfo.mutable_region(i)->set_position(j, 
-                          RegionInfo_Position_TOP_RIGHT);
-                      break;
-                    case RegionInfo_Position_LEFT:
-                      worldinfo.mutable_region(i)->set_position(j, 
-                          RegionInfo_Position_RIGHT);
-                      break;
-                    default:
-                      cout << "Some issue with Position flipping\n";
-                      break;
-                    }
-                  }
-                  newconn->queue.push(MSG_REGIONINFO, worldinfo.region(i));
-                  newconn->set_writing(true);
-                }
-              }
+										// Flip Positions to tell other RegionServers that I am
+										// your new neighbour.
+										switch (worldinfo.region(i).position(j)) {
+										case RegionInfo_Position_TOP_LEFT:
+											worldinfo.mutable_region(i)->set_position(j,
+													RegionInfo_Position_BOTTOM_RIGHT);
+											break;
+										case RegionInfo_Position_TOP:
+											worldinfo.mutable_region(i)->set_position(j, RegionInfo_Position_BOTTOM);
+											break;
+										case RegionInfo_Position_TOP_RIGHT:
+											worldinfo.mutable_region(i)->set_position(j,
+													RegionInfo_Position_BOTTOM_LEFT);
+											break;
+										case RegionInfo_Position_RIGHT:
+											worldinfo.mutable_region(i)->set_position(j, RegionInfo_Position_LEFT);
+											break;
+										case RegionInfo_Position_BOTTOM_RIGHT:
+											worldinfo.mutable_region(i)->set_position(j, RegionInfo_Position_TOP_LEFT);
+											break;
+										case RegionInfo_Position_BOTTOM:
+											worldinfo.mutable_region(i)->set_position(j, RegionInfo_Position_TOP);
+											break;
+										case RegionInfo_Position_BOTTOM_LEFT:
+											worldinfo.mutable_region(i)->set_position(j, RegionInfo_Position_TOP_RIGHT);
+											break;
+										case RegionInfo_Position_LEFT:
+											worldinfo.mutable_region(i)->set_position(j, RegionInfo_Position_RIGHT);
+											break;
+										default:
+											cout << "Some issue with Position flipping\n";
+											break;
+										}
+									}
+									newconn->queue.push(MSG_REGIONINFO, worldinfo.region(i));
+									newconn->set_writing(true);
+								}
+							}
 
-              // Find our robots, and add to the simulation
-              int lastRegionIndex = worldinfo.region_size() - 1;
-              int myId = worldinfo.region(lastRegionIndex).id();
-              vector<int> myRobotIds;
-              cout << "My id: " << myId << endl;
-              for (google::protobuf::RepeatedPtrField<const RobotInfo>
-                   ::iterator i = worldinfo.robot().begin();
-                   i != worldinfo.robot().end(); i++) {
-                if (i->region() == myId) {
-                  myRobotIds.push_back(i->id());
-                }
-              }
-              wantRobots = myRobotIds.size();
-              numRobots = 0;
+							// Find our robots, and add to the simulation
+							int lastRegionIndex = worldinfo.region_size() - 1;
+							int myId = worldinfo.region(lastRegionIndex).id();
+							vector<int> myRobotIds;
+							cout << "My id: " << myId << endl;
+							for (google::protobuf::RepeatedPtrField<const RobotInfo>::iterator i =
+									worldinfo.robot().begin(); i != worldinfo.robot().end(); i++) {
+								if (i->region() == myId) {
+									myRobotIds.push_back(i->id());
+								}
+							}
+							wantRobots = myRobotIds.size();
+							numRobots = 0;
 
-              for (int i = 400 * robotDiameter; i < regionSideLen - 3 * (robotDiameter)
-                  && numRobots < wantRobots; i += 5 * (robotDiameter))
-                for (int j = 3 * robotDiameter; j < regionSideLen - 3 * (robotDiameter)
-                    && numRobots < wantRobots; j += 5 * (robotDiameter)) {
-                  regionarea->AddRobot(myRobotIds[numRobots++], i, j, 0, .1, 
-                      0, 0, (numRobots % 3 == 0 ? "red"
-                      : ((numRobots + 1) % 3 == 0 ? "blue" : "green")));
-                }
+							for (int i = 400 * robotDiameter; i < regionSideLen - 3 * (robotDiameter) && numRobots
+									< wantRobots; i += 5 * (robotDiameter))
+								for (int j = 3 * robotDiameter; j < regionSideLen - 3 * (robotDiameter) && numRobots
+										< wantRobots; j += 5 * (robotDiameter)) {
+									regionarea->AddRobot(myRobotIds[numRobots++], i, j, 0, .1, 0, 0, (numRobots % 3
+											== 0 ? "red" : ((numRobots + 1) % 3 == 0 ? "blue" : "green")));
+								}
 
-              cout << numRobots << " robots created." << endl;
+							cout << numRobots << " robots created." << endl;
 
 							break;
 						}
@@ -402,38 +392,45 @@ void run() {
 						case MSG_TIMESTEPUPDATE: {
 							timestep.ParseFromArray(buffer, len);
 
-							if (regionarea->curStep % 20 == 0 && sendMorePngs)
-								regionarea->Step(true);
-							else
-								regionarea->Step(false);
+							generateImage = false;
+
+							//find out if we even need to generate an image
+							if (regionarea->curStep % 19 == 0) {
+								for (vector<net::EpollConnection*>::iterator it = pngviewers.begin(); it
+										!= pngviewers.end(); ++it) {
+									if (sendMorePngs[(*it)->fd].initialized == true && sendMorePngs[(*it)->fd].value
+											== true) {
+										generateImage = true;
+										break;
+									}
+								}
+							}
+
+							regionarea->Step(generateImage);
 
 							timeSteps++; //Note: only use this for this temp stat taking. use regionarea->curStep for syncing
 
-							if (regionarea->curStep % 20 == 0 && sendMorePngs) {
-								// Only generate an image for one in 20 timesteps
+							if (regionarea->curStep % 20 == 0 && generateImage) {
+								// Only send an image for one in 20 timesteps
 								surface = regionarea->stepImage;
-								unsigned char *surfaceData =
-										cairo_image_surface_get_data(surface);
-								size_t
-										surfaceLength =
-												cairo_image_surface_get_height(
-														surface)
-														* cairo_format_stride_for_width(
-																cairo_image_surface_get_format(
-																		surface),
-																cairo_image_surface_get_width(
-																		surface));
+								unsigned char *surfaceData = cairo_image_surface_get_data(surface);
+								size_t surfaceLength = cairo_image_surface_get_height(surface)
+										* cairo_format_stride_for_width(cairo_image_surface_get_format(surface),
+												cairo_image_surface_get_width(surface));
 
-								png.set_image((void*) surfaceData,
-										surfaceLength);
+								png.set_image((void*) surfaceData, surfaceLength);
 								png.set_timestep(timestep.timestep());
-								for (vector<net::EpollConnection*>::iterator i =
-										pngviewers.begin(); i
-										!= pngviewers.end(); ++i) {
-									(*i)->queue.push(MSG_REGIONRENDER, png);
-									(*i)->set_writing(true);
+								for (vector<net::EpollConnection*>::iterator it = pngviewers.begin(); it
+										!= pngviewers.end(); ++it) {
+									if (sendMorePngs[(*it)->fd].initialized && sendMorePngs[(*it)->fd].value) {
+										cout<<"Sending a PNG to fd="<<(*it)->fd<<endl;
+										(*it)->queue.push(MSG_REGIONRENDER, png);
+										(*it)->set_writing(true);
+									}
 								}
+
 							}
+
 #ifdef ENABLE_LOGGING
 							logWriter.init(MSG_TIMESTEPUPDATE, timestep);
 							logWriter.doWrite();
@@ -475,9 +472,7 @@ void run() {
 						switch (type) {
 						case MSG_CLIENTROBOT:
 							clientrobot.ParseFromArray(buffer, len);
-							cout
-									<< "Received ClientRobot message with robotId #"
-									<< clientrobot.id() << endl;
+							cout << "Received ClientRobot message with robotId #" << clientrobot.id() << endl;
 
 							// Send back a test ServerRobot message. May need to
 							// eventually broadcast to all controllers?
@@ -495,36 +490,71 @@ void run() {
 					break;
 				}
 				case net::connection::REGION: {
-          MessageType type;
+					MessageType type;
 					int len;
 					const void *buffer;
 					if (c->reader.doRead(&type, &len, &buffer)) {
 						switch (type) {
-						  case MSG_SERVERROBOT: {
-						    ServerRobot serverrobot;
-						    serverrobot.ParseFromArray(buffer, len);
-						    regionarea->GotServerRobot(serverrobot);
-						    break;
-						  }
-					  
-            case MSG_REGIONINFO: 
-            {
-              regioninfo.ParseFromArray(buffer, len);
-              cout << "Hey bro! Server #" << regioninfo.id()
-                   << " is trying to tell us he's our neighbour! He be here:\n";
-              for (int i = 0; i < regioninfo.position_size(); i++) {
-                cout << "  Position: " << regioninfo.position(i) << endl;
-                
-                // Inform AreaEngine of our new neighbour.
-                regionarea->SetNeighbour((int)regioninfo.position(i), c);
-              }
-              break;
-            }
-					  default:
+						case MSG_SERVERROBOT: {
+							ServerRobot serverrobot;
+							serverrobot.ParseFromArray(buffer, len);
+							regionarea->GotServerRobot(serverrobot);
+							break;
+						}
+						case MSG_REGIONINFO: {
+							regioninfo.ParseFromArray(buffer, len);
+							cout << "Hey bro! Server #" << regioninfo.id()
+									<< " is trying to tell us he's our neighbour! He be here:\n";
+							for (int i = 0; i < regioninfo.position_size(); i++) {
+								cout << "  Position: " << regioninfo.position(i) << endl;
+
+								// Inform AreaEngine of our new neighbour.
+								regionarea->SetNeighbour((int) regioninfo.position(i), c);
+							}
+							break;
+						}
+						default:
 							cerr << "Unexpected readable message from Region\n";
 							break;
 						}
-				  }
+					}
+					break;
+				}
+				case net::connection::PNGVIEWER: {
+					//check for a message that disables the sending of PNGs to the pngviewer
+					MessageType type;
+					int len;
+					const void *buffer;
+
+					try {
+						if (c->reader.doRead(&type, &len, &buffer)) {
+							switch (type) {
+							case MSG_SENDMOREPNGS: {
+								SendMorePngs doWeSend;
+								doWeSend.ParseFromArray(buffer, len);
+
+								sendMorePngs[c->fd].value = doWeSend.enable();
+								sendMorePngs[c->fd].initialized = true;
+								//cout << "Setting sendMorePngs for fd " << c->fd << " to " << doWeSend.enable() << endl;
+								break;
+							}
+							default:
+								cerr << "Unexpected readable message from PngViewer\n";
+							}
+
+						}
+					} catch (EOFError e) {
+						for (vector<net::EpollConnection*>::iterator i = pngviewers.begin(); i != pngviewers.end(); ++i) {
+							if (c->fd == (*i)->fd) {
+								pngviewers.erase(i);
+								close(c->fd);
+								sendMorePngs[c->fd].value = false;
+								cout << "png viewer with fd=" << c->fd << " disconnected" << endl;
+								break;
+							}
+						}
+					}
+
 					break;
 				}
 				case net::connection::REGION_LISTEN: {
@@ -534,9 +564,8 @@ void run() {
 					}
 					net::set_blocking(fd, false);
 					try {
-						net::EpollConnection *newconn =
-								new net::EpollConnection(epoll, EPOLLIN, fd,
-										net::connection::REGION);
+						net::EpollConnection *newconn = new net::EpollConnection(epoll, EPOLLIN, fd,
+								net::connection::REGION);
 						borderRegions.push_back(newconn);
 					} catch (SystemError e) {
 						cerr << e.what() << endl;
@@ -554,9 +583,8 @@ void run() {
 					}
 					net::set_blocking(fd, false);
 					try {
-						net::EpollConnection *newconn =
-								new net::EpollConnection(epoll, EPOLLIN, fd,
-										net::connection::CONTROLLER);
+						net::EpollConnection *newconn = new net::EpollConnection(epoll, EPOLLIN, fd,
+								net::connection::CONTROLLER);
 						controllers.push_back(newconn);
 					} catch (SystemError e) {
 						cerr << e.what() << endl;
@@ -567,93 +595,45 @@ void run() {
 					break;
 				}
 				case net::connection::PNGVIEWER_LISTEN: {
-					//we get a message from the pngviewer server
-					MessageType type;
-					int len;
-					const void *buffer;
-
-					//check for a message that disables the sending of PNGs to the pngviewer
-					try {
-						//first check if we are receiving an actual message or a new connection
-						if (c->reader.doRead(&type, &len, &buffer)) {
-							switch (type) {
-							case MSG_SENDMOREPNGS: {
-								SendMorePngs doWeSend;
-								doWeSend.ParseFromArray(buffer, len);
-
-								sendMorePngs = doWeSend.enable();
-							}
-							default:
-								cerr
-										<< "Unexpected message from the pngviewer!"
-										<< endl;
-								break;
-							}
-						}
-					} catch (SystemError e) {
-						//We failed to read a message, so it's a new connection from the pngviewer
-						int fd = accept(c->fd, NULL, NULL);
-						if (fd < 0) {
-							throw SystemError("Failed to accept png viewer");
-						}
-						net::set_blocking(fd, false);
-
-						try {
-							net::EpollConnection *newconn =
-									new net::EpollConnection(epoll, EPOLLOUT,
-											fd, net::connection::PNGVIEWER);
-							pngviewers.push_back(newconn);
-							sendMorePngs = true;
-						} catch (SystemError e) {
-							cerr << e.what() << endl;
-							return;
-						}
-
-						cout << "Got png viewer connection." << endl;
+					//We failed to read a message, so it's a new connection from the pngviewer
+					int fd = accept(c->fd, NULL, NULL);
+					if (fd < 0) {
+						throw SystemError("Failed to accept png viewer");
 					}
+					net::set_blocking(fd, false);
+
+					try {
+						net::EpollConnection *newconnOut = new net::EpollConnection(epoll, EPOLLIN, fd,
+								net::connection::PNGVIEWER);
+						pngviewers.push_back(newconnOut);
+						sendMorePngs[fd].value = true;
+						sendMorePngs[fd].initialized = true;
+						cout << "set " << fd << " to true" << endl;
+					} catch (SystemError e) {
+						cerr << e.what() << endl;
+						return;
+					}
+
+					cout << "Got png viewer connection." << endl;
+
 					break;
 				}
-
 				default:
-					cerr
-							<< "Internal error: Got unexpected readable event of type "
-							<< c->type << endl;
-					break;
+					cerr << "Internal error: Got unexpected readable event from the pngviewer of type " << c->type
+							<< endl;
+
 				}
 			} else if (events[i].events & EPOLLOUT) {
 				switch (c->type) {
 				case net::connection::REGION:
-          // fall through...
+					// fall through...
+				case net::connection::PNGVIEWER:
+					// fall through...
 				case net::connection::CONTROLLER:
 					// fall through...
 				case net::connection::CLOCK:
-          if (c->queue.doWrite()) {
-            c->set_writing(false);
-          }
-          break;
-				case net::connection::PNGVIEWER:
-					// Perform write
-					try {
-						if (c->queue.doWrite()) {
-							// If the queue is empty, we don't care if this is writable
-							c->set_writing(false);
-						}
-					} catch (SystemError e) {
-						for (vector<net::EpollConnection*>::iterator i =
-								pngviewers.begin(); i != pngviewers.end(); ++i) {
-							if (c->fd == (*i)->fd) {
-								pngviewers.erase(i);
-								close(c->fd);
-								cout << "png viewer with fd=" << c->fd
-										<< " disconnected" << endl;
-
-								//don't even bother sending more PNGs if we have no one to send them to
-								if (pngviewers.size() == 0)
-									sendMorePngs = false;
-
-								break;
-							}
-						}
+					if (c->queue.doWrite()) {
+						c->set_writing(false);
 					}
 					break;
 				default:
@@ -685,8 +665,7 @@ int main(int argc, char* argv[]) {
 	printf("Server Initializing ...\n");
 
 	helper::Config config(argc, argv);
-	configFileName = (config.getArg("-c").length() == 0 ? "config"
-			: config.getArg("-c").c_str());
+	configFileName = (config.getArg("-c").length() == 0 ? "config" : config.getArg("-c").c_str());
 	cout << "Using config file: " << configFileName << endl;
 
 	loadConfigFile();
