@@ -53,7 +53,7 @@
               </packing>
             </child>
             <child>
-              <object class="GtkToggleToolButton" id="About">
+              <object class="GtkToolButton" id="About">
                 <property name="visible">True</property>
                 <property name="label" translatable="yes">About</property>
                 <property name="use_underline">True</property>
@@ -136,8 +136,6 @@
     <property name="window_position">center-always</property>
     <property name="default_width">200</property>
     <property name="default_height">250</property>
-    <signal name="destroy" handler="gtk_widget_hide"/>
-    <signal name="delete_event" handler="gtk_widget_hide"/>
     <child>
       <object class="GtkVBox" id="vbox1">
         <property name="visible">True</property>
@@ -287,7 +285,6 @@
     <property name="window_position">center-always</property>
     <property name="default_width">450</property>
     <property name="default_height">250</property>
-    <signal name="delete_event" handler="gtk_widget_hide"/>
     <child>
       <object class="GtkHBox" id="hbox1">
         <property name="visible">True</property>

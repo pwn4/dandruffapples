@@ -145,14 +145,14 @@ void updateWorldGrid(string color) {
 
 //update the info window
 void updateInfoWindow() {
-	const string frameNumName = "frame_frameNum", frameserverAddName =
-			"frame_serverAdd", frameserverLocName = "frame_serverLoc";
+	const string frameNumName = "frame_frameNum", frameserverAddName = "frame_serverAdd", frameserverLocName =
+			"frame_serverLoc";
 	string tmp;
 	regionConnection *pivotPtr = pivotRegion;
 
 	for (int frame = 1; frame < 3; frame++) {
 
-		if( frame == 2)
+		if (frame == 2)
 			pivotPtr = pivotRegionBuddy;
 
 		GtkLabel *frameNum =
@@ -407,7 +407,8 @@ void setNewRegionPivotAndBuddy(uint32 newPivotRegion[], uint32 newPivotRegionBud
 
 	compareBuddy();
 	updateWorldGrid("light green");
-	updateInfoWindow();
+	if(gtk_toggle_tool_button_get_active(GTK_TOGGLE_TOOL_BUTTON(gtk_builder_get_object( builder, "Info" ))))
+		updateInfoWindow();
 }
 
 //up button handler
@@ -612,7 +613,20 @@ void on_rotateButton_clicked(GtkWidget *widget, gpointer window) {
 	updateInfoWindow();
 }
 
-void on_About_toggled(GtkWidget *widget, gpointer window) {
+//window destruction methods for the info and navigation windows
+static void destroy(GtkWidget *window, gpointer widget) {
+	gtk_widget_hide_all((GtkWidget*) window);
+	gtk_toggle_tool_button_set_active((GtkToggleToolButton*) widget, FALSE);
+}
+
+static gboolean delete_event(GtkWidget *window, GdkEvent *event, gpointer widget) {
+	destroy(window, widget);
+
+	return TRUE;
+}
+
+//"About" toolbar button handler
+void on_About_clicked(GtkWidget *widget, gpointer window) {
 	GtkWidget *dialog = gtk_about_dialog_new();
 	gtk_about_dialog_set_name(GTK_ABOUT_DIALOG(dialog), "Pngviewer");
 	gtk_about_dialog_set_version(GTK_ABOUT_DIALOG(dialog), "0.1");
@@ -630,35 +644,16 @@ void on_About_toggled(GtkWidget *widget, gpointer window) {
 	gtk_widget_destroy(dialog);
 }
 
-//navigation button handler
-void on_Navigation_toggled(GtkWidget *widget, gpointer window) {
-
-	GtkWidget *navigationWindow = GTK_WIDGET(gtk_builder_get_object( builder, "navigationWindow" ));
-
+//"Navigation" and "Info" toolbar button handler
+void on_Window_toggled(GtkWidget *widget, gpointer window) {
 	GdkColor bgColor;
 	gdk_color_parse("black", &bgColor);
-	gtk_widget_modify_bg(GTK_WIDGET(navigationWindow), GTK_STATE_NORMAL, &bgColor);
+	gtk_widget_modify_bg(GTK_WIDGET((GtkWidget*)window), GTK_STATE_NORMAL, &bgColor);
 
 	if (gtk_toggle_tool_button_get_active(GTK_TOGGLE_TOOL_BUTTON(widget))) {
-		gtk_widget_show_all(navigationWindow);
+		gtk_widget_show_all((GtkWidget*) window);
 	} else {
-		gtk_widget_hide_all(navigationWindow);
-	}
-}
-
-//info button handler
-void on_Info_toggled(GtkWidget *widget, gpointer window) {
-
-	GtkWidget *infoWindow = GTK_WIDGET(gtk_builder_get_object( builder, "infoWindow" ));
-
-	GdkColor bgColor;
-	gdk_color_parse("black", &bgColor);
-	gtk_widget_modify_bg(GTK_WIDGET(infoWindow), GTK_STATE_NORMAL, &bgColor);
-
-	if (gtk_toggle_tool_button_get_active(GTK_TOGGLE_TOOL_BUTTON(widget))) {
-		gtk_widget_show_all(infoWindow);
-	} else {
-		gtk_widget_hide_all(infoWindow);
+		gtk_widget_hide_all((GtkWidget*) window);
 	}
 }
 
@@ -668,8 +663,10 @@ void initializeDrawers() {
 	guint rows, columns;
 	GtkWidget *mainWindow = GTK_WIDGET(gtk_builder_get_object( builder, "window" ));
 	GtkToggleToolButton *navigation = GTK_TOGGLE_TOOL_BUTTON(gtk_builder_get_object( builder, "Navigation" ));
-	GtkToggleToolButton *about = GTK_TOGGLE_TOOL_BUTTON(gtk_builder_get_object( builder, "About" ));
 	GtkToggleToolButton *info = GTK_TOGGLE_TOOL_BUTTON(gtk_builder_get_object( builder, "Info" ));
+	GtkWidget *about = GTK_WIDGET(gtk_builder_get_object( builder, "About" ));
+	GtkWidget *infoWindow = GTK_WIDGET(gtk_builder_get_object( builder, "infoWindow" ));
+	GtkWidget *navigationWindow = GTK_WIDGET(gtk_builder_get_object( builder, "navigationWindow" ));
 	GtkWidget *table = GTK_WIDGET(gtk_builder_get_object( builder, "table" ));
 	GtkWidget *upButton = GTK_WIDGET(gtk_builder_get_object( builder, "up" ));
 	GtkWidget *downButton = GTK_WIDGET(gtk_builder_get_object( builder, "down" ));
@@ -693,14 +690,19 @@ void initializeDrawers() {
 		}
 	}
 
-	g_signal_connect(navigation, "toggled", G_CALLBACK(on_Navigation_toggled), (gpointer) mainWindow);
-	g_signal_connect(info, "toggled", G_CALLBACK(on_Info_toggled), (gpointer) mainWindow);
-	g_signal_connect(about, "toggled", G_CALLBACK(on_About_toggled), (gpointer) mainWindow);
+	g_signal_connect(navigation, "toggled", G_CALLBACK(on_Window_toggled), (gpointer) navigationWindow);
+	g_signal_connect(info, "toggled", G_CALLBACK(on_Window_toggled), (gpointer) infoWindow);
+	g_signal_connect(about, "clicked", G_CALLBACK(on_About_clicked), (gpointer) mainWindow);
 	g_signal_connect(upButton, "clicked", G_CALLBACK(on_upButton_clicked), (gpointer) mainWindow);
 	g_signal_connect(downButton, "clicked", G_CALLBACK(on_downButton_clicked), (gpointer) mainWindow);
 	g_signal_connect(backButton, "clicked", G_CALLBACK(on_backButton_clicked), (gpointer) mainWindow);
 	g_signal_connect(forwardButton, "clicked", G_CALLBACK(on_forwardButton_clicked), (gpointer) mainWindow);
 	g_signal_connect(rotateButton, "clicked", G_CALLBACK(on_rotateButton_clicked), (gpointer) mainWindow);
+
+	g_signal_connect(navigationWindow, "destroy", G_CALLBACK(destroy), (gpointer)navigation);
+	g_signal_connect(infoWindow, "destroy", G_CALLBACK(destroy), (gpointer)info);
+	g_signal_connect(navigationWindow, "delete-event", G_CALLBACK(delete_event), (gpointer)navigation);
+	g_signal_connect(infoWindow, "delete-event", G_CALLBACK(delete_event), (gpointer)info);
 
 	gtk_widget_show_all(mainWindow);
 
