@@ -7,6 +7,7 @@ This program communications with controllers.
 #include <cstdio>
 #include <cstring>
 #include <cerrno>
+#include <math.h>
 
 #include <unistd.h>
 #include <sys/socket.h>
@@ -50,20 +51,39 @@ int robotsPerTeam;
 net::EpollConnection* theController;
 int epoll;
 
-struct OwnRobot {
+class Robot {
+public:
   float x;
   float y;
-  float velocity;
+  float vx;
+  float vy;
   float angle;
   bool hasPuck;
   bool hasCollided;  
 
-  OwnRobot() : x(0.0), y(0.0), velocity(0.0), angle(0.0), hasPuck(false),
-               hasCollided(false) {}
+  Robot() : x(0.0), y(0.0), vx(0.0), vy(0.0), angle(0.0), hasPuck(false),
+            hasCollided(false) {}
+};
+
+class OwnRobot : public Robot {
+public:
+  bool pendingCommand;
+
+  OwnRobot() : Robot(), pendingCommand(false) {}
 };
 
 OwnRobot** ownRobots;
 
+class EnemyRobot : public Robot {
+public:
+  int id;
+  int lastTimestepSeen;
+
+  EnemyRobot() : Robot(), id(-1), lastTimestepSeen(-1) {}
+};
+
+// TODO: Change to a hash table or something
+vector<EnemyRobot*>* enemyRobots;
 
 //Config variables
 vector<string> controllerips; //controller IPs 
@@ -123,8 +143,24 @@ int indexToTeamId(int index) {
   return (index / robotsPerTeam);
 }
 
+int indexToIndexOfTeam(int index) {
+  return (index % robotsPerTeam);
+}
+
+bool weControlTeam(int teamid) {
+  return ((firstTeam <= teamid && teamid < numTeams) ? true : false);
+}
+
 int totalOwnRobots() {
   return (numTeams * robotsPerTeam);
+}
+
+int teamIdToTeamIndex(int teamid) {
+  return (teamid - firstTeam);
+}
+
+int teamIndexToTeamId(int teamIndex) {
+  return (teamIndex + firstTeam);
 }
 
 // Destination function for the AI thread.
@@ -137,18 +173,48 @@ void *artificialIntelligence(void *threadid) {
   ClientRobot clientRobot;
   float velocity = 0.1;
   float angle = 3.0;
-
+  int tempId;
 
   while (true) {
     for (int i = 0; i < totalOwnRobots(); i++) {
-      cout << "AI thread moving robot #" << indexToRobotId(i)
-           << " at timestep " << currentTimestep << endl;
-      clientRobot.set_id(indexToRobotId(i));
-      clientRobot.set_velocity(velocity);
-      clientRobot.set_angle(angle);
+      if (!ownRobots[i]->pendingCommand) {
+        // Simple AI, follow the leader!
+        if (indexToIndexOfTeam(i) == 0 && currentTimestep % 5 == 0) {
+          cout << "Leader is setting a new course!" << endl; 
+          ownRobots[i]->pendingCommand = true;
+          clientRobot.set_id(indexToRobotId(i));
+          clientRobot.set_velocityx(((rand() % 11) / 10.0) - 0.5);
+          clientRobot.set_velocityy(((rand() % 11) / 10.0) - 0.5);
+          clientRobot.set_angle(angle);
+          tempId = i;
+        } else {
+          ownRobots[i]->pendingCommand = true;
+          clientRobot.set_id(indexToRobotId(i));
+          if (ownRobots[tempId]->x > ownRobots[i]->x) {
+            // Move right!
+            clientRobot.set_velocityx(velocity);
+          } else if (ownRobots[tempId]->x == ownRobots[i]->x) {
+            clientRobot.set_velocityx(0.0);
+          } else {
+            clientRobot.set_velocityx(velocity * -1.0);
+          }
+          if (ownRobots[tempId]->y > ownRobots[i]->y) {
+            // Move up!
+            clientRobot.set_velocityy(velocity);
+          } else if (ownRobots[tempId]->y == ownRobots[i]->y) {
+            clientRobot.set_velocityy(0.0);
+          } else {
+            clientRobot.set_velocityy(velocity * -1.0);
+          }
+          clientRobot.set_angle(angle);
+        }
 
-      theController->queue.push(MSG_CLIENTROBOT, clientRobot);
-      theController->set_writing(true);
+        theController->queue.push(MSG_CLIENTROBOT, clientRobot);
+        theController->set_writing(true);
+      } else {
+        //cout << "Pending command exists for robot #" << indexToRobotId(i)
+        //     << endl;
+      } 
     }
 
     sched_yield(); // Let the other thread read and write
@@ -259,8 +325,6 @@ void run() {
                        << i + firstTeam << endl;
                 }
 
-
-
                 break;
               }
               case MSG_CLAIMTEAM:
@@ -317,6 +381,7 @@ void run() {
                     ownRobots[i] = new OwnRobot();
                   }
 
+                  enemyRobots = new vector<EnemyRobot*>[numTeams];
                   // Allow AI thread to commence.
                   simulationStarted = true;
                 }
@@ -326,13 +391,45 @@ void run() {
                 timestep.ParseFromArray(buffer, len);
                 currentTimestep = timestep.timestep();
 
+                if (simulationStarted) {
+                  // Update all current positions.
+                  for (int i = 0; i < totalOwnRobots(); i++) {
+                    // TODO: wrapping
+                    ownRobots[i]->x += ownRobots[i]->vx;
+                    ownRobots[i]->y += ownRobots[i]->vy;
+                  }
+                  // TODO: Update enemy robots
+                }
+
                 break;
               case MSG_SERVERROBOT:
+              {
                 serverrobot.ParseFromArray(buffer, len);
-                cout << "Received ServerRobot of ID #" << serverrobot.id()
-                     << endl; 
-                // Update ownRobot data.
+                if (simulationStarted) {
+                  int index = serverrobot.id();
+                  int team = indexToTeamId(index);
+                  if (weControlTeam(team)) {
+                    ownRobots[index]->pendingCommand = false;
+                    if (serverrobot.has_velocityx()) 
+                      ownRobots[index]->vx = serverrobot.velocityx();
+                    if (serverrobot.has_velocityy()) 
+                      ownRobots[index]->vy = serverrobot.velocityy();
+                    if (serverrobot.has_angle()) 
+                      ownRobots[index]->angle = serverrobot.angle();
+                    if (serverrobot.has_haspuck()) 
+                      ownRobots[index]->hasPuck = serverrobot.haspuck();
+                    if (serverrobot.has_x()) 
+                      ownRobots[index]->x = serverrobot.x();
+                    if (serverrobot.has_y()) 
+                      ownRobots[index]->y = serverrobot.y();
+                    if (serverrobot.has_hascollided()) 
+                      ownRobots[index]->hasCollided = serverrobot.hascollided();
+
+                    // TODO: Add to all other enemyRobot lists
+                  }
+                }
                 break;
+              }
               default:
                 cout << "Unknown message!" << endl;
                 break;
@@ -347,8 +444,6 @@ void run() {
           switch(c->type) {
           case net::connection::CONTROLLER:
             if(c->queue.doWrite()) {
-              cout << "Sent a message at timestep " 
-                   << currentTimestep << endl;
               c->set_writing(false);
             }
             break;
@@ -379,6 +474,7 @@ void run() {
 //this is the main loop for the client
 int main(int argc, char* argv[])
 {
+  srand(time(NULL));
 	//Print a starting message
 	printf("--== Client Software ==-\n");
 	

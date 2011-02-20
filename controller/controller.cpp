@@ -175,8 +175,6 @@ int main(int argc, char** argv)
                   if (j->regionId == (int)newServer->id) {
                     robots[j->robotId].server = newServer;
                     robots[j->robotId].client = NULL;
-                    cout << "Assigned robot " << j->robotId << " to regionserver "
-                         << newServer->id << endl;
                   }
                 }
               }
@@ -211,9 +209,6 @@ int main(int argc, char** argv)
                   i != unassignedRobots.end(); ++i) {
                 if (i->regionId == (int)newServer->id) {
                   robots[i->robotId].server = newServer;
-                  robots[i->robotId].client = NULL;
-                  cout << "Assigned robot " << i->robotId << " to regionserver "
-                       << newServer->id << endl;
                 }
               }
               break;
