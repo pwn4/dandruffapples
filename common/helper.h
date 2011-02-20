@@ -15,9 +15,8 @@ using namespace std;
 #define ENABLE_LOGGING
 
 namespace helper {
-template<class T>
 
-string toString(const T&);
+string toString(int);
 string getNewName(string);
 
 class Config {

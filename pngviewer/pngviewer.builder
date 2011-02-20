@@ -132,9 +132,9 @@
   </object>
   <object class="GtkWindow" id="navigationWindow">
     <property name="border_width">5</property>
-    <property name="title"> </property>
+    <property name="title"> Navigation</property>
     <property name="window_position">center-always</property>
-    <property name="default_width">150</property>
+    <property name="default_width">200</property>
     <property name="default_height">250</property>
     <signal name="destroy" handler="gtk_widget_hide"/>
     <signal name="delete_event" handler="gtk_widget_hide"/>
@@ -282,20 +282,114 @@
     <property name="stock">gtk-go-up</property>
   </object>
   <object class="GtkWindow" id="infoWindow">
-    <property name="title" translatable="yes"> </property>
-    <property name="resizable">False</property>
+    <property name="border_width">5</property>
+    <property name="title" translatable="yes"> Info</property>
     <property name="window_position">center-always</property>
     <property name="default_width">450</property>
     <property name="default_height">250</property>
     <signal name="delete_event" handler="gtk_widget_hide"/>
     <child>
-      <object class="GtkHBox" id="infoHbox">
+      <object class="GtkHBox" id="hbox1">
         <property name="visible">True</property>
+        <property name="spacing">10</property>
         <child>
-          <placeholder/>
+          <object class="GtkVBox" id="frame1">
+            <property name="visible">True</property>
+            <property name="spacing">5</property>
+            <child>
+              <object class="GtkLabel" id="frame_frameNum1">
+                <property name="visible">True</property>
+                <property name="label" translatable="yes">label</property>
+              </object>
+              <packing>
+                <property name="position">0</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkLabel" id="frame_serverId1">
+                <property name="visible">True</property>
+                <property name="label" translatable="yes">label</property>
+              </object>
+              <packing>
+                <property name="position">1</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkLabel" id="frame_serverAdd1">
+                <property name="visible">True</property>
+                <property name="label" translatable="yes">label</property>
+              </object>
+              <packing>
+                <property name="position">2</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkLabel" id="frame_serverLoc1">
+                <property name="visible">True</property>
+                <property name="label" translatable="yes">label</property>
+              </object>
+              <packing>
+                <property name="position">3</property>
+              </packing>
+            </child>
+          </object>
+          <packing>
+            <property name="position">0</property>
+          </packing>
         </child>
         <child>
-          <placeholder/>
+          <object class="GtkVSeparator" id="vseparator1">
+            <property name="visible">True</property>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="position">1</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkVBox" id="frame2">
+            <property name="visible">True</property>
+            <property name="spacing">5</property>
+            <child>
+              <object class="GtkLabel" id="frame_frameNum2">
+                <property name="visible">True</property>
+                <property name="label" translatable="yes">label</property>
+              </object>
+              <packing>
+                <property name="position">0</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkLabel" id="frame_serverId2">
+                <property name="visible">True</property>
+                <property name="label" translatable="yes">label</property>
+              </object>
+              <packing>
+                <property name="position">1</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkLabel" id="frame_serverAdd2">
+                <property name="visible">True</property>
+                <property name="label" translatable="yes">label</property>
+              </object>
+              <packing>
+                <property name="position">2</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkLabel" id="frame_serverLoc2">
+                <property name="visible">True</property>
+                <property name="label" translatable="yes">label</property>
+              </object>
+              <packing>
+                <property name="position">3</property>
+              </packing>
+            </child>
+          </object>
+          <packing>
+            <property name="position">2</property>
+          </packing>
         </child>
       </object>
     </child>

@@ -67,6 +67,9 @@ map<int, map<int, GtkDrawingArea*> > worldGrid;
 //this is the region that the navigation will move the grid around
 regionConnection *pivotRegion = NULL, *pivotRegionBuddy = NULL;
 
+//used only for calculating images per second for each server
+int timeCache, lastSecond1, lastSecond2, messages1, messages2;
+
 /* Position in a grid:
  * ____
  * |1|2|
@@ -140,6 +143,39 @@ void updateWorldGrid(string color) {
 			GTK_STATE_NORMAL, &fgColor);
 }
 
+//update the info window
+void updateInfoWindow() {
+	const string frameNumName = "frame_frameNum", frameserverAddName =
+			"frame_serverAdd", frameserverLocName = "frame_serverLoc";
+	string tmp;
+	regionConnection *pivotPtr = pivotRegion;
+
+	for (int frame = 1; frame < 3; frame++) {
+
+		if( frame == 2)
+			pivotPtr = pivotRegionBuddy;
+
+		GtkLabel *frameNum =
+				GTK_LABEL(gtk_builder_get_object( builder, (frameNumName+helper::toString(frame)).c_str() ));
+		GtkLabel *frameserverAdd =
+				GTK_LABEL(gtk_builder_get_object( builder, (frameserverAddName+helper::toString(frame)).c_str() ));
+		GtkLabel *frameserverLoc =
+				GTK_LABEL(gtk_builder_get_object( builder, (frameserverLocName+helper::toString(frame)).c_str() ));
+
+		tmp = "Frame Number: " + helper::toString(frame);
+		gtk_label_set_text(frameNum, tmp.c_str());
+
+		tmp = "Server address: " + helper::toString(pivotPtr->info.address()) + ":" + helper::toString(
+				pivotPtr->info.renderport()) + " connected on fd = " + helper::toString(pivotPtr->fd);
+		gtk_label_set_text(frameserverAdd, tmp.c_str());
+
+		tmp = "Server located at: (" + helper::toString(pivotPtr->info.draw_x()) + ", " + helper::toString(
+				pivotPtr->info.draw_y()) + " )";
+		gtk_label_set_text(frameserverLoc, tmp.c_str());
+	}
+}
+
+//enable the info/navigation buttons found in the main window's toolbar and do some work to initialize them
 void initializeToolbarButtons() {
 	gtk_widget_set_sensitive(GTK_WIDGET(gtk_builder_get_object( builder, "Navigation" )), true);
 	gtk_widget_set_sensitive(GTK_WIDGET(gtk_builder_get_object( builder, "Info" )), true);
@@ -163,7 +199,41 @@ void initializeToolbarButtons() {
 		}
 	}
 
+	updateInfoWindow();
 	updateWorldGrid("light green");
+}
+
+//updates the number of messages found in the Info window
+void benchmarkMessages(int fd) {
+	timeCache = time(NULL);
+
+	if (fd == pivotRegion->fd)
+		messages1++;
+	else
+		messages2++;
+
+	//check if its time to output
+	if (timeCache > lastSecond1 || timeCache > lastSecond2) {
+		string tmp;
+
+		if (fd == pivotRegion->fd) {
+			GtkLabel *frameserverId = GTK_LABEL(gtk_builder_get_object( builder, "frame_serverId1" ));
+			tmp = "Server ID: " + helper::toString(pivotRegion->info.id()) + " sending at " + helper::toString(
+					messages1) + " images per second";
+			gtk_label_set_text(frameserverId, tmp.c_str());
+
+			messages1 = 0;
+			lastSecond1 = timeCache;
+		} else {
+			GtkLabel *frameserverId = GTK_LABEL(gtk_builder_get_object( builder, "frame_serverId2" ));
+			tmp = "Server ID: " + helper::toString(pivotRegionBuddy->info.id()) + " sending at " + helper::toString(
+					messages2) + " images per second";
+			gtk_label_set_text(frameserverId, tmp.c_str());
+
+			messages2 = 0;
+			lastSecond2 = timeCache;
+		}
+	}
 }
 
 //handler for region received messages
@@ -210,6 +280,8 @@ gboolean io_regionmessage(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 			debug << "Received render update from server fd=" << regions.at(regionNum)->fd << " and the timestep is # "
 					<< render.timestep() << endl;
 #endif
+			benchmarkMessages(regions.at(regionNum)->fd);
+
 			displayPng(regionNum, render);
 
 			break;
@@ -283,8 +355,8 @@ gboolean io_clockmessage(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 		//create a new handler to wait for when the server sends a new PNG to us
 		g_io_add_watch(g_io_channel_unix_new(regionFd), G_IO_IN, io_regionmessage, NULL);
 #ifdef DEBUG
-		debug << "Connected to region server fd=" << regionFd
-				<< " located at ( " << regioninfo.draw_x() << ", " << regioninfo.draw_y() << " )" << endl;
+		debug << "Connected to region server fd=" << regionFd << " located at ( " << regioninfo.draw_x() << ", "
+				<< regioninfo.draw_y() << " )" << endl;
 #endif
 		break;
 	}
@@ -319,22 +391,23 @@ void setNewRegionPivotAndBuddy(uint32 newPivotRegion[], uint32 newPivotRegionBud
 			<< ") and pivotRegionBuddy to (" << newPivotRegionBuddy[0] << "," << newPivotRegionBuddy[1] << ")" << endl;
 #endif
 
-	for (int i=0; i<regions.size(); i++) {
-		debug<<"Looking at region: ("<<regions.at(i)->info.draw_x()<<", "<<regions.at(i)->info.draw_y()<<")"<<endl;
-		if (regions.at(i)->info.draw_x() == newPivotRegion[0] && regions.at(i)->info.draw_y() == newPivotRegion[1])
-		{
+	for (int i = 0; i < (int) regions.size(); i++) {
+		debug << "Looking at region: (" << regions.at(i)->info.draw_x() << ", " << regions.at(i)->info.draw_y() << ")"
+				<< endl;
+		if (regions.at(i)->info.draw_x() == newPivotRegion[0] && regions.at(i)->info.draw_y() == newPivotRegion[1]) {
 			pivotRegion = regions.at(i);
-			debug<<"Found a match for pivotRegion"<<endl;
+			debug << "Found a match for pivotRegion" << endl;
 		}
-		if (regions.at(i)->info.draw_x() == newPivotRegionBuddy[0] && regions.at(i)->info.draw_y() == newPivotRegionBuddy[1])
-		{
+		if (regions.at(i)->info.draw_x() == newPivotRegionBuddy[0] && regions.at(i)->info.draw_y()
+				== newPivotRegionBuddy[1]) {
 			pivotRegionBuddy = regions.at(i);
-			debug<<"Found a match for pivotRegionBuddy"<<endl;
+			debug << "Found a match for pivotRegionBuddy" << endl;
 		}
 	}
 
 	compareBuddy();
 	updateWorldGrid("light green");
+	updateInfoWindow();
 }
 
 //up button handler
@@ -528,28 +601,33 @@ void on_rotateButton_clicked(GtkWidget *widget, gpointer window) {
 	debug << "Changing pivotRegionBuddy to (" << newPivotRegionBuddy[0] << "," << newPivotRegionBuddy[1] << ")" << endl;
 #endif
 
-	for (int i=0; i<regions.size(); i++) {
-		if (regions.at(i)->info.draw_x() == newPivotRegionBuddy[0] && regions.at(i)->info.draw_y() == newPivotRegionBuddy[1])
+	for (int i = 0; i < (int) regions.size(); i++) {
+		if (regions.at(i)->info.draw_x() == newPivotRegionBuddy[0] && regions.at(i)->info.draw_y()
+				== newPivotRegionBuddy[1])
 			pivotRegionBuddy = regions.at(i);
 	}
 
 	compareBuddy();
 	updateWorldGrid("light green");
+	updateInfoWindow();
 }
 
 void on_About_toggled(GtkWidget *widget, gpointer window) {
-	  GtkWidget *dialog = gtk_about_dialog_new();
-	  gtk_about_dialog_set_name(GTK_ABOUT_DIALOG(dialog), "Pngviewer");
-	  gtk_about_dialog_set_version(GTK_ABOUT_DIALOG(dialog), "0.1");
-	  gtk_about_dialog_set_copyright(GTK_ABOUT_DIALOG(dialog),
-	      "(c) Team 2");
-	  gtk_about_dialog_set_comments(GTK_ABOUT_DIALOG(dialog),
-	     "PngViewer is a program to create a real-time visual representation of the 'Antix' simulation.");
-	    const gchar *authors[2] = {"Peter Neufeld, Frank Lau, Egor Philippov,\nYouyou Yang, Jianfeng Hu, Roy Chiang,\nWilson Huynh, Gordon Leugn, Kevin Fahy,\nBenjamin Saunders", NULL};
+	GtkWidget *dialog = gtk_about_dialog_new();
+	gtk_about_dialog_set_name(GTK_ABOUT_DIALOG(dialog), "Pngviewer");
+	gtk_about_dialog_set_version(GTK_ABOUT_DIALOG(dialog), "0.1");
+	gtk_about_dialog_set_copyright(GTK_ABOUT_DIALOG(dialog), "(c) Team 2");
+	gtk_about_dialog_set_comments(GTK_ABOUT_DIALOG(dialog),
+			"PngViewer is a program to create a real-time visual representation of the 'Antix' simulation.");
+	const gchar
+			*authors[2] =
+					{
+							"Peter Neufeld, Frank Lau, Egor Philippov,\nYouyou Yang, Jianfeng Hu, Roy Chiang,\nWilson Huynh, Gordon Leugn, Kevin Fahy,\nBenjamin Saunders",
+							NULL };
 
-	  gtk_about_dialog_set_authors(GTK_ABOUT_DIALOG(dialog), authors);
-	  gtk_dialog_run(GTK_DIALOG (dialog));
-	  gtk_widget_destroy(dialog);
+	gtk_about_dialog_set_authors(GTK_ABOUT_DIALOG(dialog), authors);
+	gtk_dialog_run(GTK_DIALOG (dialog));
+	gtk_widget_destroy(dialog);
 }
 
 //navigation button handler
