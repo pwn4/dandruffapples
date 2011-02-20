@@ -61,12 +61,11 @@ vector<regionConnection*> regions;
 vector<GtkDrawingArea*> pngDrawingArea;
 bool horizontalView = true;
 GtkBuilder *builder;
-bool runForTheFirstTime=true;
+bool runForTheFirstTime = true;
 uint32 worldServerRows = 0, worldServerColumns = 0;
 map<int, map<int, GtkDrawingArea*> > worldGrid;
 //this is the region that the navigation will move the grid around
 regionConnection *pivotRegion = NULL, *pivotRegionBuddy = NULL;
-
 
 /* Position in a grid:
  * ____
@@ -99,12 +98,12 @@ void loadConfigFile(const char *configFileName, char* clockip) {
 
 //display the png that we received from a region server in its pngDrawingArea space
 void displayPng(int regionNum, RegionRender render) {
-	int position = TOP_LEFT;
+	int position = BOTTOM_LEFT;
 
-	if (horizontalView && regions.at(regionNum) == pivotRegionBuddy)
+	if (regions.at(regionNum) == pivotRegion)
+		position = TOP_LEFT;
+	else if (horizontalView && regions.at(regionNum) == pivotRegionBuddy)
 		position = TOP_RIGHT;
-	else if (!horizontalView && regions.at(regionNum) == pivotRegionBuddy)
-		position = BOTTOM_LEFT;
 
 	cairo_t *cr = gdk_cairo_create(pngDrawingArea.at(position)->widget.window);
 	cairo_surface_t *image = cairo_image_surface_create_for_data((unsigned char*) render.image().c_str(), IMAGEFORMAT,
@@ -116,51 +115,59 @@ void displayPng(int regionNum, RegionRender render) {
 }
 
 //set whether a region with a given 'fd' will send or not send PNGs
-void sendPngs(regionConnection *stoppingRegion, bool send) {
-	MessageWriter writer(stoppingRegion->fd);
+void sendPngs(int fd, bool send) {
+	MessageWriter writer(fd);
 
 	SendMorePngs sendMore;
 	sendMore.set_enable(send);
 	writer.init(MSG_SENDMOREPNGS, sendMore);
 #ifdef DEBUG
-	debug << "Telling server ( " << stoppingRegion->info.address() << ":" << stoppingRegion->info.renderport()
-			<< " ) to stop sending PNGs" << endl;
+	debug << "Telling server with fd = " << fd << " to set the sending of PNGs to " << send << endl;
 #endif
 	for (bool complete = false; !complete;) {
 		complete = writer.doWrite();
 	}
-
 }
 
-void initializeToolbarButtons()
-{
+//update the fields in the worldGrid that we are viewing with a color
+void updateWorldGrid(string color) {
+	GdkColor fgColor;
+	gdk_color_parse(color.c_str(), &fgColor);
+
+	gtk_widget_modify_bg(GTK_WIDGET(worldGrid[pivotRegion->info.draw_x()][pivotRegion->info.draw_y()]),
+			GTK_STATE_NORMAL, &fgColor);
+	gtk_widget_modify_bg(GTK_WIDGET(worldGrid[pivotRegionBuddy->info.draw_x()][pivotRegionBuddy->info.draw_y()]),
+			GTK_STATE_NORMAL, &fgColor);
+}
+
+void initializeToolbarButtons() {
 	gtk_widget_set_sensitive(GTK_WIDGET(gtk_builder_get_object( builder, "Navigation" )), true);
 	gtk_widget_set_sensitive(GTK_WIDGET(gtk_builder_get_object( builder, "Info" )), true);
 
 	int navigationWindowWidth, navigationWindowLength;
 	GtkWidget *navigationWindow = GTK_WIDGET(gtk_builder_get_object( builder, "navigationWindow" ));
 	GtkWidget *worldGridTable = GTK_WIDGET(gtk_builder_get_object( builder, "worldGrid" ));
-	gtk_table_resize(GTK_TABLE(worldGridTable), worldServerRows+1, worldServerColumns+1);
+	gtk_table_resize(GTK_TABLE(worldGridTable), worldServerRows, worldServerColumns);
 
 	GdkColor bgColor;
 	gdk_color_parse("black", &bgColor);
 	gtk_widget_modify_bg(GTK_WIDGET(navigationWindow), GTK_STATE_NORMAL, &bgColor);
 
-	gtk_window_get_default_size(GTK_WINDOW(navigationWindow), &navigationWindowWidth, &navigationWindowLength );
+	gtk_window_get_default_size(GTK_WINDOW(navigationWindow), &navigationWindowWidth, &navigationWindowLength);
 
-	gdk_color_parse("white", &bgColor);
-	for (guint i = 0; i < worldServerRows+1; i++) {
-		for (guint j = 0; j < worldServerColumns+1; j++) {
+	for (guint i = 0; i < worldServerRows; i++) {
+		for (guint j = 0; j < worldServerColumns; j++) {
 			GtkDrawingArea* area = GTK_DRAWING_AREA(gtk_drawing_area_new());
-			gtk_widget_modify_fg(GTK_WIDGET(area), GTK_STATE_NORMAL, &bgColor);
-			gtk_widget_set_size_request(GTK_WIDGET(area), navigationWindowWidth/(worldServerColumns+1), navigationWindowLength/(worldServerRows+1));
+			gtk_widget_set_size_request(GTK_WIDGET(area), navigationWindowWidth / worldServerColumns,
+					navigationWindowLength / worldServerRows);
 
 			gtk_table_attach_defaults(GTK_TABLE(worldGridTable), GTK_WIDGET(area), j, j + 1, i, i + 1);
-			worldGrid[i][j]=area;
+
+			worldGrid[j][i] = area;
 		}
 	}
 
-
+	updateWorldGrid("light green");
 }
 
 //handler for region received messages
@@ -173,15 +180,30 @@ gboolean io_regionmessage(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 
 	//get the region number that we are receiving a PNG from
 	for (vector<regionConnection*>::iterator it = regions.begin(); it != regions.end() && (*it)->fd
-			!= g_io_channel_unix_get_fd(ioch); it++, regionNum++) {}
+			!= g_io_channel_unix_get_fd(ioch); it++, regionNum++) {
+	}
 
 	for (bool complete = false; !complete;)
 		complete = regions.at(regionNum)->reader.doRead(&type, &len, &buffer);
 
+	//things that have to be done only when we receive the first PNG
+	if (runForTheFirstTime) {
+		runForTheFirstTime = false;
+
+		//our rows and columns span from 0, so their size is +1
+		worldServerRows++;
+		worldServerColumns++;
+
+		//if you don't have a buddy then you're your own buddy ='(
+		if (pivotRegionBuddy == NULL)
+			pivotRegionBuddy = pivotRegion;
+
+		initializeToolbarButtons();
+	}
+
 	//if the server is not viewed then tell it to stop sending to us
-	if (regions.at(regionNum)->fd != pivotRegion->fd && (pivotRegionBuddy == NULL || regions.at(regionNum)->fd
-			!= pivotRegionBuddy->fd)) {
-		sendPngs(regions.at(regionNum), false);
+	if (regions.at(regionNum)->fd != pivotRegion->fd && regions.at(regionNum)->fd != pivotRegionBuddy->fd) {
+		sendPngs(regions.at(regionNum)->fd, false);
 	} else {
 		switch (type) {
 		case MSG_REGIONRENDER: {
@@ -189,17 +211,9 @@ gboolean io_regionmessage(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 			render.ParseFromArray(buffer, len);
 
 #ifdef DEBUG
-			debug << "Received render update from server: " << regions.at(regionNum)->info.address() << ":"
-					<< regions.at(regionNum)->info.renderport() << " and the timestep is # " << render.timestep()
-					<< endl;
+			debug << "Received render update from server fd=" << regions.at(regionNum)->fd << " and the timestep is # "
+					<< render.timestep() << endl;
 #endif
-			if(runForTheFirstTime)
-			{
-				runForTheFirstTime=false;
-
-				initializeToolbarButtons();
-			}
-
 			displayPng(regionNum, render);
 
 			break;
@@ -242,28 +256,17 @@ gboolean io_clockmessage(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 
 		//when the PNG viewer starts it only shows a horizontal rectangle of PNGs from region servers (0,0) and (0,1)
 		if (regioninfo.draw_x() == 0 && regioninfo.draw_y() == 0) {
-
 			gtk_widget_set_size_request(GTK_WIDGET(pngDrawingArea.at(TOP_LEFT)), IMAGEWIDTH, IMAGEHEIGHT);
 			regions.push_back(new regionConnection(regionFd, regioninfo));
 			pivotRegion = regions.at(regions.size() - 1);
-
-#ifdef DEBUG
-			debug << "The server in the top left is: " << regioninfo.address() << ":" << regioninfo.renderport()
-					<< endl;
-#endif
 		} else if (regioninfo.draw_x() == 1 && regioninfo.draw_y() == 0) {
-
 			gtk_widget_set_size_request(GTK_WIDGET(pngDrawingArea.at(TOP_RIGHT)), IMAGEWIDTH, IMAGEHEIGHT);
 			regions.push_back(new regionConnection(regionFd, regioninfo));
 			pivotRegionBuddy = regions.at(regions.size() - 1);
-#ifdef DEBUG
-			debug << "The server in the top right is: " << regioninfo.address() << ":" << regioninfo.renderport()
-					<< endl;
-#endif
 		} else {
 			regions.push_back(new regionConnection(regionFd, regioninfo));
 #ifdef DEBUG
-			debug << "The server is disabled: " << regioninfo.address() << ":" << regioninfo.renderport() << endl;
+			debug << "The server is disabled: fd= " << regionFd << endl;
 #endif
 		}
 
@@ -284,7 +287,7 @@ gboolean io_clockmessage(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 		//create a new handler to wait for when the server sends a new PNG to us
 		g_io_add_watch(g_io_channel_unix_new(regionFd), G_IO_IN, io_regionmessage, NULL);
 #ifdef DEBUG
-		debug << "Connected to region server: " << regioninfo.address() << ":" << regioninfo.renderport()
+		debug << "Connected to region server fd=" << regionFd
 				<< " located at ( " << regioninfo.draw_x() << ", " << regioninfo.draw_y() << " )" << endl;
 #endif
 		break;
@@ -299,6 +302,19 @@ gboolean io_clockmessage(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 	return TRUE;
 }
 
+//see if the buddy of the pivot is the pivot itself
+bool compareBuddy() {
+	if (pivotRegion == pivotRegionBuddy) {
+		gtk_widget_set_size_request(GTK_WIDGET(pngDrawingArea.at(TOP_RIGHT)), 0, 0);
+		gtk_widget_set_size_request(GTK_WIDGET(pngDrawingArea.at(BOTTOM_LEFT)), 0, 0);
+#ifdef DEBUG
+		debug << "pivtorBuddy is the same as the pivotRegion. Removing buddy!" << endl;
+#endif
+		return false;
+	} else
+		return true;
+}
+
 //find and set the new pivotRegion and its buddy from the new coordinates
 void setNewRegionPivotAndBuddy(uint32 newPivotRegion[], uint32 newPivotRegionBuddy[]) {
 
@@ -307,28 +323,40 @@ void setNewRegionPivotAndBuddy(uint32 newPivotRegion[], uint32 newPivotRegionBud
 			<< ") and pivotRegionBuddy to (" << newPivotRegionBuddy[0] << "," << newPivotRegionBuddy[1] << ")" << endl;
 #endif
 
-	for (vector<regionConnection*>::iterator it = regions.begin(); it != regions.end(); it++) {
-
-		if ((*it)->info.draw_x() == newPivotRegion[0] && (*it)->info.draw_y() == newPivotRegion[1])
-			pivotRegion = (*it);
-		else if ((*it)->info.draw_x() == newPivotRegionBuddy[0] && (*it)->info.draw_y() == newPivotRegionBuddy[1])
-			pivotRegionBuddy = (*it);
+	for (int i=0; i<regions.size(); i++) {
+		debug<<"Looking at region: ("<<regions.at(i)->info.draw_x()<<", "<<regions.at(i)->info.draw_y()<<")"<<endl;
+		if (regions.at(i)->info.draw_x() == newPivotRegion[0] && regions.at(i)->info.draw_y() == newPivotRegion[1])
+		{
+			pivotRegion = regions.at(i);
+			debug<<"Found a match for pivotRegion"<<endl;
+		}
+		if (regions.at(i)->info.draw_x() == newPivotRegionBuddy[0] && regions.at(i)->info.draw_y() == newPivotRegionBuddy[1])
+		{
+			pivotRegionBuddy = regions.at(i);
+			debug<<"Found a match for pivotRegionBuddy"<<endl;
+		}
 	}
+
+	compareBuddy();
+	updateWorldGrid("light green");
 }
 
 //up button handler
-void on_upButton_clicked(GtkWidget *widget, gpointer window) {
+void on_downButton_clicked(GtkWidget *widget, gpointer window) {
 #ifdef DEBUG
-	debug << "Clicked up" << endl;
+	debug << "Clicked down" << endl;
 #endif
 	uint32 tmp1, tmp2;
+
+	updateWorldGrid("white");
+
 	//yeah, it would be nice to use the modulo operation, but in some cases worldServerRows=0, worldServerColumns=0
-	if (pivotRegion->info.draw_y() + 1 > worldServerRows)
+	if (pivotRegion->info.draw_y() + 1 >= worldServerRows)
 		tmp1 = 0;
 	else
 		tmp1 = pivotRegion->info.draw_y() + 1;
 
-	if (pivotRegionBuddy->info.draw_y() + 1 > worldServerRows)
+	if (pivotRegionBuddy->info.draw_y() + 1 >= worldServerRows)
 		tmp2 = 0;
 	else
 		tmp2 = pivotRegionBuddy->info.draw_y() + 1;
@@ -336,30 +364,61 @@ void on_upButton_clicked(GtkWidget *widget, gpointer window) {
 	uint32 newPivotRegion[2] = { pivotRegion->info.draw_x(), tmp1 };
 	uint32 newPivotRegionBuddy[2] = { pivotRegionBuddy->info.draw_x(), tmp2 };
 
+	if (horizontalView) {
+		sendPngs(pivotRegion->fd, false);
+		sendPngs(pivotRegionBuddy->fd, false);
+	} else {
+		sendPngs(pivotRegion->fd, false);
+	}
+
 	setNewRegionPivotAndBuddy(newPivotRegion, newPivotRegionBuddy);
+
+	if (horizontalView) {
+		sendPngs(pivotRegion->fd, true);
+		sendPngs(pivotRegionBuddy->fd, true);
+	} else {
+		sendPngs(pivotRegionBuddy->fd, true);
+	}
+
 }
 
 //down button handler
-void on_downButton_clicked(GtkWidget *widget, gpointer window) {
+void on_upButton_clicked(GtkWidget *widget, gpointer window) {
 #ifdef DEBUG
-	debug << "Clicked down" << endl;
+	debug << "Clicked up" << endl;
 #endif
 	uint32 tmp1, tmp2;
 
+	updateWorldGrid("white");
+
 	if ((int) pivotRegion->info.draw_y() - 1 < 0)
-		tmp1 = worldServerRows;
+		tmp1 = worldServerRows - 1;
 	else
 		tmp1 = pivotRegion->info.draw_y() - 1;
 
 	if ((int) pivotRegionBuddy->info.draw_y() - 1 < 0)
-		tmp2 = worldServerRows;
+		tmp2 = worldServerRows - 1;
 	else
 		tmp2 = pivotRegionBuddy->info.draw_y() - 1;
 
 	uint32 newPivotRegion[2] = { pivotRegion->info.draw_x(), tmp1 };
 	uint32 newPivotRegionBuddy[2] = { pivotRegionBuddy->info.draw_x(), tmp2 };
 
+	if (horizontalView) {
+		sendPngs(pivotRegion->fd, false);
+		sendPngs(pivotRegionBuddy->fd, false);
+	} else {
+		sendPngs(pivotRegionBuddy->fd, false);
+	}
+
 	setNewRegionPivotAndBuddy(newPivotRegion, newPivotRegionBuddy);
+
+	if (horizontalView) {
+		sendPngs(pivotRegion->fd, true);
+		sendPngs(pivotRegionBuddy->fd, true);
+	} else {
+		sendPngs(pivotRegion->fd, true);
+	}
 }
 
 //back button handler
@@ -368,21 +427,36 @@ void on_backButton_clicked(GtkWidget *widget, gpointer window) {
 	debug << "Clicked back" << endl;
 #endif
 	uint32 tmp1, tmp2;
+
+	updateWorldGrid("white");
+
 	if (((int) pivotRegion->info.draw_x()) - 1 < 0)
-		tmp1 = worldServerColumns;
+		tmp1 = worldServerColumns - 1;
 	else
 		tmp1 = pivotRegion->info.draw_x() - 1;
 
 	if (((int) pivotRegionBuddy->info.draw_x()) - 1 < 0)
-		tmp2 = worldServerColumns;
+		tmp2 = worldServerColumns - 1;
 	else
 		tmp2 = pivotRegionBuddy->info.draw_x() - 1;
 
 	uint32 newPivotRegion[2] = { tmp1, pivotRegion->info.draw_y() };
 	uint32 newPivotRegionBuddy[2] = { tmp2, pivotRegionBuddy->info.draw_y() };
 
+	if (horizontalView) {
+		sendPngs(pivotRegionBuddy->fd, false);
+	} else {
+		sendPngs(pivotRegion->fd, false);
+		sendPngs(pivotRegionBuddy->fd, false);
+	}
 	setNewRegionPivotAndBuddy(newPivotRegion, newPivotRegionBuddy);
 
+	if (horizontalView) {
+		sendPngs(pivotRegion->fd, true);
+	} else {
+		sendPngs(pivotRegion->fd, true);
+		sendPngs(pivotRegionBuddy->fd, true);
+	}
 }
 
 //forward button handler
@@ -391,13 +465,16 @@ void on_forwardButton_clicked(GtkWidget *widget, gpointer window) {
 	debug << "Clicked forward" << endl;
 #endif
 	uint32 tmp1, tmp2;
+
+	updateWorldGrid("white");
+
 	//yeah, it would be nice to use the modulo operation, but in some cases worldServerRows=0, worldServerColumns=0
-	if (pivotRegion->info.draw_x() + 1 > worldServerColumns)
+	if (pivotRegion->info.draw_x() + 1 >= worldServerColumns)
 		tmp1 = 0;
 	else
 		tmp1 = pivotRegion->info.draw_x() + 1;
 
-	if (pivotRegionBuddy->info.draw_x() + 1 > worldServerColumns)
+	if (pivotRegionBuddy->info.draw_x() + 1 >= worldServerColumns)
 		tmp2 = 0;
 	else
 		tmp2 = pivotRegionBuddy->info.draw_x() + 1;
@@ -405,7 +482,21 @@ void on_forwardButton_clicked(GtkWidget *widget, gpointer window) {
 	uint32 newPivotRegion[2] = { tmp1, pivotRegion->info.draw_y() };
 	uint32 newPivotRegionBuddy[2] = { tmp2, pivotRegionBuddy->info.draw_y() };
 
+	if (horizontalView) {
+		sendPngs(pivotRegion->fd, false);
+	} else {
+		sendPngs(pivotRegion->fd, false);
+		sendPngs(pivotRegionBuddy->fd, false);
+	}
+
 	setNewRegionPivotAndBuddy(newPivotRegion, newPivotRegionBuddy);
+
+	if (horizontalView) {
+		sendPngs(pivotRegionBuddy->fd, true);
+	} else {
+		sendPngs(pivotRegion->fd, true);
+		sendPngs(pivotRegionBuddy->fd, true);
+	}
 }
 
 //rotate button handler
@@ -413,9 +504,10 @@ void on_rotateButton_clicked(GtkWidget *widget, gpointer window) {
 #ifdef DEBUG
 	debug << "Clicked rotate" << endl;
 #endif
+	uint32 newPivotRegionBuddy[2], tmp1 = pivotRegion->info.draw_x(), tmp2 = pivotRegion->info.draw_y();
 	horizontalView = !horizontalView;
 
-	uint32 newPivotRegionBuddy[2], tmp1 = pivotRegion->info.draw_x(), tmp2 = pivotRegion->info.draw_y();
+	updateWorldGrid("white");
 
 	if (horizontalView) {
 		gtk_widget_set_size_request(GTK_WIDGET(pngDrawingArea.at(TOP_RIGHT)), IMAGEWIDTH, IMAGEHEIGHT);
@@ -436,17 +528,17 @@ void on_rotateButton_clicked(GtkWidget *widget, gpointer window) {
 	newPivotRegionBuddy[0] = tmp1;
 	newPivotRegionBuddy[1] = tmp2;
 
-	//really rare case that happens when we have a very small world like 2x1
-	//if( pivo)
-
 #ifdef DEBUG
 	debug << "Changing pivotRegionBuddy to (" << newPivotRegionBuddy[0] << "," << newPivotRegionBuddy[1] << ")" << endl;
 #endif
 
-	for (vector<regionConnection*>::iterator it = regions.begin(); it != regions.end(); it++) {
-		if ((*it)->info.draw_x() == newPivotRegionBuddy[0] && (*it)->info.draw_y() == newPivotRegionBuddy[1])
-			pivotRegionBuddy = (*it);
+	for (int i=0; i<regions.size(); i++) {
+		if (regions.at(i)->info.draw_x() == newPivotRegionBuddy[0] && regions.at(i)->info.draw_y() == newPivotRegionBuddy[1])
+			pivotRegionBuddy = regions.at(i);
 	}
+
+	compareBuddy();
+	updateWorldGrid("light green");
 }
 
 //navigation button handler
@@ -534,7 +626,6 @@ int main(int argc, char* argv[]) {
 	const char *configFileName = (config.getArg("-c").length() == 0 ? "config" : config.getArg("-c").c_str());
 #ifdef DEBUG
 	debug.open(helper::pngViewerDebugLogName.c_str(), ios::out);
-	debug << "Using config file: " << configFileName << endl;
 #endif
 	loadConfigFile(configFileName, clockip);
 
