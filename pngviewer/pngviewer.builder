@@ -23,7 +23,7 @@
                 <property name="sensitive">False</property>
                 <property name="label" translatable="yes">Navigation</property>
                 <property name="use_underline">True</property>
-                <property name="stock_id">gtk-about</property>
+                <property name="stock_id">gtk-network</property>
               </object>
               <packing>
                 <property name="expand">False</property>
@@ -45,6 +45,27 @@
             </child>
             <child>
               <object class="GtkSeparatorToolItem" id="vsep">
+                <property name="visible">True</property>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="homogeneous">True</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkToggleToolButton" id="About">
+                <property name="visible">True</property>
+                <property name="label" translatable="yes">About</property>
+                <property name="use_underline">True</property>
+                <property name="stock_id">gtk-about</property>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="homogeneous">True</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkSeparatorToolItem" id="vsep1">
                 <property name="visible">True</property>
               </object>
               <packing>
@@ -264,12 +285,18 @@
     <property name="title" translatable="yes"> </property>
     <property name="resizable">False</property>
     <property name="window_position">center-always</property>
-    <property name="default_width">440</property>
+    <property name="default_width">450</property>
     <property name="default_height">250</property>
+    <signal name="delete_event" handler="gtk_widget_hide"/>
     <child>
-      <object class="GtkLabel" id="test">
+      <object class="GtkHBox" id="infoHbox">
         <property name="visible">True</property>
-        <property name="label" translatable="yes">testtesttesttesttest</property>
+        <child>
+          <placeholder/>
+        </child>
+        <child>
+          <placeholder/>
+        </child>
       </object>
     </child>
   </object>

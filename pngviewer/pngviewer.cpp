@@ -149,10 +149,6 @@ void initializeToolbarButtons() {
 	GtkWidget *worldGridTable = GTK_WIDGET(gtk_builder_get_object( builder, "worldGrid" ));
 	gtk_table_resize(GTK_TABLE(worldGridTable), worldServerRows, worldServerColumns);
 
-	GdkColor bgColor;
-	gdk_color_parse("black", &bgColor);
-	gtk_widget_modify_bg(GTK_WIDGET(navigationWindow), GTK_STATE_NORMAL, &bgColor);
-
 	gtk_window_get_default_size(GTK_WINDOW(navigationWindow), &navigationWindowWidth, &navigationWindowLength);
 
 	for (guint i = 0; i < worldServerRows; i++) {
@@ -541,10 +537,29 @@ void on_rotateButton_clicked(GtkWidget *widget, gpointer window) {
 	updateWorldGrid("light green");
 }
 
+void on_About_toggled(GtkWidget *widget, gpointer window) {
+	  GtkWidget *dialog = gtk_about_dialog_new();
+	  gtk_about_dialog_set_name(GTK_ABOUT_DIALOG(dialog), "Pngviewer");
+	  gtk_about_dialog_set_version(GTK_ABOUT_DIALOG(dialog), "0.1");
+	  gtk_about_dialog_set_copyright(GTK_ABOUT_DIALOG(dialog),
+	      "(c) Team 2");
+	  gtk_about_dialog_set_comments(GTK_ABOUT_DIALOG(dialog),
+	     "PngViewer is a program to create a real-time visual representation of the 'Antix' simulation.");
+	    const gchar *authors[2] = {"Peter Neufeld, Frank Lau, Egor Philippov,\nYouyou Yang, Jianfeng Hu, Roy Chiang,\nWilson Huynh, Gordon Leugn, Kevin Fahy,\nBenjamin Saunders", NULL};
+
+	  gtk_about_dialog_set_authors(GTK_ABOUT_DIALOG(dialog), authors);
+	  gtk_dialog_run(GTK_DIALOG (dialog));
+	  gtk_widget_destroy(dialog);
+}
+
 //navigation button handler
 void on_Navigation_toggled(GtkWidget *widget, gpointer window) {
 
 	GtkWidget *navigationWindow = GTK_WIDGET(gtk_builder_get_object( builder, "navigationWindow" ));
+
+	GdkColor bgColor;
+	gdk_color_parse("black", &bgColor);
+	gtk_widget_modify_bg(GTK_WIDGET(navigationWindow), GTK_STATE_NORMAL, &bgColor);
 
 	if (gtk_toggle_tool_button_get_active(GTK_TOGGLE_TOOL_BUTTON(widget))) {
 		gtk_widget_show_all(navigationWindow);
@@ -557,6 +572,10 @@ void on_Navigation_toggled(GtkWidget *widget, gpointer window) {
 void on_Info_toggled(GtkWidget *widget, gpointer window) {
 
 	GtkWidget *infoWindow = GTK_WIDGET(gtk_builder_get_object( builder, "infoWindow" ));
+
+	GdkColor bgColor;
+	gdk_color_parse("black", &bgColor);
+	gtk_widget_modify_bg(GTK_WIDGET(infoWindow), GTK_STATE_NORMAL, &bgColor);
 
 	if (gtk_toggle_tool_button_get_active(GTK_TOGGLE_TOOL_BUTTON(widget))) {
 		gtk_widget_show_all(infoWindow);
@@ -571,6 +590,7 @@ void initializeDrawers() {
 	guint rows, columns;
 	GtkWidget *mainWindow = GTK_WIDGET(gtk_builder_get_object( builder, "window" ));
 	GtkToggleToolButton *navigation = GTK_TOGGLE_TOOL_BUTTON(gtk_builder_get_object( builder, "Navigation" ));
+	GtkToggleToolButton *about = GTK_TOGGLE_TOOL_BUTTON(gtk_builder_get_object( builder, "About" ));
 	GtkToggleToolButton *info = GTK_TOGGLE_TOOL_BUTTON(gtk_builder_get_object( builder, "Info" ));
 	GtkWidget *table = GTK_WIDGET(gtk_builder_get_object( builder, "table" ));
 	GtkWidget *upButton = GTK_WIDGET(gtk_builder_get_object( builder, "up" ));
@@ -597,6 +617,7 @@ void initializeDrawers() {
 
 	g_signal_connect(navigation, "toggled", G_CALLBACK(on_Navigation_toggled), (gpointer) mainWindow);
 	g_signal_connect(info, "toggled", G_CALLBACK(on_Info_toggled), (gpointer) mainWindow);
+	g_signal_connect(about, "toggled", G_CALLBACK(on_About_toggled), (gpointer) mainWindow);
 	g_signal_connect(upButton, "clicked", G_CALLBACK(on_upButton_clicked), (gpointer) mainWindow);
 	g_signal_connect(downButton, "clicked", G_CALLBACK(on_downButton_clicked), (gpointer) mainWindow);
 	g_signal_connect(backButton, "clicked", G_CALLBACK(on_backButton_clicked), (gpointer) mainWindow);
