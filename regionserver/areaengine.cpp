@@ -280,8 +280,9 @@ void AreaEngine::Step(bool generateImage){
         curRobot->arrayLocation = newIndices;
         AreaEngine::RemoveRobot(curRobot->id, oldIndices.x, oldIndices.y, false);
         AreaEngine::AddRobot(curRobot);
-        //check if we need to inform a neighbor that its entered an overlap
-        BroadcastRobot(curRobot, newIndices);
+        //check if we need to inform a neighbor that its entered an overlap - but ONLY if we just entered an OVERLAP!
+        if(oldIndices.x > 1 && oldIndices.y > 1 && oldIndices.x < regionBounds && oldIndices.y < regionBounds)
+          BroadcastRobot(curRobot, newIndices);
       }
     }
     robotIt++;
@@ -476,7 +477,7 @@ void AreaEngine::GotServerRobot(ServerRobot message){
     //new robot
     AddRobot(message.id(), message.x(), message.y(), message.angle(), message.velocityx(), message.velocityy(), curStep, message.color(), false);
   }else{
-    //modify existing
+    //modify existing;
     RobotObject* curRobot = robots[message.id()];
     
     if(message.has_velocityx())
