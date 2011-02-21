@@ -479,13 +479,13 @@ void AreaEngine::GotServerRobot(ServerRobot message){
     AddRobot(message.id(), message.x(), message.y(), message.angle(), message.velocityx(), message.velocityy(), curStep, message.color(), false);
   }else{
     //modify existing;
-    cout << "FFFFFFUUU" << endl;
+    cout << "FFFFFFUUU " << message.id() << endl;
     RobotObject* curRobot = robots[message.id()];
     
-    if(message.has_velocityx())
+    if(message.has_velocityx()) 
       curRobot->vx = message.velocityx();
       
-    if(message.has_velocityy())
+    if(message.has_velocityy()) 
       curRobot->vy = message.velocityy();
   }
 }
@@ -502,64 +502,100 @@ void AreaEngine::BroadcastRobot(RobotObject *curRobot, Index oldIndices, Index n
   informNeighbour.set_velocityy(curRobot->vy);
   informNeighbour.set_laststep(curStep);
 
-  if(newIndices.x == 1 && neighbours[LEFT] != NULL){
+  if(newIndices.x == 1){
     if(oldIndices.x > 1){
-      informNeighbour.set_x(transx + regionRatio);
-      informNeighbour.set_y(transy);
-		  neighbours[LEFT]->queue.push(MSG_SERVERROBOT, informNeighbour);
-		  neighbours[LEFT]->set_writing(true);
-	  }
-		if(newIndices.y == 1 && neighbours[TOP_LEFT] != NULL){
-		  if(oldIndices.x > 1 || oldIndices.y > 1){
-		    informNeighbour.set_x(transx + regionRatio);
-        informNeighbour.set_y(transy + regionRatio);
-      	neighbours[TOP_LEFT]->queue.push(MSG_SERVERROBOT, informNeighbour);
-		    neighbours[TOP_LEFT]->set_writing(true);
-	    }
-    }else if(newIndices.y == regionBounds && neighbours[BOTTOM_LEFT] != NULL){
-      if(oldIndices.x > 1 || oldIndices.y < regionBounds){
+      if (neighbours[LEFT] !=  NULL) {
         informNeighbour.set_x(transx + regionRatio);
-        informNeighbour.set_y(transy - regionRatio);
-		    neighbours[BOTTOM_LEFT]->queue.push(MSG_SERVERROBOT, informNeighbour);
-		    neighbours[BOTTOM_LEFT]->set_writing(true);
+        informNeighbour.set_y(transy);
+        neighbours[LEFT]->queue.push(MSG_SERVERROBOT, informNeighbour);
+        neighbours[LEFT]->set_writing(true);
+      } else {
+        curRobot->x = transx + regionRatio;
+      }
+	  }
+		if(newIndices.y == 1){
+		  if(oldIndices.x > 1 || oldIndices.y > 1){
+        if (neighbours[TOP_LEFT] != NULL) {
+          informNeighbour.set_x(transx + regionRatio);
+          informNeighbour.set_y(transy + regionRatio);
+          neighbours[TOP_LEFT]->queue.push(MSG_SERVERROBOT, informNeighbour);
+          neighbours[TOP_LEFT]->set_writing(true);
+        } else {
+          curRobot->x = transx + regionRatio;
+          curRobot->y = transy + regionRatio;
+        }
+	    }
+    }else if(newIndices.y == regionBounds){
+      if(oldIndices.x > 1 || oldIndices.y < regionBounds){
+        if (neighbours[BOTTOM_LEFT] != NULL) {
+          informNeighbour.set_x(transx + regionRatio);
+          informNeighbour.set_y(transy - regionRatio);
+          neighbours[BOTTOM_LEFT]->queue.push(MSG_SERVERROBOT, informNeighbour);
+          neighbours[BOTTOM_LEFT]->set_writing(true);
+        } else {
+          curRobot->x = transx + regionRatio;
+          curRobot->y = transy - regionRatio;
+        }
 	    }
     }
-  }else if(newIndices.x == regionBounds && neighbours[RIGHT] != NULL){
+  }else if(newIndices.x == regionBounds){
     if(oldIndices.x < regionBounds){
-      informNeighbour.set_x(transx - regionRatio);
-      informNeighbour.set_y(transy);
-      neighbours[RIGHT]->queue.push(MSG_SERVERROBOT, informNeighbour);
-		  neighbours[RIGHT]->set_writing(true);
-		}
-		if(newIndices.y == 1 && neighbours[TOP_RIGHT] != NULL){
-		  if(oldIndices.x < regionBounds || oldIndices.y > 1){
-		    informNeighbour.set_x(transx - regionRatio);
-        informNeighbour.set_y(transy + regionRatio);
-      	neighbours[TOP_RIGHT]->queue.push(MSG_SERVERROBOT, informNeighbour);
-		    neighbours[TOP_RIGHT]->set_writing(true);
-	    }
-    }else if(newIndices.y == regionBounds && neighbours[BOTTOM_RIGHT] != NULL){
-      if(oldIndices.x < regionBounds || oldIndices.y < regionBounds){
+      if (neighbours[RIGHT] != NULL) {
         informNeighbour.set_x(transx - regionRatio);
-        informNeighbour.set_y(transy - regionRatio);
-		    neighbours[BOTTOM_RIGHT]->queue.push(MSG_SERVERROBOT, informNeighbour);
-		    neighbours[BOTTOM_RIGHT]->set_writing(true);
+        informNeighbour.set_y(transy);
+        neighbours[RIGHT]->queue.push(MSG_SERVERROBOT, informNeighbour);
+        neighbours[RIGHT]->set_writing(true);
+      } else {
+        curRobot->x = transx - regionRatio;
+      }
+		}
+		if(newIndices.y == 1){
+		  if(oldIndices.x < regionBounds || oldIndices.y > 1){
+        if (neighbours[TOP_RIGHT] != NULL) {
+          informNeighbour.set_x(transx - regionRatio);
+          informNeighbour.set_y(transy + regionRatio);
+          neighbours[TOP_RIGHT]->queue.push(MSG_SERVERROBOT, informNeighbour);
+          neighbours[TOP_RIGHT]->set_writing(true);
+        } else {
+          curRobot->x = transx - regionRatio;
+          curRobot->y = transy + regionRatio;
+        }
+	    }
+    }else if(newIndices.y == regionBounds){
+      if(oldIndices.x < regionBounds || oldIndices.y < regionBounds){
+        if (neighbours[BOTTOM_RIGHT] != NULL) {
+          informNeighbour.set_x(transx - regionRatio);
+          informNeighbour.set_y(transy - regionRatio);
+          neighbours[BOTTOM_RIGHT]->queue.push(MSG_SERVERROBOT, informNeighbour);
+          neighbours[BOTTOM_RIGHT]->set_writing(true);
+        } else {
+          curRobot->x = transx - regionRatio;
+          curRobot->y = transy - regionRatio;
+        }
 	    }
     }
   }
-  if(newIndices.y == 1 && neighbours[TOP] != NULL){
+  if(newIndices.y == 1){
     if(oldIndices.y > 1){
-      informNeighbour.set_x(transx);
-      informNeighbour.set_y(transy + regionRatio);
-    	neighbours[TOP]->queue.push(MSG_SERVERROBOT, informNeighbour);
-		  neighbours[TOP]->set_writing(true);
+      if (neighbours[TOP] != NULL) {
+        informNeighbour.set_x(transx);
+        informNeighbour.set_y(transy + regionRatio);
+        neighbours[TOP]->queue.push(MSG_SERVERROBOT, informNeighbour);
+        neighbours[TOP]->set_writing(true);
+      } else {
+        curRobot->y = transy + regionRatio;
+      }
 	  }
-  }else if(newIndices.y == regionBounds && neighbours[BOTTOM] != NULL){
+  }else if(newIndices.y == regionBounds){
     if(oldIndices.y < regionBounds){
-      informNeighbour.set_x(transx);
-      informNeighbour.set_y(transy - regionRatio);
-		  neighbours[BOTTOM]->queue.push(MSG_SERVERROBOT, informNeighbour);
-		  neighbours[BOTTOM]->set_writing(true);
+      if (neighbours[BOTTOM] != NULL) {
+        informNeighbour.set_x(transx);
+        informNeighbour.set_y(transy - regionRatio);
+        neighbours[BOTTOM]->queue.push(MSG_SERVERROBOT, informNeighbour);
+        neighbours[BOTTOM]->set_writing(true);
+      } else {
+        curRobot->y = transy - regionRatio;
+      }
     }
   }
 }
