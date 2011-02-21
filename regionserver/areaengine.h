@@ -17,6 +17,7 @@
 #include <gtk/gtk.h>
 #include <cairo.h>
 #include <string>
+#include "../common/claim.pb.h"
 #include "../common/serverrobot.pb.h"
 #include "../common/net.h"
 

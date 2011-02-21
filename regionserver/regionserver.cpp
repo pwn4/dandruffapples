@@ -507,8 +507,8 @@ void run() {
 						}
 						case MSG_REGIONINFO: {
 							regioninfo.ParseFromArray(buffer, len);
-							cout << "Hey bro! Server #" << regioninfo.id()
-									<< " is trying to tell us he's our neighbour! He be here:\n";
+							cout << "Found new neighbour, server #" << regioninfo.id()
+									<< endl;
 							for (int i = 0; i < regioninfo.position_size(); i++) {
 								cout << "  Position: " << regioninfo.position(i) << endl;
 
