@@ -60,7 +60,7 @@ map<int, map<int, GtkDrawingArea*> > worldGrid;
 regionConnection *pivotRegion = NULL, *pivotRegionBuddy = NULL;
 
 //used only for calculating images per second for each server
-int timeCache, lastSecond1=0, lastSecond2=0, messages1=0, messages2=0;
+int timeCache, lastSecond1 = 0, lastSecond2 = 0, messages1 = 0, messages2 = 0;
 
 /* Position in a grid:
  * ____
@@ -143,7 +143,6 @@ void updateInfoWindow() {
 	regionConnection *pivotPtr = pivotRegion;
 
 	for (int frame = 1; frame < 3; frame++) {
-
 		if (frame == 2)
 			pivotPtr = pivotRegionBuddy;
 
@@ -154,9 +153,9 @@ void updateInfoWindow() {
 		GtkLabel *frameserverLoc =
 				GTK_LABEL(gtk_builder_get_object( builder, (frameserverLocName+helper::toString(frame)).c_str() ));
 
-		if( frame == 1 || pivotRegionBuddy == pivotRegion )
+		if (frame == 1 || pivotRegionBuddy == pivotRegion)
 			position = "top-left";
-		else if(horizontalView)
+		else if (horizontalView)
 			position = "top-right";
 		else
 			position = "bottom";
@@ -390,16 +389,12 @@ void setNewRegionPivotAndBuddy(uint32 newPivotRegion[], uint32 newPivotRegionBud
 #endif
 
 	for (int i = 0; i < (int) regions.size(); i++) {
-		debug << "Looking at region: (" << regions.at(i)->info.draw_x() << ", " << regions.at(i)->info.draw_y() << ")"
-				<< endl;
 		if (regions.at(i)->info.draw_x() == newPivotRegion[0] && regions.at(i)->info.draw_y() == newPivotRegion[1]) {
 			pivotRegion = regions.at(i);
-			debug << "Found a match for pivotRegion" << endl;
 		}
 		if (regions.at(i)->info.draw_x() == newPivotRegionBuddy[0] && regions.at(i)->info.draw_y()
 				== newPivotRegionBuddy[1]) {
 			pivotRegionBuddy = regions.at(i);
-			debug << "Found a match for pivotRegionBuddy" << endl;
 		}
 	}
 
@@ -585,14 +580,14 @@ void on_rotateButton_clicked(GtkWidget *widget, gpointer window) {
 	if (horizontalView) {
 		gtk_widget_set_size_request(GTK_WIDGET(worldDrawingArea.at(TOP_RIGHT)), IMAGEWIDTH, IMAGEHEIGHT);
 		gtk_widget_set_size_request(GTK_WIDGET(worldDrawingArea.at(BOTTOM_LEFT)), 0, 0);
-		if (pivotRegion->info.draw_x() + 1 > worldServerColumns)
+		if (pivotRegion->info.draw_x() + 1 >= worldServerColumns)
 			tmp1 = 0;
 		else
 			tmp1 += 1;
 	} else {
 		gtk_widget_set_size_request(GTK_WIDGET(worldDrawingArea.at(TOP_RIGHT)), IMAGEWIDTH, IMAGEHEIGHT);
 		gtk_widget_set_size_request(GTK_WIDGET(worldDrawingArea.at(BOTTOM_LEFT)), 0, 0);
-		if (pivotRegion->info.draw_y() + 1 > worldServerRows)
+		if (pivotRegion->info.draw_y() + 1 >= worldServerRows)
 			tmp2 = 0;
 		else
 			tmp2 += 1;
@@ -605,11 +600,16 @@ void on_rotateButton_clicked(GtkWidget *widget, gpointer window) {
 	debug << "Changing pivotRegionBuddy to (" << newPivotRegionBuddy[0] << "," << newPivotRegionBuddy[1] << ")" << endl;
 #endif
 
+	sendWorldViews(pivotRegionBuddy->fd, false);
+
 	for (int i = 0; i < (int) regions.size(); i++) {
 		if (regions.at(i)->info.draw_x() == newPivotRegionBuddy[0] && regions.at(i)->info.draw_y()
 				== newPivotRegionBuddy[1])
 			pivotRegionBuddy = regions.at(i);
 	}
+
+	if (pivotRegionBuddy != pivotRegion)
+		sendWorldViews(pivotRegionBuddy->fd, true);
 
 	compareBuddy();
 	updateWorldGrid("light green");
@@ -665,7 +665,7 @@ void on_Window_toggled(GtkWidget *widget, gpointer window) {
 //initializations and simple modifications for the things that will be drawn
 void initializeDrawers() {
 	g_type_init();
-	guint rows=2, columns=2;
+	guint rows = 2, columns = 2;
 	GtkWidget *mainWindow = GTK_WIDGET(gtk_builder_get_object( builder, "window" ));
 	GtkToggleToolButton *navigation = GTK_TOGGLE_TOOL_BUTTON(gtk_builder_get_object( builder, "Navigation" ));
 	GtkToggleToolButton *info = GTK_TOGGLE_TOOL_BUTTON(gtk_builder_get_object( builder, "Info" ));
