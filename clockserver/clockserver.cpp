@@ -147,25 +147,25 @@ int main(int argc, char **argv) {
 
   int sock = net::do_listen(CLOCK_PORT);
   int controllerSock = net::do_listen(CONTROLLERS_PORT);
-  int pngSock = net::do_listen(PNG_VIEWER_PORT);
+  int worldviewSock = net::do_listen(WORLD_VIEWER_PORT);
   net::set_blocking(sock, false);
   net::set_blocking(controllerSock, false);
-  net::set_blocking(pngSock, false);
+  net::set_blocking(worldviewSock, false);
 
   int epoll = epoll_create(server_count);
   if(epoll < 0) {
     perror("Failed to create epoll handle");
     close(sock);
     close(controllerSock);
-    close(pngSock);
+    close(worldviewSock);
     return 1;
   }
 
   RegionConnection listenconn(epoll, EPOLLIN, sock, RegionConnection::REGION_LISTEN),
     controllerlistenconn(epoll, EPOLLIN, controllerSock, RegionConnection::CONTROLLER_LISTEN),
-    pnglistenconn(epoll, EPOLLIN, pngSock, RegionConnection::PNGVIEWER_LISTEN);
+    worldlistenconn(epoll, EPOLLIN, worldviewSock, RegionConnection::WORLDVIEWER_LISTEN);
   
-  vector<RegionConnection*> regions, controllers, pngviewers;
+  vector<RegionConnection*> regions, controllers, worldviewers;
   size_t maxevents = 1 + server_count;
   struct epoll_event *events = new struct epoll_event[maxevents];
   size_t connected = 0, ready = 0;
@@ -262,8 +262,8 @@ int main(int argc, char **argv) {
                 (*i)->set_writing(true);
               }
 
-              for(vector<RegionConnection*>::iterator i = pngviewers.begin();
-                  i != pngviewers.end(); ++i) {
+              for(vector<RegionConnection*>::iterator i = worldviewers.begin();
+                  i != worldviewers.end(); ++i) {
                 (*i)->queue.push(MSG_REGIONINFO, *region);
                 (*i)->set_writing(true);            
               }
@@ -413,26 +413,26 @@ int main(int argc, char **argv) {
           cout << "Got controller connection." << endl;
           break;
         }
-        case RegionConnection::PNGVIEWER_LISTEN:
+        case RegionConnection::WORLDVIEWER_LISTEN:
         {
-          // Accept a new pngviewer
+          // Accept a new worldviewer
           struct sockaddr_in addr;
           socklen_t addr_size = sizeof(addr);
           int fd = accept(c->fd, (struct sockaddr*)&addr, &addr_size);
           if(fd < 0) {
-            throw SystemError("Failed to accept png viewer");
+            throw SystemError("Failed to accept world viewer");
           }
           net::set_blocking(fd, false);
 
-          RegionConnection *newconn = new RegionConnection(epoll, EPOLLOUT, fd, RegionConnection::PNGVIEWER);
+          RegionConnection *newconn = new RegionConnection(epoll, EPOLLOUT, fd, RegionConnection::WORLDVIEWER);
           newconn->addr = addr.sin_addr.s_addr;
-          pngviewers.push_back(newconn);
+          worldviewers.push_back(newconn);
 
           for(size_t i = 0; i < (unsigned)worldinfo.region_size(); ++i) {
             newconn->queue.push(MSG_REGIONINFO, worldinfo.region(i));
           }
 
-          cout << "Got png viewer connection." << endl;
+          cout << "Got world viewer connection." << endl;
           break;
         }
 
@@ -442,7 +442,7 @@ int main(int argc, char **argv) {
         }
       } else if(events[i].events & EPOLLOUT) {
         switch(c->type) {
-        case RegionConnection::PNGVIEWER:
+        case RegionConnection::WORLDVIEWER:
         case RegionConnection::CONTROLLER:
         case RegionConnection::REGION:
           if(c->queue.doWrite()) {

@@ -1,6 +1,6 @@
 /*/////////////////////////////////////////////////////////////////////////////////////////////////
  Regionserver program
- This program communications with clients, controllers, PNGviewers, other regionservers, and clockservers.
+ This program communications with clients, controllers, Worldviewers, other regionservers, and clockservers.
  //////////////////////////////////////////////////////////////////////////////////////////////////*/
 #include <sstream>
 #include <iostream>
@@ -58,7 +58,7 @@ const char *configFileName;
 char clockip[40] = "127.0.0.1";
 
 int controllerPort = CONTROLLERS_PORT;
-int pngviewerPort = PNG_VIEWER_PORT;
+int worldviewerPort = WORLD_VIEWER_PORT;
 int regionPort = REGIONS_PORT;
 ////////////////////////////////////////////////////////////
 
@@ -95,9 +95,9 @@ void loadConfigFile() {
 		regionPort = strtol(configuration["REGPORT"].c_str(), NULL, 10);
 	}
 
-	//png viewer listening port
-	if (configuration.find("PNGPORT") != configuration.end()) {
-		pngviewerPort = strtol(configuration["PNGPORT"].c_str(), NULL, 10);
+	//world viewer listening port
+	if (configuration.find("WORLDVIEWERPORT") != configuration.end()) {
+		worldviewerPort = strtol(configuration["WORLDVIEWERPORT"].c_str(), NULL, 10);
 	}
 
 }
@@ -130,7 +130,7 @@ char *parse_port(char *input) {
 
 //the main function
 void run() {
-	map<int, Bool> sendMorePngs;
+	map<int, Bool> sendMoreWorldViews;
 	time_t timeCache;
 	bool generateImage;
 
@@ -162,9 +162,9 @@ void run() {
 	int regionfd = net::do_listen(regionPort);
 	net::set_blocking(regionfd, false);
 
-	//listen for PNG viewer connections
-	int pngfd = net::do_listen(pngviewerPort);
-	net::set_blocking(pngfd, false);
+	//listen for world viewer connections
+	int worldviewerfd = net::do_listen(worldviewerPort);
+	net::set_blocking(worldviewerfd, false);
 
 	//create a new file for logging
 	string logName = helper::getNewName("/tmp/" + helper::defaultLogName);
@@ -181,7 +181,7 @@ void run() {
 		perror("Failed to create epoll handle");
 		close(controllerfd);
 		close(regionfd);
-		close(pngfd);
+		close(worldviewerfd);
 		close(clockfd);
 		close(logfd);
 		exit(1);
@@ -190,7 +190,7 @@ void run() {
 	// Add clock and client sockets to epoll
 	net::EpollConnection clockconn(epoll, EPOLLIN, clockfd, net::connection::CLOCK), controllerconn(epoll, EPOLLIN,
 			controllerfd, net::connection::CONTROLLER_LISTEN), regionconn(epoll, EPOLLIN, regionfd,
-			net::connection::REGION_LISTEN), pngconn(epoll, EPOLLIN, pngfd, net::connection::PNGVIEWER_LISTEN);
+			net::connection::REGION_LISTEN), worldviewerconn(epoll, EPOLLIN, worldviewerfd, net::connection::WORLDVIEWER_LISTEN);
 
 	//handle logging to file initializations
 	PuckStack puckstack;
@@ -230,7 +230,7 @@ void run() {
 	int timeSteps = 0;
 	time_t lastSecond = time(NULL);
 	vector<net::EpollConnection*> controllers;
-	vector<net::EpollConnection*> pngviewers;
+	vector<net::EpollConnection*> worldviewers;
 	vector<net::EpollConnection*> borderRegions;
 
 	//send port listening info (IMPORTANT)
@@ -239,7 +239,7 @@ void run() {
 	info.set_address(0);
 	info.set_id(0);
 	info.set_regionport(regionPort);
-	info.set_renderport(pngviewerPort);
+	info.set_renderport(worldviewerPort);
 	info.set_controllerport(controllerPort);
 	clockconn.queue.push(MSG_REGIONINFO, info);
 	clockconn.set_writing(true);
@@ -396,9 +396,9 @@ void run() {
 
 							//find out if we even need to generate an image
 							if (regionarea->curStep % 19 == 0) {
-								for (vector<net::EpollConnection*>::iterator it = pngviewers.begin(); it
-										!= pngviewers.end(); ++it) {
-									if (sendMorePngs[(*it)->fd].initialized == true && sendMorePngs[(*it)->fd].value
+								for (vector<net::EpollConnection*>::iterator it = worldviewers.begin(); it
+										!= worldviewers.end(); ++it) {
+									if (sendMoreWorldViews[(*it)->fd].initialized == true && sendMoreWorldViews[(*it)->fd].value
 											== true) {
 										generateImage = true;
 										break;
@@ -420,10 +420,10 @@ void run() {
 
 								png.set_image((void*) surfaceData, surfaceLength);
 								png.set_timestep(timestep.timestep());
-								for (vector<net::EpollConnection*>::iterator it = pngviewers.begin(); it
-										!= pngviewers.end(); ++it) {
-									if (sendMorePngs[(*it)->fd].initialized && sendMorePngs[(*it)->fd].value) {
-										(*it)->queue.push(MSG_REGIONRENDER, png);
+								for (vector<net::EpollConnection*>::iterator it = worldviewers.begin(); it
+										!= worldviewers.end(); ++it) {
+									if (sendMoreWorldViews[(*it)->fd].initialized && sendMoreWorldViews[(*it)->fd].value) {
+										(*it)->queue.push(MSG_REGIONVIEW, png);
 										(*it)->set_writing(true);
 									}
 								}
@@ -519,8 +519,8 @@ void run() {
 					}
 					break;
 				}
-				case net::connection::PNGVIEWER: {
-					//check for a message that disables the sending of PNGs to the pngviewer
+				case net::connection::WORLDVIEWER: {
+					//check for a message that disables the sending of data to the worldviewer
 					MessageType type;
 					int len;
 					const void *buffer;
@@ -528,27 +528,27 @@ void run() {
 					try {
 						if (c->reader.doRead(&type, &len, &buffer)) {
 							switch (type) {
-							case MSG_SENDMOREPNGS: {
-								SendMorePngs doWeSend;
+							case MSG_SENDMOREWORLDVIEWS: {
+								SendMoreWorldViews doWeSend;
 								doWeSend.ParseFromArray(buffer, len);
 
-								sendMorePngs[c->fd].value = doWeSend.enable();
-								sendMorePngs[c->fd].initialized = true;
-								cout << "Setting sendMorePngs for fd " << c->fd << " to " << doWeSend.enable() << endl;
+								sendMoreWorldViews[c->fd].value = doWeSend.enable();
+								sendMoreWorldViews[c->fd].initialized = true;
+								cout << "Setting sendMoreWorldViews for fd " << c->fd << " to " << doWeSend.enable() << endl;
 								break;
 							}
 							default:
-								cerr << "Unexpected readable message from PngViewer\n";
+								cerr << "Unexpected readable message from WorldViewer\n";
 							}
 
 						}
 					} catch (EOFError e) {
-						for (vector<net::EpollConnection*>::iterator i = pngviewers.begin(); i != pngviewers.end(); ++i) {
+						for (vector<net::EpollConnection*>::iterator i = worldviewers.begin(); i != worldviewers.end(); ++i) {
 							if (c->fd == (*i)->fd) {
-								pngviewers.erase(i);
+								worldviewers.erase(i);
 								close(c->fd);
-								sendMorePngs[c->fd].value = false;
-								cout << "png viewer with fd=" << c->fd << " disconnected" << endl;
+								sendMoreWorldViews[c->fd].value = false;
+								cout << "world viewer with fd=" << c->fd << " disconnected" << endl;
 								break;
 							}
 						}
@@ -593,32 +593,32 @@ void run() {
 					cout << "Got controller connection." << endl;
 					break;
 				}
-				case net::connection::PNGVIEWER_LISTEN: {
-					//We failed to read a message, so it's a new connection from the pngviewer
+				case net::connection::WORLDVIEWER_LISTEN: {
+					//We failed to read a message, so it's a new connection from the worldviewer
 					int fd = accept(c->fd, NULL, NULL);
 					if (fd < 0) {
-						throw SystemError("Failed to accept png viewer");
+						throw SystemError("Failed to accept world viewer");
 					}
 					net::set_blocking(fd, false);
 
 					try {
 						net::EpollConnection *newconnOut = new net::EpollConnection(epoll, EPOLLIN, fd,
-								net::connection::PNGVIEWER);
-						pngviewers.push_back(newconnOut);
-						sendMorePngs[fd].value = true;
-						sendMorePngs[fd].initialized = true;
+								net::connection::WORLDVIEWER);
+						worldviewers.push_back(newconnOut);
+						sendMoreWorldViews[fd].value = true;
+						sendMoreWorldViews[fd].initialized = true;
 						cout << "set " << fd << " to true" << endl;
 					} catch (SystemError e) {
 						cerr << e.what() << endl;
 						return;
 					}
 
-					cout << "Got png viewer connection." << endl;
+					cout << "Got world viewer connection." << endl;
 
 					break;
 				}
 				default:
-					cerr << "Internal error: Got unexpected readable event from the pngviewer of type " << c->type
+					cerr << "Internal error: Got unexpected readable event from the worldviewer of type " << c->type
 							<< endl;
 
 				}
@@ -626,7 +626,7 @@ void run() {
 				switch (c->type) {
 				case net::connection::REGION:
 					// fall through...
-				case net::connection::PNGVIEWER:
+				case net::connection::WORLDVIEWER:
 					// fall through...
 				case net::connection::CONTROLLER:
 					// fall through...
@@ -650,8 +650,8 @@ void run() {
 	close(controllerfd);
 	shutdown(regionfd, SHUT_RDWR);
 	close(regionfd);
-	shutdown(pngfd, SHUT_RDWR);
-	close(pngfd);
+	shutdown(worldviewerfd, SHUT_RDWR);
+	close(worldviewerfd);
 	close(logfd);
 }
 
