@@ -277,7 +277,6 @@ void AreaEngine::Step(bool generateImage){
         robots.erase(robotIt++);
         continue;
       }else{
-        curRobot->arrayLocation = newIndices;
         AreaEngine::RemoveRobot(curRobot->id, oldIndices.x, oldIndices.y, false);
         AreaEngine::AddRobot(curRobot);
         //check if we need to inform a neighbor that its entered an overlap - but ONLY if we just entered an OVERLAP!
@@ -285,6 +284,7 @@ void AreaEngine::Step(bool generateImage){
           BroadcastRobot(curRobot, newIndices);
       }
     }
+    curRobot->arrayLocation = newIndices;
     robotIt++;
   }
 
