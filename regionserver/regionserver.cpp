@@ -373,7 +373,7 @@ void run() {
 							wantRobots = myRobotIds.size();
 							numRobots = 0;
 
-							for (int i = 400 * robotDiameter; i < regionSideLen - 3 * (robotDiameter) && numRobots
+							for (int i = 10 * robotDiameter; i < regionSideLen - 3 * (robotDiameter) && numRobots
 									< wantRobots; i += 5 * (robotDiameter))
 								for (int j = 3 * robotDiameter; j < regionSideLen - 3 * (robotDiameter) && numRobots
 										< wantRobots; j += 5 * (robotDiameter)) {
