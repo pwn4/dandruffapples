@@ -283,8 +283,7 @@ void AreaEngine::Step(bool generateImage){
         //check if we need to inform a neighbor that its entered an overlap - but ONLY if we just entered an OVERLAP!
         BroadcastRobot(curRobot, oldIndices, newIndices);
       }
-    }else
-      curRobot->arrayLocation = newIndices;
+    }
       
     robotIt++;
   }
