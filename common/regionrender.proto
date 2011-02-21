@@ -3,6 +3,6 @@ message RegionRender {
   required bytes image = 2;
 }
 
-message SendMorePngs{
+message SendMoreWorldViews{
   required bool enable=1;
 }

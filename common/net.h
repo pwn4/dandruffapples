@@ -19,13 +19,13 @@ namespace net {
       UNSPECIFIED,
       REGION_LISTEN,
       CONTROLLER_LISTEN,
-      PNGVIEWER_LISTEN,
+      WORLDVIEWER_LISTEN,
       CLIENT_LISTEN,
       CLOCK,
       CONTROLLER,
       REGION,
       CLIENT,
-      PNGVIEWER
+      WORLDVIEWER
     } type;
 
     int fd;

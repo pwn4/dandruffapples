@@ -29,7 +29,7 @@ private:
 };
 
 const string defaultLogName = "antix_log";
-const string pngViewerDebugLogName="/tmp/pngviewer_debug.txt";
+const string worldViewerDebugLogName="/tmp/worldviewer_debug.txt";
 }
 
 #endif
