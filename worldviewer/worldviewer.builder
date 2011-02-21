@@ -5,7 +5,7 @@
   <object class="GtkWindow" id="window">
     <property name="visible">True</property>
     <property name="border_width">10</property>
-    <property name="title" translatable="yes">Antix</property>
+    <property name="title" translatable="yes">World Viewer</property>
     <property name="default_width">1000</property>
     <property name="default_height">1000</property>
     <signal name="destroy" handler="gtk_main_quit"/>
