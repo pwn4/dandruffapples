@@ -374,6 +374,9 @@ void compareBuddy() {
 	if (pivotRegion == pivotRegionBuddy) {
 		gtk_widget_set_size_request(GTK_WIDGET(worldDrawingArea.at(TOP_RIGHT)), 0, 0);
 		gtk_widget_set_size_request(GTK_WIDGET(worldDrawingArea.at(BOTTOM_LEFT)), 0, 0);
+
+		gtk_widget_queue_draw(GTK_WIDGET(worldDrawingArea.at(TOP_RIGHT)));
+		gtk_widget_queue_draw(GTK_WIDGET(worldDrawingArea.at(BOTTOM_LEFT)));
 #ifdef DEBUG
 		debug << "pivtorBuddy is the same as the pivotRegion. Removing buddy!" << endl;
 #endif
@@ -580,13 +583,20 @@ void on_rotateButton_clicked(GtkWidget *widget, gpointer window) {
 	if (horizontalView) {
 		gtk_widget_set_size_request(GTK_WIDGET(worldDrawingArea.at(TOP_RIGHT)), IMAGEWIDTH, IMAGEHEIGHT);
 		gtk_widget_set_size_request(GTK_WIDGET(worldDrawingArea.at(BOTTOM_LEFT)), 0, 0);
+
+		gtk_widget_queue_draw(GTK_WIDGET(worldDrawingArea.at(BOTTOM_LEFT)));
+
 		if (pivotRegion->info.draw_x() + 1 >= worldServerColumns)
 			tmp1 = 0;
 		else
 			tmp1 += 1;
 	} else {
-		gtk_widget_set_size_request(GTK_WIDGET(worldDrawingArea.at(TOP_RIGHT)), IMAGEWIDTH, IMAGEHEIGHT);
-		gtk_widget_set_size_request(GTK_WIDGET(worldDrawingArea.at(BOTTOM_LEFT)), 0, 0);
+		gtk_widget_set_size_request(GTK_WIDGET(worldDrawingArea.at(BOTTOM_LEFT)), IMAGEWIDTH, IMAGEHEIGHT);
+		gtk_widget_set_size_request(GTK_WIDGET(worldDrawingArea.at(TOP_RIGHT)), 0, 0);
+
+		gtk_widget_queue_draw(GTK_WIDGET(worldDrawingArea.at(TOP_RIGHT)));
+
+
 		if (pivotRegion->info.draw_y() + 1 >= worldServerRows)
 			tmp2 = 0;
 		else
@@ -600,7 +610,8 @@ void on_rotateButton_clicked(GtkWidget *widget, gpointer window) {
 	debug << "Changing pivotRegionBuddy to (" << newPivotRegionBuddy[0] << "," << newPivotRegionBuddy[1] << ")" << endl;
 #endif
 
-	sendWorldViews(pivotRegionBuddy->fd, false);
+	if (pivotRegionBuddy != pivotRegion)
+		sendWorldViews(pivotRegionBuddy->fd, false);
 
 	for (int i = 0; i < (int) regions.size(); i++) {
 		if (regions.at(i)->info.draw_x() == newPivotRegionBuddy[0] && regions.at(i)->info.draw_y()
