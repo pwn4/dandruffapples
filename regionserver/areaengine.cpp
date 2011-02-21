@@ -248,8 +248,17 @@ void AreaEngine::Step(bool generateImage){
       if(drawX >= 0 && drawX < IMAGEWIDTH && drawY >= 0 && drawY < IMAGEHEIGHT)
       {
         cairo_rectangle (stepImageDrawer, drawX, drawY, 1, 1);
-        //set the color
-        cairo_set_source_rgb(stepImageDrawer, 1, 0, 0);
+        //set the color - HARDCODE FOR NOW
+        if(curRobot->robotColor == "red")
+          cairo_set_source_rgb(stepImageDrawer, 1, 0, 0);
+        else if(curRobot->robotColor == "green")
+          cairo_set_source_rgb(stepImageDrawer, 0, 1, 0);
+        else if(curRobot->robotColor == "blue")
+          cairo_set_source_rgb(stepImageDrawer, 0, 0, 1);
+        else if(curRobot->robotColor == "orange")
+          cairo_set_source_rgb(stepImageDrawer, 1, .5, .153);
+        else
+          cairo_set_source_rgb(stepImageDrawer, .1, .1, .1);
         cairo_fill (stepImageDrawer);
       }
     }
@@ -276,6 +285,7 @@ void AreaEngine::Step(bool generateImage){
         int transx = curRobot->x;
         int transy = curRobot->y;
         //continue
+        informNeighbour.set_color(curRobot->robotColor);
         informNeighbour.set_velocityx(curRobot->vx);
         informNeighbour.set_velocityy(curRobot->vy);
         informNeighbour.set_laststep(curStep);
@@ -512,7 +522,7 @@ void AreaEngine::SetNeighbour(int placement, EpollConnection *socketHandle){
 void AreaEngine::GotServerRobot(ServerRobot message){
   if(robots.find(message.id()) == robots.end()){
     //new robot
-    AddRobot(message.id(), message.x(), message.y(), message.angle(), message.velocityx(), message.velocityy(), curStep, "red");
+    AddRobot(message.id(), message.x(), message.y(), message.angle(), message.velocityx(), message.velocityy(), curStep, message.color());
   }else{
     //modify existing
     RobotObject* curRobot = robots[message.id()];

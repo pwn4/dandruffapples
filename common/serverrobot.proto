@@ -9,8 +9,9 @@ message ServerRobot {
   optional bool hasCollided = 8;
   optional fixed32 controllerIp = 9;
   optional fixed32 lastStep = 10;
-  repeated bool viewLostId = 11; // robot specified by seenById can no 
+  optional string color = 11; //temporary for now, will be changed
+  repeated bool viewLostId = 12; // robot specified by seenById can no 
                                 // longer see this robot
-  repeated fixed32 seenById = 12; // list of robots now viewing
+  repeated fixed32 seenById = 13; // list of robots now viewing
 
 }

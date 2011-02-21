@@ -209,6 +209,7 @@ void run() {
 	tsdone.set_done(true);
 	WorldInfo worldinfo;
 	RegionInfo regioninfo;
+	int myId;   //region id
 	//Region Area Variables (should be set by clock server)
 	int regionSideLen = 2500;
 	int robotDiameter = 4;
@@ -360,7 +361,7 @@ void run() {
 
 							// Find our robots, and add to the simulation
 							int lastRegionIndex = worldinfo.region_size() - 1;
-							int myId = worldinfo.region(lastRegionIndex).id();
+							myId = worldinfo.region(lastRegionIndex).id();
 							vector<int> myRobotIds;
 							cout << "My id: " << myId << endl;
 							for (google::protobuf::RepeatedPtrField<const RobotInfo>::iterator i =
@@ -376,8 +377,7 @@ void run() {
 									< wantRobots; i += 5 * (robotDiameter))
 								for (int j = 3 * robotDiameter; j < regionSideLen - 3 * (robotDiameter) && numRobots
 										< wantRobots; j += 5 * (robotDiameter)) {
-									regionarea->AddRobot(myRobotIds[numRobots++], i, j, 0, .1, 0, 0, (numRobots % 3
-											== 0 ? "red" : ((numRobots + 1) % 3 == 0 ? "blue" : "green")));
+									regionarea->AddRobot(myRobotIds[numRobots++], i, j, 0, .1, 0, 0, (myId == 0 ? "red" : (myId == 1 ? "blue" : (myId == 2 ? "green" : "orange"))));
 								}
 
 							cout << numRobots << " robots created." << endl;
