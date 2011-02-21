@@ -472,12 +472,15 @@ void run() {
 						case MSG_CLIENTROBOT:
 							clientrobot.ParseFromArray(buffer, len);
 							cout << "Received ClientRobot message with robotId #" << clientrobot.id() << endl;
+							
+							regionarea->ChangeVelocity(clientrobot.id(), clientrobot.velocityx(), clientrobot.velocityy());
+							regionarea->ChangeAngle(clientrobot.id(), clientrobot.angle());
 
 							// Send back a test ServerRobot message. May need to
 							// eventually broadcast to all controllers?
-							serverrobot.set_id(clientrobot.id());
-							c->queue.push(MSG_SERVERROBOT, serverrobot);
-							c->set_writing(true);
+							//serverrobot.set_id(clientrobot.id());
+							//c->queue.push(MSG_SERVERROBOT, serverrobot);
+							//c->set_writing(true);
 
 							break;
 						default:
