@@ -99,7 +99,7 @@ cairo_t *stepImageDrawer;
 
   ColorObject colorFromTeam(int teamId);
   
-  void BroadcastRobot(RobotObject *curRobot, Index newIndices);
+  void BroadcastRobot(RobotObject *curRobot, Index oldIndices, Index newIndices);
   
 public:
   cairo_surface_t *stepImage; //contains the image of the last step called with generateImage=true

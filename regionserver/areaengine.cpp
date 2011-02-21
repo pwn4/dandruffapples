@@ -242,10 +242,10 @@ void AreaEngine::Step(bool generateImage){
     
     if(generateImage){
       //repaint the robot
-      //drawX = ((curRobot->x-(regionRatio/regionBounds)) / regionRatio)*IMAGEWIDTH;
-      //drawY = ((curRobot->y-(regionRatio/regionBounds)) / regionRatio)*IMAGEHEIGHT;
-      drawX = ((curRobot->x) / (regionRatio+(2*(regionRatio/regionBounds))))*IMAGEWIDTH;
-      drawY = ((curRobot->y) / (regionRatio+(2*(regionRatio/regionBounds))))*IMAGEHEIGHT;
+      drawX = ((curRobot->x-(regionRatio/regionBounds)) / regionRatio)*IMAGEWIDTH;
+      drawY = ((curRobot->y-(regionRatio/regionBounds)) / regionRatio)*IMAGEHEIGHT;
+      //drawX = ((curRobot->x) / (regionRatio+(2*(regionRatio/regionBounds))))*IMAGEWIDTH;
+      //drawY = ((curRobot->y) / (regionRatio+(2*(regionRatio/regionBounds))))*IMAGEHEIGHT;
       //don't draw the overlaps
       if(drawX >= 0 && drawX < IMAGEWIDTH && drawY >= 0 && drawY < IMAGEHEIGHT)
       {
@@ -254,11 +254,11 @@ void AreaEngine::Step(bool generateImage){
         if(curRobot->robotColor == "red")
           cairo_set_source_rgb(stepImageDrawer, 1, 0, 0);
         else if(curRobot->robotColor == "green")
-          cairo_set_source_rgb(stepImageDrawer, 0, 1, 0);
+          cairo_set_source_rgb(stepImageDrawer, 0, .5, 0);
         else if(curRobot->robotColor == "blue")
           cairo_set_source_rgb(stepImageDrawer, 0, 0, 1);
         else if(curRobot->robotColor == "orange")
-          cairo_set_source_rgb(stepImageDrawer, 1, .5, .153);
+          cairo_set_source_rgb(stepImageDrawer, .7, .4, .103);
         else
           cairo_set_source_rgb(stepImageDrawer, .1, .1, .1);
         cairo_fill (stepImageDrawer);
@@ -267,7 +267,7 @@ void AreaEngine::Step(bool generateImage){
     //check if the robot moves through a[][]
     Index oldIndices = curRobot->arrayLocation;
     Index newIndices = getRobotIndices(curRobot->x, curRobot->y, false);
-
+    
     if(newIndices.x != oldIndices.x || newIndices.y != oldIndices.y)
     {
       //the robot moved, so...if we no longer track it
@@ -277,13 +277,15 @@ void AreaEngine::Step(bool generateImage){
         robots.erase(robotIt++);
         continue;
       }else{
-        curRobot->arrayLocation = newIndices;
         AreaEngine::RemoveRobot(curRobot->id, oldIndices.x, oldIndices.y, false);
+        curRobot->arrayLocation = newIndices;
         AreaEngine::AddRobot(curRobot);
-        //check if we need to inform a neighbor that its entered an overlap
-        BroadcastRobot(curRobot, newIndices);
+        //check if we need to inform a neighbor that its entered an overlap - but ONLY if we just entered an OVERLAP!
+        BroadcastRobot(curRobot, oldIndices, newIndices);
       }
-    }
+    }else
+      curRobot->arrayLocation = newIndices;
+      
     robotIt++;
   }
 
@@ -382,7 +384,7 @@ RobotObject* AreaEngine::AddRobot(int robotId, double newx, double newy, double 
   newRobot->nextRobot = NULL;
   
   if(broadcast)
-    BroadcastRobot(newRobot, robotIndices);
+    BroadcastRobot(newRobot, Index(regionBounds/2, regionBounds/2), robotIndices);
   
   return newRobot;
 }
@@ -476,7 +478,8 @@ void AreaEngine::GotServerRobot(ServerRobot message){
     //new robot
     AddRobot(message.id(), message.x(), message.y(), message.angle(), message.velocityx(), message.velocityy(), curStep, message.color(), false);
   }else{
-    //modify existing
+    //modify existing;
+    cout << "FFFFFFUUU" << endl;
     RobotObject* curRobot = robots[message.id()];
     
     if(message.has_velocityx())
@@ -487,7 +490,7 @@ void AreaEngine::GotServerRobot(ServerRobot message){
   }
 }
 
-void AreaEngine::BroadcastRobot(RobotObject *curRobot, Index newIndices){
+void AreaEngine::BroadcastRobot(RobotObject *curRobot, Index oldIndices, Index newIndices){
   ServerRobot informNeighbour;
   informNeighbour.set_id(curRobot->id);
   //setup to translate the x and y
@@ -500,47 +503,63 @@ void AreaEngine::BroadcastRobot(RobotObject *curRobot, Index newIndices){
   informNeighbour.set_laststep(curStep);
 
   if(newIndices.x == 1 && neighbours[LEFT] != NULL){
-    informNeighbour.set_x(transx + regionRatio);
-    informNeighbour.set_y(transy);
-		neighbours[LEFT]->queue.push(MSG_SERVERROBOT, informNeighbour);
-		neighbours[LEFT]->set_writing(true);
-		if(newIndices.y == 1 && neighbours[TOP_LEFT] != NULL){
-		  informNeighbour.set_x(transx + regionRatio);
-      informNeighbour.set_y(transy + regionRatio);
-    	neighbours[TOP_LEFT]->queue.push(MSG_SERVERROBOT, informNeighbour);
-		  neighbours[TOP_LEFT]->set_writing(true);
-    }else if(newIndices.y == regionBounds && neighbours[BOTTOM_LEFT] != NULL){
+    if(oldIndices.x > 1){
       informNeighbour.set_x(transx + regionRatio);
-      informNeighbour.set_y(transy - regionRatio);
-		  neighbours[BOTTOM_LEFT]->queue.push(MSG_SERVERROBOT, informNeighbour);
-		  neighbours[BOTTOM_LEFT]->set_writing(true);
+      informNeighbour.set_y(transy);
+		  neighbours[LEFT]->queue.push(MSG_SERVERROBOT, informNeighbour);
+		  neighbours[LEFT]->set_writing(true);
+	  }
+		if(newIndices.y == 1 && neighbours[TOP_LEFT] != NULL){
+		  if(oldIndices.x > 1 || oldIndices.y > 1){
+		    informNeighbour.set_x(transx + regionRatio);
+        informNeighbour.set_y(transy + regionRatio);
+      	neighbours[TOP_LEFT]->queue.push(MSG_SERVERROBOT, informNeighbour);
+		    neighbours[TOP_LEFT]->set_writing(true);
+	    }
+    }else if(newIndices.y == regionBounds && neighbours[BOTTOM_LEFT] != NULL){
+      if(oldIndices.x > 1 || oldIndices.y < regionBounds){
+        informNeighbour.set_x(transx + regionRatio);
+        informNeighbour.set_y(transy - regionRatio);
+		    neighbours[BOTTOM_LEFT]->queue.push(MSG_SERVERROBOT, informNeighbour);
+		    neighbours[BOTTOM_LEFT]->set_writing(true);
+	    }
     }
   }else if(newIndices.x == regionBounds && neighbours[RIGHT] != NULL){
-    informNeighbour.set_x(transx - regionRatio);
-    informNeighbour.set_y(transy);
-    neighbours[RIGHT]->queue.push(MSG_SERVERROBOT, informNeighbour);
-		neighbours[RIGHT]->set_writing(true);
-		if(newIndices.y == 1 && neighbours[TOP_RIGHT] != NULL){
-		  informNeighbour.set_x(transx - regionRatio);
-      informNeighbour.set_y(transy + regionRatio);
-    	neighbours[TOP_RIGHT]->queue.push(MSG_SERVERROBOT, informNeighbour);
-		  neighbours[TOP_RIGHT]->set_writing(true);
-    }else if(newIndices.y == regionBounds && neighbours[BOTTOM_RIGHT] != NULL){
+    if(oldIndices.x < regionBounds){
       informNeighbour.set_x(transx - regionRatio);
-      informNeighbour.set_y(transy - regionRatio);
-		  neighbours[BOTTOM_RIGHT]->queue.push(MSG_SERVERROBOT, informNeighbour);
-		  neighbours[BOTTOM_RIGHT]->set_writing(true);
+      informNeighbour.set_y(transy);
+      neighbours[RIGHT]->queue.push(MSG_SERVERROBOT, informNeighbour);
+		  neighbours[RIGHT]->set_writing(true);
+		}
+		if(newIndices.y == 1 && neighbours[TOP_RIGHT] != NULL){
+		  if(oldIndices.x < regionBounds || oldIndices.y > 1){
+		    informNeighbour.set_x(transx - regionRatio);
+        informNeighbour.set_y(transy + regionRatio);
+      	neighbours[TOP_RIGHT]->queue.push(MSG_SERVERROBOT, informNeighbour);
+		    neighbours[TOP_RIGHT]->set_writing(true);
+	    }
+    }else if(newIndices.y == regionBounds && neighbours[BOTTOM_RIGHT] != NULL){
+      if(oldIndices.x < regionBounds || oldIndices.y < regionBounds){
+        informNeighbour.set_x(transx - regionRatio);
+        informNeighbour.set_y(transy - regionRatio);
+		    neighbours[BOTTOM_RIGHT]->queue.push(MSG_SERVERROBOT, informNeighbour);
+		    neighbours[BOTTOM_RIGHT]->set_writing(true);
+	    }
     }
   }
   if(newIndices.y == 1 && neighbours[TOP] != NULL){
-    informNeighbour.set_x(transx);
-    informNeighbour.set_y(transy + regionRatio);
-  	neighbours[TOP]->queue.push(MSG_SERVERROBOT, informNeighbour);
-		neighbours[TOP]->set_writing(true);
+    if(oldIndices.y > 1){
+      informNeighbour.set_x(transx);
+      informNeighbour.set_y(transy + regionRatio);
+    	neighbours[TOP]->queue.push(MSG_SERVERROBOT, informNeighbour);
+		  neighbours[TOP]->set_writing(true);
+	  }
   }else if(newIndices.y == regionBounds && neighbours[BOTTOM] != NULL){
-    informNeighbour.set_x(transx);
-    informNeighbour.set_y(transy - regionRatio);
-		neighbours[BOTTOM]->queue.push(MSG_SERVERROBOT, informNeighbour);
-		neighbours[BOTTOM]->set_writing(true);
+    if(oldIndices.y < regionBounds){
+      informNeighbour.set_x(transx);
+      informNeighbour.set_y(transy - regionRatio);
+		  neighbours[BOTTOM]->queue.push(MSG_SERVERROBOT, informNeighbour);
+		  neighbours[BOTTOM]->set_writing(true);
+    }
   }
 }
