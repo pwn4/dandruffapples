@@ -478,6 +478,7 @@ void AreaEngine::GotServerRobot(ServerRobot message){
     AddRobot(message.id(), message.x(), message.y(), message.angle(), message.velocityx(), message.velocityy(), curStep, message.color(), false);
   }else{
     //modify existing;
+    cout << "FFFFFFUUU" << endl;
     RobotObject* curRobot = robots[message.id()];
     
     if(message.has_velocityx())
