@@ -121,7 +121,7 @@ void AreaEngine::Step(bool generateImage){
   for(int i = 0; i < 8; i++)
   {
     if(neighbours[i] != NULL){
-      while((*neighbours)->reader.doRead(&type, &len, &buffer))
+      while(neighbours[i]->reader.doRead(&type, &len, &buffer))
       {
         switch (type) {
 				  case MSG_SERVERROBOT: {
