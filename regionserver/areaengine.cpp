@@ -267,17 +267,26 @@ void AreaEngine::Step(bool generateImage){
     //check if the robot moves through a[][]
     Index oldIndices = curRobot->arrayLocation;
     Index newIndices = getRobotIndices(curRobot->x, curRobot->y, false);
-    
+    int tmp = curRobot->id;
     if(newIndices.x != oldIndices.x || newIndices.y != oldIndices.y)
     {
       //the robot moved, so...if we no longer track it
       if(newIndices.x < 0 || newIndices.y < 0 || newIndices.x >= regionBounds+2 || newIndices.y >= regionBounds+2)
       {
-        AreaEngine::RemoveRobot(curRobot->id, oldIndices.x, oldIndices.y, true);
+        if(!AreaEngine::RemoveRobot(curRobot->id, oldIndices.x, oldIndices.y, true))
+        {
+          cerr << "Remove Robot Failure! This should NOT happen! Id: " << tmp << endl;
+        }else
+          cout << "Removed robot id: " << tmp << endl;
         robots.erase(robotIt++);
         continue;
       }else{
-        AreaEngine::RemoveRobot(curRobot->id, oldIndices.x, oldIndices.y, false);
+        if(!AreaEngine::RemoveRobot(curRobot->id, oldIndices.x, oldIndices.y, false))
+        {
+          cerr << "Remove Robot Failure! This should NOT happen! Id: " << tmp << endl;
+        }else
+          cout << "Removed robot id: " << tmp << endl;
+          
         curRobot->arrayLocation = newIndices;
         AreaEngine::AddRobot(curRobot);
         //check if we need to inform a neighbor that its entered an overlap - but ONLY if we just entered an OVERLAP!
@@ -518,6 +527,7 @@ void AreaEngine::BroadcastRobot(RobotObject *curRobot, Index oldIndices, Index n
   int transx = curRobot->x;
   int transy = curRobot->y;
   //continue
+  informNeighbour.set_angle(curRobot->angle);
   informNeighbour.set_color(curRobot->robotColor);
   informNeighbour.set_velocityx(curRobot->vx);
   informNeighbour.set_velocityy(curRobot->vy);
