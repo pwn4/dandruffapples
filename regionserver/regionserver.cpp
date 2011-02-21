@@ -378,15 +378,15 @@ void run() {
 							for (int j = (2 * robotDiameter)+minElementSize; j < (regionSideLen-minElementSize) - (2 * (robotDiameter)) && numRobots	< wantRobots; j += 4 * (robotDiameter)) {
 								for (int i = (2 * robotDiameter)+minElementSize; i < (regionSideLen-minElementSize) - (2 * (robotDiameter)) && numRobots	< wantRobots; i += 5 * (robotDiameter)){
 									if(rowCounter == 0)
-									  regionarea->AddRobot(myRobotIds[numRobots++], i, j, 0, 0, -.1, 0, (myId == 0 ? "red" : (myId == 1 ? "blue" : (myId == 2 ? "green" : "orange"))), false);
+									  regionarea->AddRobot(myRobotIds[numRobots++], i, j, 0, 0, -.1, 0, (myId == 0 ? "red" : (myId == 1 ? "blue" : (myId == 2 ? "green" : "orange"))), true);
 									else if(rowCounter == 1)
-									  regionarea->AddRobot(myRobotIds[numRobots++], i, j, 0, 0, .1, 0, (myId == 0 ? "red" : (myId == 1 ? "blue" : (myId == 2 ? "green" : "orange"))), false);
+									  regionarea->AddRobot(myRobotIds[numRobots++], i, j, 0, 0, .1, 0, (myId == 0 ? "red" : (myId == 1 ? "blue" : (myId == 2 ? "green" : "orange"))), true);
 									else if(firstrow){
-									  regionarea->AddRobot(myRobotIds[numRobots++], i, j, 0, 0, (double)((rand() % 101)-50.0)/100.0, 0, (myId == 0 ? "red" : (myId == 1 ? "blue" : (myId == 2 ? "green" : "orange"))), false);
+									  regionarea->AddRobot(myRobotIds[numRobots++], i, j, 0, 0, (double)((rand() % 101)-50.0)/100.0, 0, (myId == 0 ? "red" : (myId == 1 ? "blue" : (myId == 2 ? "green" : "orange"))), true);
 									}
 									rowCounter = (rowCounter+1) % 3;
 								}
-								firstrow = false;
+								firstrow = true;
 								rowCounter = 0;
 							}
 
