@@ -173,7 +173,7 @@ void *artificialIntelligence(void *threadid) {
   ClientRobot clientRobot;
   float velocity = 0.1;
   float angle = 3.0;
-  int tempId;
+  int tempId = 0;
 
   while (true) {
     for (int i = 0; i < totalOwnRobots(); i++) {
@@ -193,22 +193,23 @@ void *artificialIntelligence(void *threadid) {
           if (ownRobots[tempId]->x > ownRobots[i]->x) {
             // Move right!
             clientRobot.set_velocityx(velocity);
-          } else if (ownRobots[tempId]->x == ownRobots[i]->x) {
-            clientRobot.set_velocityx(0.0);
+          //} else if (ownRobots[tempId]->x == ownRobots[i]->x) {
+          //  clientRobot.set_velocityx(0.0);
           } else {
             clientRobot.set_velocityx(velocity * -1.0);
           }
           if (ownRobots[tempId]->y > ownRobots[i]->y) {
             // Move up!
             clientRobot.set_velocityy(velocity);
-          } else if (ownRobots[tempId]->y == ownRobots[i]->y) {
-            clientRobot.set_velocityy(0.0);
+         // } else if (ownRobots[tempId]->y == ownRobots[i]->y) {
+         //   clientRobot.set_velocityy(0.0);
           } else {
             clientRobot.set_velocityy(velocity * -1.0);
           }
           clientRobot.set_angle(angle);
         }
 
+        cout << "vels" << clientRobot.velocityx() << clientRobot.velocityy() << endl;
         theController->queue.push(MSG_CLIENTROBOT, clientRobot);
         theController->set_writing(true);
       } else {
