@@ -280,19 +280,18 @@
     <property name="stock">gtk-go-up</property>
   </object>
   <object class="GtkWindow" id="infoWindow">
-    <property name="border_width">5</property>
+    <property name="border_width">3</property>
     <property name="title" translatable="yes"> Info</property>
     <property name="window_position">center-always</property>
-    <property name="default_width">450</property>
-    <property name="default_height">250</property>
+    <property name="default_width">150</property>
+    <property name="default_height">100</property>
     <child>
       <object class="GtkHBox" id="hbox1">
         <property name="visible">True</property>
-        <property name="spacing">10</property>
+        <property name="spacing">3</property>
         <child>
           <object class="GtkVBox" id="frame1">
             <property name="visible">True</property>
-            <property name="spacing">5</property>
             <child>
               <object class="GtkLabel" id="frame_frameNum1">
                 <property name="visible">True</property>
@@ -346,7 +345,6 @@
         <child>
           <object class="GtkVBox" id="frame2">
             <property name="visible">True</property>
-            <property name="spacing">5</property>
             <child>
               <object class="GtkLabel" id="frame_frameNum2">
                 <property name="visible">True</property>

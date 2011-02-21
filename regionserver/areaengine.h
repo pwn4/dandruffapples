@@ -99,6 +99,8 @@ cairo_t *stepImageDrawer;
 
   ColorObject colorFromTeam(int teamId);
   
+  void BroadcastRobot(RobotObject *curRobot, Index newIndices);
+  
 public:
   cairo_surface_t *stepImage; //contains the image of the last step called with generateImage=true
   int curStep;
@@ -111,7 +113,7 @@ public:
   bool Collides(double x1, double y1, double x2, double y2);
   
   void AddRobot(RobotObject * oldRobot);
-  RobotObject* AddRobot(int robotId, double newx, double newy, double newa, double newvx, double newvy, int atStep, string newColor);
+  RobotObject* AddRobot(int robotId, double newx, double newy, double newa, double newvx, double newvy, int atStep, string newColor, bool broadcast);
   
   bool RemoveRobot(int robotId, int xInd, int yInd, bool freeMem);
   

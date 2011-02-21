@@ -372,12 +372,11 @@ void run() {
 							}
 							wantRobots = myRobotIds.size();
 							numRobots = 0;
-
-							for (int i = 10 * robotDiameter; i < regionSideLen - 3 * (robotDiameter) && numRobots
+							for (int i = (2 * robotDiameter)+minElementSize; i < (regionSideLen-minElementSize) - (1 * (robotDiameter)) && numRobots
 									< wantRobots; i += 5 * (robotDiameter))
-								for (int j = 3 * robotDiameter; j < regionSideLen - 3 * (robotDiameter) && numRobots
+								for (int j = (2 * robotDiameter)+minElementSize; j < (regionSideLen-minElementSize) - (1 * (robotDiameter)) && numRobots
 										< wantRobots; j += 5 * (robotDiameter)) {
-									regionarea->AddRobot(myRobotIds[numRobots++], i, j, 0, .1, 0, 0, (myId == 0 ? "red" : (myId == 1 ? "blue" : (myId == 2 ? "green" : "orange"))));
+									regionarea->AddRobot(myRobotIds[numRobots++], i, j, 0, .1, 0, 0, (myId == 0 ? "red" : (myId == 1 ? "blue" : (myId == 2 ? "green" : "orange"))), true);
 								}
 
 							cout << numRobots << " robots created." << endl;
