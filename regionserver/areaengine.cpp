@@ -254,11 +254,11 @@ void AreaEngine::Step(bool generateImage){
         if(curRobot->robotColor == "red")
           cairo_set_source_rgb(stepImageDrawer, 1, 0, 0);
         else if(curRobot->robotColor == "green")
-          cairo_set_source_rgb(stepImageDrawer, 0, 1, 0);
+          cairo_set_source_rgb(stepImageDrawer, 0, .5, 0);
         else if(curRobot->robotColor == "blue")
           cairo_set_source_rgb(stepImageDrawer, 0, 0, 1);
         else if(curRobot->robotColor == "orange")
-          cairo_set_source_rgb(stepImageDrawer, 1, .5, .153);
+          cairo_set_source_rgb(stepImageDrawer, .9, .4, .103);
         else
           cairo_set_source_rgb(stepImageDrawer, .1, .1, .1);
         cairo_fill (stepImageDrawer);
@@ -267,7 +267,7 @@ void AreaEngine::Step(bool generateImage){
     //check if the robot moves through a[][]
     Index oldIndices = curRobot->arrayLocation;
     Index newIndices = getRobotIndices(curRobot->x, curRobot->y, false);
-
+    
     if(newIndices.x != oldIndices.x || newIndices.y != oldIndices.y)
     {
       //the robot moved, so...if we no longer track it
@@ -278,13 +278,15 @@ void AreaEngine::Step(bool generateImage){
         continue;
       }else{
         AreaEngine::RemoveRobot(curRobot->id, oldIndices.x, oldIndices.y, false);
+        curRobot->arrayLocation = newIndices;
         AreaEngine::AddRobot(curRobot);
         //check if we need to inform a neighbor that its entered an overlap - but ONLY if we just entered an OVERLAP!
         if(oldIndices.x > 1 && oldIndices.y > 1 && oldIndices.x < regionBounds && oldIndices.y < regionBounds)
           BroadcastRobot(curRobot, newIndices);
       }
-    }
-    curRobot->arrayLocation = newIndices;
+    }else
+      curRobot->arrayLocation = newIndices;
+      
     robotIt++;
   }
 
