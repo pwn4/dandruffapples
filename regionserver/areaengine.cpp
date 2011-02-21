@@ -121,6 +121,12 @@ void AreaEngine::Step(bool generateImage){
   for(int i = 0; i < 8; i++)
   {
     if(neighbours[i] != NULL){
+    	//todo: review while loop
+    	//doRead returns true when we read the full message and false when we didn't
+    	//if it returns false then we need to call it again, don't we?
+    	//if we simply go to the next neighbour when it returns false then
+    	//we miss on adding the neighbours from the neighbour and this will lead
+    	//to the FFFFFUUUUU
       while(neighbours[i]->reader.doRead(&type, &len, &buffer))
       {
         switch (type) {
@@ -167,7 +173,11 @@ void AreaEngine::Step(bool generateImage){
 
         RobotObject *otherRobot = element->robots;
         //check'em
-        while(otherRobot != NULL){    
+        while(otherRobot != NULL){
+        	//todo: BIG PROBLEM
+        	//cout<<"curRobot->id is "+curRobot->id<<endl;
+        	//cout<<"otherRobot->id is "+otherRobot->id<<endl;
+
           if(curRobot->id != otherRobot->id){
             if(otherRobot->lastStep != curStep){
               if(AreaEngine::Collides(curRobot->x+curRobot->vx, curRobot->y+curRobot->vy, otherRobot->x+otherRobot->vx, otherRobot->y+otherRobot->vy))
@@ -275,17 +285,18 @@ void AreaEngine::Step(bool generateImage){
       {
         if(!AreaEngine::RemoveRobot(curRobot->id, oldIndices.x, oldIndices.y, true))
         {
-          cerr << "Remove Robot Failure! This should NOT happen! Id: " << tmp << endl;
+          //cerr << "Remove Robot Failure! This should NOT happen! Id: " << tmp << endl;
         }else
-          cout << "Removed robot id: " << tmp << endl;
+          //cout << "Removed robot id: " << tmp << endl;
+        //todo: review
         robots.erase(robotIt++);
         continue;
       }else{
         if(!AreaEngine::RemoveRobot(curRobot->id, oldIndices.x, oldIndices.y, false))
         {
-          cerr << "Remove Robot Failure! This should NOT happen! Id: " << tmp << endl;
+          //cerr << "Remove Robot Failure! This should NOT happen! Id: " << tmp << endl;
         }else
-          cout << "Removed robot id: " << tmp << endl;
+          //cout << "Removed robot id: " << tmp << endl;
           
         curRobot->arrayLocation = newIndices;
         AreaEngine::AddRobot(curRobot);
@@ -301,7 +312,9 @@ void AreaEngine::Step(bool generateImage){
   //THIS IS THE BOTTLENECK RIGHT NOW
   for(robotIt=robots.begin() ; robotIt != robots.end(); robotIt++)
   {
-  
+	//todo: is this even legal? In the code above we remove an ELEMENT from a map with robots.erase()
+	//but when we iterate through a map don't we iterate through only the keys?
+	//in that case this .second will point to an undefined location
     RobotObject * curRobot = (*robotIt).second;
     nowSaw = curRobot->lastSeen;
     
@@ -329,6 +342,7 @@ void AreaEngine::Step(bool generateImage){
               //curRobot->nowSeen->insert(pair<int, bool>(otherRobot->id, true));
             }else{
             //then, that which we did see, but now don't
+            	//todo: We look for a KEY, but then we only delete the ELEMENT... although looking at the above code this is probably the desired effect
               if(nowSaw->find(otherRobot->id) != nowSaw->end())
               {
                 nowSaw->erase(otherRobot->id);
