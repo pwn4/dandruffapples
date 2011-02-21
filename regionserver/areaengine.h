@@ -95,6 +95,7 @@ ArrayObject** robotArray;
 map<int, RobotObject*> robots;
 map<int, ServerRobot*> updates;
 EpollConnection ** neighbours;
+vector<EpollConnection*> controllers;
 cairo_t *stepImageDrawer;
 
   ColorObject colorFromTeam(int teamId);
@@ -126,8 +127,10 @@ public:
   //note, I could have added a changeMovement function that gets the robot to move like in Vaughn's code. However, it requires some trig calculations and such. Therein, it would be better if the clients' code (if it turns out we can't have strafing) restricts movement, and calculates the appropriate changeVelocity and changeAngle calls.
 
   void SetNeighbour(int placement, EpollConnection* socketHandle);
-  
+
   void GotServerRobot(ServerRobot message);
+
+  void AddController(EpollConnection* socketHandle);
 
 };
 

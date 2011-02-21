@@ -174,13 +174,18 @@ void *artificialIntelligence(void *threadid) {
   float velocity = 0.1;
   float angle = 3.0;
   int tempId = 0;
+  bool tempFlag = false;
+  bool sendNewData = false;
 
   while (true) {
+    if (currentTimestep % 500 == 0) {
+      tempFlag = true;
+    }
     for (int i = 0; i < totalOwnRobots(); i++) {
-      if (!ownRobots[i]->pendingCommand) {
+      sendNewData = false;
+      if (!ownRobots[i]->pendingCommand && currentTimestep % 50 == 0) {
         // Simple AI, follow the leader!
-        if (indexToIndexOfTeam(i) == 0 && currentTimestep % 5 == 0) {
-          cout << "Leader is setting a new course!" << endl; 
+        if (indexToIndexOfTeam(i) == 0 && tempFlag) {
           ownRobots[i]->pendingCommand = true;
           clientRobot.set_id(indexToRobotId(i));
           clientRobot.set_velocityx(((rand() % 11) / 10.0) - 0.5);
@@ -193,33 +198,34 @@ void *artificialIntelligence(void *threadid) {
           if (ownRobots[tempId]->x > ownRobots[i]->x) {
             // Move right!
             clientRobot.set_velocityx(velocity);
-          //} else if (ownRobots[tempId]->x == ownRobots[i]->x) {
-          //  clientRobot.set_velocityx(0.0);
+          } else if (ownRobots[tempId]->x == ownRobots[i]->x) {
+            clientRobot.set_velocityx(0.0);
           } else {
             clientRobot.set_velocityx(velocity * -1.0);
           }
           if (ownRobots[tempId]->y > ownRobots[i]->y) {
             // Move up!
             clientRobot.set_velocityy(velocity);
-         // } else if (ownRobots[tempId]->y == ownRobots[i]->y) {
-         //   clientRobot.set_velocityy(0.0);
+          } else if (ownRobots[tempId]->y == ownRobots[i]->y) {
+            clientRobot.set_velocityy(0.0);
           } else {
             clientRobot.set_velocityy(velocity * -1.0);
           }
           clientRobot.set_angle(angle);
         }
 
-        cout << "vels" << clientRobot.velocityx() << clientRobot.velocityy() << endl;
+        //cout << "vels" << clientRobot.velocityx() << clientRobot.velocityy() << endl;
         theController->queue.push(MSG_CLIENTROBOT, clientRobot);
         theController->set_writing(true);
       } else {
+        sched_yield(); // Let the other thread read and write
         //cout << "Pending command exists for robot #" << indexToRobotId(i)
         //     << endl;
       } 
     }
 
-    sched_yield(); // Let the other thread read and write
-    sleep(5); // delay this thread for 5 seconds
+    //sched_yield(); // Let the other thread read and write
+    //sleep(5); // delay this thread for 5 seconds
   }
 
   pthread_exit(0);
