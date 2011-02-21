@@ -665,7 +665,7 @@ void on_Window_toggled(GtkWidget *widget, gpointer window) {
 //initializations and simple modifications for the things that will be drawn
 void initializeDrawers() {
 	g_type_init();
-	guint rows, columns;
+	guint rows=2, columns=2;
 	GtkWidget *mainWindow = GTK_WIDGET(gtk_builder_get_object( builder, "window" ));
 	GtkToggleToolButton *navigation = GTK_TOGGLE_TOOL_BUTTON(gtk_builder_get_object( builder, "Navigation" ));
 	GtkToggleToolButton *info = GTK_TOGGLE_TOOL_BUTTON(gtk_builder_get_object( builder, "Info" ));
@@ -678,8 +678,6 @@ void initializeDrawers() {
 	GtkWidget *backButton = GTK_WIDGET(gtk_builder_get_object( builder, "back" ));
 	GtkWidget *forwardButton = GTK_WIDGET(gtk_builder_get_object( builder, "forward" ));
 	GtkWidget *rotateButton = GTK_WIDGET(gtk_builder_get_object( builder, "rotate" ));
-
-	gtk_table_get_size(GTK_TABLE(table), &rows, &columns);
 
 	//change the color of the main window's background to black
 	GdkColor bgColor;
