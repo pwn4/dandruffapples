@@ -395,7 +395,7 @@ void run() {
 							generateImage = false;
 
 							//find out if we even need to generate an image
-							if ((regionarea->curStep % 20)-1 == 0) {
+							if (regionarea->curStep % 20 == 0) {
 								for (vector<net::EpollConnection*>::iterator it = worldviewers.begin(); it
 										!= worldviewers.end(); ++it) {
 									if (sendMoreWorldViews[(*it)->fd].initialized == true && sendMoreWorldViews[(*it)->fd].value
@@ -410,7 +410,7 @@ void run() {
 
 							timeSteps++; //Note: only use this for this temp stat taking. use regionarea->curStep for syncing
 
-							if (regionarea->curStep % 20 == 0 && generateImage) {
+							if (generateImage) {
 								// Only send an image for one in 20 timesteps
 								surface = regionarea->stepImage;
 								unsigned char *surfaceData = cairo_image_surface_get_data(surface);
