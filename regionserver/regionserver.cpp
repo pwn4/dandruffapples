@@ -423,7 +423,6 @@ void run() {
 								for (vector<net::EpollConnection*>::iterator it = pngviewers.begin(); it
 										!= pngviewers.end(); ++it) {
 									if (sendMorePngs[(*it)->fd].initialized && sendMorePngs[(*it)->fd].value) {
-										cout<<"Sending a PNG to fd="<<(*it)->fd<<endl;
 										(*it)->queue.push(MSG_REGIONRENDER, png);
 										(*it)->set_writing(true);
 									}
@@ -535,7 +534,7 @@ void run() {
 
 								sendMorePngs[c->fd].value = doWeSend.enable();
 								sendMorePngs[c->fd].initialized = true;
-								//cout << "Setting sendMorePngs for fd " << c->fd << " to " << doWeSend.enable() << endl;
+								cout << "Setting sendMorePngs for fd " << c->fd << " to " << doWeSend.enable() << endl;
 								break;
 							}
 							default:

@@ -11,16 +11,7 @@
 #include <cerrno>
 #include <fstream>
 #include <string>
-#include <tr1/memory>
 #include <map>
-
-#include <unistd.h>
-#include <sys/socket.h>
-#include <sys/fcntl.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <sys/epoll.h>
-#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -39,6 +30,7 @@
 
 #include "../common/helper.h"
 #include "../common/imageconstants.h"
+
 #include <gtk/gtk.h>
 #include <cairo.h>
 
@@ -68,7 +60,7 @@ map<int, map<int, GtkDrawingArea*> > worldGrid;
 regionConnection *pivotRegion = NULL, *pivotRegionBuddy = NULL;
 
 //used only for calculating images per second for each server
-int timeCache, lastSecond1, lastSecond2, messages1, messages2;
+int timeCache, lastSecond1=0, lastSecond2=0, messages1=0, messages2=0;
 
 /* Position in a grid:
  * ____
@@ -147,7 +139,7 @@ void updateWorldGrid(string color) {
 void updateInfoWindow() {
 	const string frameNumName = "frame_frameNum", frameserverAddName = "frame_serverAdd", frameserverLocName =
 			"frame_serverLoc";
-	string tmp;
+	string tmp, position;
 	regionConnection *pivotPtr = pivotRegion;
 
 	for (int frame = 1; frame < 3; frame++) {
@@ -162,7 +154,14 @@ void updateInfoWindow() {
 		GtkLabel *frameserverLoc =
 				GTK_LABEL(gtk_builder_get_object( builder, (frameserverLocName+helper::toString(frame)).c_str() ));
 
-		tmp = "Frame Number: " + helper::toString(frame);
+		if( frame == 1 || pivotRegionBuddy == pivotRegion )
+			position = "top-left";
+		else if(horizontalView)
+			position = "top-right";
+		else
+			position = "bottom";
+
+		tmp = "Frame Number: " + helper::toString(frame) + " position in the " + position + " corner";
 		gtk_label_set_text(frameNum, tmp.c_str());
 
 		tmp = "Server address: " + helper::toString(pivotPtr->info.address()) + ":" + helper::toString(
@@ -224,7 +223,8 @@ void benchmarkMessages(int fd) {
 
 			messages1 = 0;
 			lastSecond1 = timeCache;
-		} else {
+		}
+		if (fd == pivotRegionBuddy->fd) {
 			GtkLabel *frameserverId = GTK_LABEL(gtk_builder_get_object( builder, "frame_serverId2" ));
 			tmp = "Server ID: " + helper::toString(pivotRegionBuddy->info.id()) + " sending at " + helper::toString(
 					messages2) + " images per second";
@@ -371,16 +371,14 @@ gboolean io_clockmessage(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 }
 
 //see if the buddy of the pivot is the pivot itself
-bool compareBuddy() {
+void compareBuddy() {
 	if (pivotRegion == pivotRegionBuddy) {
 		gtk_widget_set_size_request(GTK_WIDGET(pngDrawingArea.at(TOP_RIGHT)), 0, 0);
 		gtk_widget_set_size_request(GTK_WIDGET(pngDrawingArea.at(BOTTOM_LEFT)), 0, 0);
 #ifdef DEBUG
 		debug << "pivtorBuddy is the same as the pivotRegion. Removing buddy!" << endl;
 #endif
-		return false;
-	} else
-		return true;
+	}
 }
 
 //find and set the new pivotRegion and its buddy from the new coordinates
@@ -407,7 +405,8 @@ void setNewRegionPivotAndBuddy(uint32 newPivotRegion[], uint32 newPivotRegionBud
 
 	compareBuddy();
 	updateWorldGrid("light green");
-	if(gtk_toggle_tool_button_get_active(GTK_TOGGLE_TOOL_BUTTON(gtk_builder_get_object( builder, "Info" ))))
+	//only update the info window if the its button is toggled
+	if (gtk_toggle_tool_button_get_active(GTK_TOGGLE_TOOL_BUTTON(gtk_builder_get_object( builder, "Info" ))))
 		updateInfoWindow();
 }
 
@@ -418,9 +417,10 @@ void on_downButton_clicked(GtkWidget *widget, gpointer window) {
 #endif
 	uint32 tmp1, tmp2;
 
+	//update the world grid to have no currently viewed regions
 	updateWorldGrid("white");
 
-	//yeah, it would be nice to use the modulo operation, but in some cases worldServerRows=0, worldServerColumns=0
+	//find the new positions of the region and its buddy
 	if (pivotRegion->info.draw_y() + 1 >= worldServerRows)
 		tmp1 = 0;
 	else
@@ -434,6 +434,7 @@ void on_downButton_clicked(GtkWidget *widget, gpointer window) {
 	uint32 newPivotRegion[2] = { pivotRegion->info.draw_x(), tmp1 };
 	uint32 newPivotRegionBuddy[2] = { pivotRegionBuddy->info.draw_x(), tmp2 };
 
+	//disable the sending of PNGs from regions that we are moving away from
 	if (horizontalView) {
 		sendPngs(pivotRegion->fd, false);
 		sendPngs(pivotRegionBuddy->fd, false);
@@ -441,8 +442,10 @@ void on_downButton_clicked(GtkWidget *widget, gpointer window) {
 		sendPngs(pivotRegion->fd, false);
 	}
 
+	//set the new pivotRegion and pivotRegionBuddy
 	setNewRegionPivotAndBuddy(newPivotRegion, newPivotRegionBuddy);
 
+	//enable the sending of PNGs from regions that we are moving to
 	if (horizontalView) {
 		sendPngs(pivotRegion->fd, true);
 		sendPngs(pivotRegionBuddy->fd, true);
@@ -538,7 +541,6 @@ void on_forwardButton_clicked(GtkWidget *widget, gpointer window) {
 
 	updateWorldGrid("white");
 
-	//yeah, it would be nice to use the modulo operation, but in some cases worldServerRows=0, worldServerColumns=0
 	if (pivotRegion->info.draw_x() + 1 >= worldServerColumns)
 		tmp1 = 0;
 	else
@@ -579,6 +581,7 @@ void on_rotateButton_clicked(GtkWidget *widget, gpointer window) {
 
 	updateWorldGrid("white");
 
+	//which way do we want to rotate?
 	if (horizontalView) {
 		gtk_widget_set_size_request(GTK_WIDGET(pngDrawingArea.at(TOP_RIGHT)), IMAGEWIDTH, IMAGEHEIGHT);
 		gtk_widget_set_size_request(GTK_WIDGET(pngDrawingArea.at(BOTTOM_LEFT)), 0, 0);
@@ -610,7 +613,9 @@ void on_rotateButton_clicked(GtkWidget *widget, gpointer window) {
 
 	compareBuddy();
 	updateWorldGrid("light green");
-	updateInfoWindow();
+
+	if (gtk_toggle_tool_button_get_active(GTK_TOGGLE_TOOL_BUTTON(gtk_builder_get_object( builder, "Info" ))))
+		updateInfoWindow();
 }
 
 //window destruction methods for the info and navigation windows
