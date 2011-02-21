@@ -258,7 +258,7 @@ void AreaEngine::Step(bool generateImage){
         else if(curRobot->robotColor == "blue")
           cairo_set_source_rgb(stepImageDrawer, 0, 0, 1);
         else if(curRobot->robotColor == "orange")
-          cairo_set_source_rgb(stepImageDrawer, .9, .4, .103);
+          cairo_set_source_rgb(stepImageDrawer, .7, .4, .103);
         else
           cairo_set_source_rgb(stepImageDrawer, .1, .1, .1);
         cairo_fill (stepImageDrawer);
