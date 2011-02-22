@@ -46,7 +46,7 @@ struct PuckStackObject{
   
   PuckStackObject * nextStack;
 };
-//todo: review destructor for pointers?
+
 struct RobotObject{
   int id, lastStep;
   double x, y;
@@ -66,7 +66,6 @@ struct RobotObject{
   RobotObject(int newid, double newx, double newy, double newa, double newvx, double newvy, Index aLoc, int curStep, string color) : id(newid), lastStep(curStep), x(newx), y(newy), angle(newa), vx(newvx), vy(newvy), arrayLocation(aLoc), lastCollision(time(NULL)), lastSeen(new map<int, bool>), robotColor(color), nextRobot(NULL), controllerfd(-1), team(0) {}
 };
 
-//todo: review destructor for pointers?
 struct ArrayObject{
   PuckStackObject * pucks;
   RobotObject * robots;
