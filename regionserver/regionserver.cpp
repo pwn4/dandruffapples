@@ -548,10 +548,10 @@ void run() {
 							}
 
 						}
-					} catch (EOFError e) {
-            close(c->fd);
-            sendMoreWorldViews[c->fd].value = false;
-            cout << "world viewer with fd=" << c->fd << " disconnected" << endl;
+					} catch (runtime_error e) {
+						close(c->fd);
+						sendMoreWorldViews[c->fd].value = false;
+						cout << "world viewer with fd=" << c->fd << " disconnected" << endl;
 
             // Remove from sets
 						for(vector<net::EpollConnection*>::iterator i = worldviewers.begin(); i != worldviewers.end(); ++i) {

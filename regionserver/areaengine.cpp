@@ -289,17 +289,17 @@ void AreaEngine::Step(bool generateImage){
       {
         if(!AreaEngine::RemoveRobot(curRobot->id, oldIndices.x, oldIndices.y, true))
         {
-          cerr << "Remove Robot Failure! This should NOT happen! Id: " << tmp << endl;
+          //cerr << "Remove Robot Failure! This should NOT happen! Id: " << tmp << endl;
         }else
-          cout << "Removed robot id: " << tmp << endl;
+          //cout << "Removed robot id: " << tmp << endl;
         robots.erase(robotIt++);
         continue;
       }else{
         if(!AreaEngine::RemoveRobot(curRobot->id, oldIndices.x, oldIndices.y, false))
         {
-          cerr << "Remove Robot Failure! This should NOT happen! Id: " << tmp << endl;
+          //cerr << "Remove Robot Failure! This should NOT happen! Id: " << tmp << endl;
         }else
-          cout << "Removed robot id: " << tmp << endl;
+          //cout << "Removed robot id: " << tmp << endl;
           
         curRobot->arrayLocation = newIndices;
         AreaEngine::AddRobot(curRobot);

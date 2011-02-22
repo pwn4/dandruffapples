@@ -584,8 +584,6 @@ void on_rotateButton_clicked(GtkWidget *widget, gpointer window) {
 		gtk_widget_set_size_request(GTK_WIDGET(worldDrawingArea.at(TOP_RIGHT)), IMAGEWIDTH, IMAGEHEIGHT);
 		gtk_widget_set_size_request(GTK_WIDGET(worldDrawingArea.at(BOTTOM_LEFT)), 0, 0);
 
-		gtk_widget_queue_draw(GTK_WIDGET(worldDrawingArea.at(BOTTOM_LEFT)));
-
 		if (pivotRegion->info.draw_x() + 1 >= worldServerColumns)
 			tmp1 = 0;
 		else
@@ -593,9 +591,6 @@ void on_rotateButton_clicked(GtkWidget *widget, gpointer window) {
 	} else {
 		gtk_widget_set_size_request(GTK_WIDGET(worldDrawingArea.at(BOTTOM_LEFT)), IMAGEWIDTH, IMAGEHEIGHT);
 		gtk_widget_set_size_request(GTK_WIDGET(worldDrawingArea.at(TOP_RIGHT)), 0, 0);
-
-		gtk_widget_queue_draw(GTK_WIDGET(worldDrawingArea.at(TOP_RIGHT)));
-
 
 		if (pivotRegion->info.draw_y() + 1 >= worldServerRows)
 			tmp2 = 0;
