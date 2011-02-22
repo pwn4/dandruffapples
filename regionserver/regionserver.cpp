@@ -366,7 +366,7 @@ void run() {
 							myId = worldinfo.region(lastRegionIndex).id();
 							vector<int> myRobotIds;
 							cout << "My id: " << myId << endl;
-							for (google::protobuf::RepeatedPtrField<const RobotInfo>::iterator i =
+							for (google::protobuf::RepeatedPtrField<const RobotInfo>::const_iterator i =
 									worldinfo.robot().begin(); i != worldinfo.robot().end(); i++) {
 								if (i->region() == myId) {
 									myRobotIds.push_back(i->id());
@@ -408,7 +408,7 @@ void run() {
 
 							//find out if we even need to generate an image
 							if (regionarea->curStep % 20 == 0) {
-								for (vector<net::EpollConnection*>::iterator it = worldviewers.begin(); it
+								for (vector<net::EpollConnection*>::const_iterator it = worldviewers.begin(); it
 										!= worldviewers.end(); ++it) {
 									if (sendMoreWorldViews[(*it)->fd].initialized == true && sendMoreWorldViews[(*it)->fd].value
 											== true) {
@@ -431,7 +431,7 @@ void run() {
 
 								png.set_image((void*) surfaceData, surfaceLength);
 								png.set_timestep(timestep.timestep());
-								for (vector<net::EpollConnection*>::iterator it = worldviewers.begin(); it
+								for (vector<net::EpollConnection*>::const_iterator it = worldviewers.begin(); it
 										!= worldviewers.end(); ++it) {
 									if (sendMoreWorldViews[(*it)->fd].initialized && sendMoreWorldViews[(*it)->fd].value) {
 										(*it)->queue.push(MSG_REGIONVIEW, png);

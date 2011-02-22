@@ -277,7 +277,7 @@ void AreaEngine::Step(bool generateImage){
         // And At least one oldIndices must be within the shared area.
         Claim claim;
         claim.set_id(curRobot->id);
-        for (vector<EpollConnection*>::iterator it = controllers.begin();
+        for (vector<EpollConnection*>::const_iterator it = controllers.begin();
              it != controllers.end(); it++) {
           (*it)->queue.push(MSG_CLAIM, claim);
           (*it)->set_writing(true); 
@@ -476,7 +476,7 @@ bool AreaEngine::ChangeVelocity(int robotId, double newvx, double newvy){
   serverrobot.set_y(robots[robotId]->y); 
   serverrobot.set_angle(robots[robotId]->angle); 
   serverrobot.set_haspuck(robots[robotId]->holdingPuck); 
-  for (vector<EpollConnection*>::iterator it = controllers.begin();
+  for (vector<EpollConnection*>::const_iterator it = controllers.begin();
        it != controllers.end(); it++) {
     (*it)->queue.push(MSG_SERVERROBOT, serverrobot);
     (*it)->set_writing(true); 

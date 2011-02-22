@@ -256,13 +256,13 @@ int main(int argc, char **argv) {
               c->queue.push(MSG_WORLDINFO, worldinfo);
               c->set_writing(true);
 
-              for(vector<RegionConnection*>::iterator i = controllers.begin();
+              for(vector<RegionConnection*>::const_iterator i = controllers.begin();
                   i != controllers.end(); ++i) {
                 (*i)->queue.push(MSG_REGIONINFO, *region);
                 (*i)->set_writing(true);
               }
 
-              for(vector<RegionConnection*>::iterator i = worldviewers.begin();
+              for(vector<RegionConnection*>::const_iterator i = worldviewers.begin();
                   i != worldviewers.end(); ++i) {
                 (*i)->queue.push(MSG_REGIONINFO, *region);
                 (*i)->set_writing(true);            
@@ -329,13 +329,13 @@ int main(int argc, char **argv) {
             ready = 0;
             timestep.set_timestep(step++);
             // Send to regions
-            for(vector<RegionConnection*>::iterator i = regions.begin();
+            for(vector<RegionConnection*>::const_iterator i = regions.begin();
                 i != regions.end(); ++i) {
               (*i)->queue.push(MSG_TIMESTEPUPDATE, timestep);
               (*i)->set_writing(true);
             }
             // Send to controllers
-            for(vector<RegionConnection*>::iterator i = controllers.begin();
+            for(vector<RegionConnection*>::const_iterator i = controllers.begin();
                 i != controllers.end(); ++i) {
               (*i)->queue.push(MSG_TIMESTEPUPDATE, timestep);
               (*i)->set_writing(true);
@@ -477,12 +477,12 @@ int main(int argc, char **argv) {
 
   // Clean up
   close(epoll);
-  for(vector<RegionConnection*>::iterator i = controllers.begin();
+  for(vector<RegionConnection*>::const_iterator i = controllers.begin();
       i != controllers.end(); ++i) {
     shutdown((*i)->fd, SHUT_RDWR);
     close((*i)->fd);
   }
-  for(vector<RegionConnection*>::iterator i = regions.begin();
+  for(vector<RegionConnection*>::const_iterator i = regions.begin();
       i != regions.end(); ++i) {
     shutdown((*i)->fd, SHUT_RDWR);
     close((*i)->fd);
