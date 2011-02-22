@@ -27,7 +27,10 @@ void MessageQueue::push(MessageType typeTag, const google::protobuf::MessageLite
   }
 
   // Work out sizes
-  int msglen = message.ByteSize();
+  uint32_t msglen = message.ByteSize();
+  if(msglen < 1) {
+    throw UninitializedMessageError();
+  }
   int blocklen = msglen + sizeof(uint8_t) + sizeof(uint32_t);
 
   // Ensure we have a place to put it
