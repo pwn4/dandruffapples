@@ -202,10 +202,10 @@ void initializeToolbarButtons() {
 }
 
 //updates the number of messages found in the Info window
-void benchmarkMessages(int fd) {
+void benchmarkMessages(regionConnection *region) {
 	timeCache = time(NULL);
 
-	if (fd == pivotRegion->fd)
+	if (region == pivotRegion)
 		messages1++;
 	else
 		messages2++;
@@ -214,7 +214,7 @@ void benchmarkMessages(int fd) {
 	if (timeCache > lastSecond1 || timeCache > lastSecond2) {
 		string tmp;
 
-		if (fd == pivotRegion->fd) {
+		if (region == pivotRegion) {
 			GtkLabel *frameserverId = GTK_LABEL(gtk_builder_get_object( builder, "frame_serverId1" ));
 			tmp = "Server ID: " + helper::toString(pivotRegion->info.id()) + " sending at " + helper::toString(
 					messages1) + " images per second";
@@ -223,7 +223,7 @@ void benchmarkMessages(int fd) {
 			messages1 = 0;
 			lastSecond1 = timeCache;
 		}
-		if (fd == pivotRegionBuddy->fd) {
+		if (region == pivotRegionBuddy) {
 			GtkLabel *frameserverId = GTK_LABEL(gtk_builder_get_object( builder, "frame_serverId2" ));
 			tmp = "Server ID: " + helper::toString(pivotRegionBuddy->info.id()) + " sending at " + helper::toString(
 					messages2) + " images per second";
@@ -267,7 +267,7 @@ gboolean io_regionmessage(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 	}
 
 	//if the server is not viewed then tell it to stop sending to us
-	if (regions.at(regionNum)->fd != pivotRegion->fd && regions.at(regionNum)->fd != pivotRegionBuddy->fd) {
+	if (regions.at(regionNum) != pivotRegion && regions.at(regionNum) != pivotRegionBuddy) {
 		sendWorldViews(regions.at(regionNum)->fd, false);
 	} else {
 		switch (type) {
@@ -279,7 +279,7 @@ gboolean io_regionmessage(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 			debug << "Received render update from server fd=" << regions.at(regionNum)->fd << " and the timestep is # "
 					<< render.timestep() << endl;
 #endif
-			benchmarkMessages(regions.at(regionNum)->fd);
+			benchmarkMessages(regions.at(regionNum));
 
 			displayWorldView(regionNum, render);
 
@@ -626,8 +626,8 @@ void on_rotateButton_clicked(GtkWidget *widget, gpointer window) {
 
 //window destruction methods for the info and navigation windows
 static void destroy(GtkWidget *window, gpointer widget) {
-	gtk_widget_hide_all((GtkWidget*) window);
-	gtk_toggle_tool_button_set_active((GtkToggleToolButton*) widget, FALSE);
+	gtk_widget_hide_all(GTK_WIDGET(window));
+	gtk_toggle_tool_button_set_active(GTK_TOGGLE_TOOL_BUTTON(widget), FALSE);
 }
 
 static gboolean delete_event(GtkWidget *window, GdkEvent *event, gpointer widget) {
@@ -659,12 +659,12 @@ void on_About_clicked(GtkWidget *widget, gpointer window) {
 void on_Window_toggled(GtkWidget *widget, gpointer window) {
 	GdkColor bgColor;
 	gdk_color_parse("black", &bgColor);
-	gtk_widget_modify_bg(GTK_WIDGET((GtkWidget*)window), GTK_STATE_NORMAL, &bgColor);
+	gtk_widget_modify_bg(GTK_WIDGET(window), GTK_STATE_NORMAL, &bgColor);
 
 	if (gtk_toggle_tool_button_get_active(GTK_TOGGLE_TOOL_BUTTON(widget))) {
-		gtk_widget_show_all((GtkWidget*) window);
+		gtk_widget_show_all(GTK_WIDGET(window));
 	} else {
-		gtk_widget_hide_all((GtkWidget*) window);
+		gtk_widget_hide_all(GTK_WIDGET(window));
 	}
 }
 
@@ -684,11 +684,21 @@ void initializeDrawers() {
 	GtkWidget *backButton = GTK_WIDGET(gtk_builder_get_object( builder, "back" ));
 	GtkWidget *forwardButton = GTK_WIDGET(gtk_builder_get_object( builder, "forward" ));
 	GtkWidget *rotateButton = GTK_WIDGET(gtk_builder_get_object( builder, "rotate" ));
+	GdkColor color;
+
+	gdk_color_parse("white", &color);
+	for(int frame=1; frame<3; frame++)
+	{
+		gtk_widget_modify_fg(GTK_WIDGET(gtk_builder_get_object( builder,("frame_frameNum"+helper::toString(frame)).c_str())), GTK_STATE_NORMAL, &color);
+		gtk_widget_modify_fg(GTK_WIDGET(gtk_builder_get_object( builder,("frame_serverId"+helper::toString(frame)).c_str())), GTK_STATE_NORMAL, &color);
+		gtk_widget_modify_fg(GTK_WIDGET(gtk_builder_get_object( builder,("frame_serverAdd"+helper::toString(frame)).c_str())), GTK_STATE_NORMAL, &color);
+		gtk_widget_modify_fg(GTK_WIDGET(gtk_builder_get_object( builder,("frame_serverLoc"+helper::toString(frame)).c_str())), GTK_STATE_NORMAL, &color);
+	}
 
 	//change the color of the main window's background to black
-	GdkColor bgColor;
-	gdk_color_parse("black", &bgColor);
-	gtk_widget_modify_bg(GTK_WIDGET(mainWindow), GTK_STATE_NORMAL, &bgColor);
+
+	gdk_color_parse("black", &color);
+	gtk_widget_modify_bg(GTK_WIDGET(mainWindow), GTK_STATE_NORMAL, &color);
 
 	//create a grid to display the received world views
 	for (guint i = 0; i < rows; i++) {
