@@ -247,7 +247,7 @@ gboolean io_regionmessage(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 	int regionNum = 0;
 
 	//get the region number that we are receiving a world view from
-	for (vector<regionConnection*>::iterator it = regions.begin(); it != regions.end() && (*it)->fd
+	for (vector<regionConnection*>::const_iterator it = regions.begin(); it != regions.end() && (*it)->fd
 			!= g_io_channel_unix_get_fd(ioch); it++, regionNum++) {
 	}
 

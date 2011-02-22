@@ -5,6 +5,7 @@
 #include <iostream>
 #include <vector>
 #include <math.h>
+#include <algorithm>
 
 #include <unistd.h>
 #include <fcntl.h>
@@ -177,7 +178,6 @@ int main(int argc, char **argv) {
   timestep.set_timestep(step++);
   time_t lastSecond = time(NULL);
   int timeSteps = 0;
-  unsigned regionId = 0;
   int numPositionedServers = 0;
   
   long totalpersecond = 0, number = 0;
@@ -277,8 +277,24 @@ int main(int argc, char **argv) {
               
             }
           } catch(EOFError e) {
-            cerr << "Region server disconnected!  Shutting down." << endl;
-            return 1;
+        	  //added the last "seconds>0" check to test whether we started running the simulation
+        	  //and a region server has disconnected
+        	  if( ( ready == connected && connected == server_count ) ||  second > 0)
+        	  {
+        		  cerr << "Region server disconnected!  Shutting down." << endl;
+            	return 1;
+        	  }
+        	  else
+        	  {
+        		  close(c->fd);
+
+        		  regions.erase(find(regions.begin(), regions.end(), c));
+        		  connected--;
+        		  delete c;
+        		  cerr << "Region server disconnected!"<<endl;
+
+        		  break;
+        	  }
           } catch(SystemError e) {
             cerr << "Error reading from region server: "
                  << e.what() << ".  Shutting down." << endl;
@@ -358,10 +374,10 @@ int main(int argc, char **argv) {
               
             }
           } catch(EOFError e) {
-            cerr << "Region server disconnected!  Shutting down." << endl;
+            cerr << "Controller disconnected!  Shutting down." << endl;
             return 1;
           } catch(SystemError e) {
-            cerr << "Error reading from region server: "
+            cerr << "Error reading from controller: "
                  << e.what() << ".  Shutting down." << endl;
             return 1;
           }

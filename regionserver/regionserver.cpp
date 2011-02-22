@@ -19,7 +19,6 @@
 
 #include <stdio.h>
 #include <string>
-#include <string.h>
 #include <stdlib.h>
 #include <math.h>
 #include <cairo.h>
@@ -31,7 +30,6 @@
 #include "../common/clientrobot.pb.h"
 #include "../common/serverrobot.pb.h"
 #include "../common/puckstack.pb.h"
-#include "../common/messagewriter.h"
 #include "../common/worldinfo.pb.h"
 #include "../common/regionrender.pb.h"
 
@@ -555,14 +553,9 @@ void run() {
 						sendMoreWorldViews[c->fd].value = false;
 						cout << "world viewer with fd=" << c->fd << " disconnected" << endl;
 
-            // Remove from sets
-						for(vector<net::EpollConnection*>::iterator i = worldviewers.begin(); i != worldviewers.end(); ++i) {
-							if(c == *i) {
-								worldviewers.erase(i);
-                break;
-							}
-						}
-            delete c;
+						// Remove from sets
+						worldviewers.erase(find(worldviewers.begin(), worldviewers.end(), c));
+						delete c;
 					}
 
 					break;
