@@ -188,9 +188,10 @@ void run() {
 	}
 
 	// Add clock and client sockets to epoll
-	net::EpollConnection clockconn(epoll, EPOLLIN, clockfd, net::connection::CLOCK), controllerconn(epoll, EPOLLIN,
-			controllerfd, net::connection::CONTROLLER_LISTEN), regionconn(epoll, EPOLLIN, regionfd,
-			net::connection::REGION_LISTEN), worldviewerconn(epoll, EPOLLIN, worldviewerfd, net::connection::WORLDVIEWER_LISTEN);
+	net::EpollConnection clockconn(epoll, EPOLLIN, clockfd, net::connection::CLOCK),
+    controllerconn(epoll, EPOLLIN, controllerfd, net::connection::CONTROLLER_LISTEN),
+    regionconn(epoll, EPOLLIN, regionfd, net::connection::REGION_LISTEN),
+    worldviewerconn(epoll, EPOLLIN, worldviewerfd, net::connection::WORLDVIEWER_LISTEN);
 
 	//handle logging to file initializations
 	PuckStack puckstack;
@@ -209,7 +210,7 @@ void run() {
 	tsdone.set_done(true);
 	WorldInfo worldinfo;
 	RegionInfo regioninfo;
-	int myId;   //region id
+	unsigned myId;   //region id
 	//Region Area Variables (should be set by clock server)
 	int regionSideLen = 2500;
 	int robotDiameter = 4;
@@ -548,15 +549,18 @@ void run() {
 
 						}
 					} catch (EOFError e) {
-						for (vector<net::EpollConnection*>::iterator i = worldviewers.begin(); i != worldviewers.end(); ++i) {
-							if (c->fd == (*i)->fd) {
+            close(c->fd);
+            sendMoreWorldViews[c->fd].value = false;
+            cout << "world viewer with fd=" << c->fd << " disconnected" << endl;
+
+            // Remove from sets
+						for(vector<net::EpollConnection*>::iterator i = worldviewers.begin(); i != worldviewers.end(); ++i) {
+							if(c == *i) {
 								worldviewers.erase(i);
-								close(c->fd);
-								sendMoreWorldViews[c->fd].value = false;
-								cout << "world viewer with fd=" << c->fd << " disconnected" << endl;
-								break;
+                break;
 							}
 						}
+            delete c;
 					}
 
 					break;
@@ -624,8 +628,8 @@ void run() {
 					break;
 				}
 				default:
-					cerr << "Internal error: Got unexpected readable event from the worldviewer of type " << c->type
-							<< endl;
+					cerr << "Internal error: Got unhandled readable connection type " << c->type
+               << endl;
 
 				}
 			} else if (events[i].events & EPOLLOUT) {
