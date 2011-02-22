@@ -31,12 +31,11 @@
               </packing>
             </child>
             <child>
-              <object class="GtkToggleToolButton" id="Info">
+              <object class="GtkToggleToolButton" id="Fullscreen">
                 <property name="visible">True</property>
-                <property name="sensitive">False</property>
-                <property name="label" translatable="yes">Info</property>
+                <property name="label" translatable="yes">Fullscreen</property>
                 <property name="use_underline">True</property>
-                <property name="stock_id">gtk-info</property>
+                <property name="stock_id">gtk-fullscreen</property>
               </object>
               <packing>
                 <property name="expand">False</property>
@@ -46,6 +45,19 @@
             <child>
               <object class="GtkSeparatorToolItem" id="vsep">
                 <property name="visible">True</property>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="homogeneous">True</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkToggleToolButton" id="Info">
+                <property name="visible">True</property>
+                <property name="sensitive">False</property>
+                <property name="label" translatable="yes">Info</property>
+                <property name="use_underline">True</property>
+                <property name="stock_id">gtk-info</property>
               </object>
               <packing>
                 <property name="expand">False</property>
@@ -102,7 +114,7 @@
               <object class="GtkViewport" id="viewport">
                 <property name="visible">True</property>
                 <child>
-                  <object class="GtkTable" id="table">
+                  <object class="GtkTable" id="tableWorldView">
                     <property name="visible">True</property>
                     <property name="n_rows">2</property>
                     <property name="n_columns">2</property>

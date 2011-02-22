@@ -47,7 +47,10 @@ struct regionConnection: net::connection {
 
 };
 
-//variable declarations
+//define the size of the table
+const guint tableWorldViewRows = 2, tableWorldViewColumns = 2;
+
+//Variable declarations
 /////////////////////////////////////////////////////
 vector<regionConnection*> regions;
 vector<GtkDrawingArea*> worldDrawingArea;
@@ -630,24 +633,44 @@ void on_Window_toggled(GtkWidget *widget, gpointer window) {
 	gdk_color_parse("black", &bgColor);
 	gtk_widget_modify_bg(GTK_WIDGET(window), GTK_STATE_NORMAL, &bgColor);
 
-	if (gtk_toggle_tool_button_get_active(GTK_TOGGLE_TOOL_BUTTON(widget))) {
+	if (gtk_toggle_tool_button_get_active(GTK_TOGGLE_TOOL_BUTTON(widget)))
 		gtk_widget_show_all(GTK_WIDGET(window));
-	} else {
+	else
 		gtk_widget_hide_all(GTK_WIDGET(window));
+
+}
+
+//Fullscreen button handler
+void on_Fullscreen_toggled(GtkWidget *widget, gpointer window) {
+
+	//we will not be able to see any other windows when in fullscreen mode,
+	//so might as well disable the buttons
+	if (gtk_toggle_tool_button_get_active(GTK_TOGGLE_TOOL_BUTTON(widget)))
+	{
+		gtk_window_fullscreen(GTK_WINDOW(window));
+		gtk_widget_set_sensitive(GTK_WIDGET(gtk_builder_get_object( builder, "Navigation" )), false);
+		gtk_widget_set_sensitive(GTK_WIDGET(gtk_builder_get_object( builder, "Info" )), false);
+	}
+	else
+	{
+		gtk_window_unfullscreen(GTK_WINDOW(window));
+		gtk_widget_set_sensitive(GTK_WIDGET(gtk_builder_get_object( builder, "Navigation" )), true);
+		gtk_widget_set_sensitive(GTK_WIDGET(gtk_builder_get_object( builder, "Info" )), true);
 	}
 }
 
 //initializations and simple modifications for the things that will be drawn
 void initializeDrawers() {
 	g_type_init();
-	guint rows = 2, columns = 2;
+
 	GtkWidget *mainWindow = GTK_WIDGET(gtk_builder_get_object( builder, "window" ));
 	GtkToggleToolButton *navigation = GTK_TOGGLE_TOOL_BUTTON(gtk_builder_get_object( builder, "Navigation" ));
 	GtkToggleToolButton *info = GTK_TOGGLE_TOOL_BUTTON(gtk_builder_get_object( builder, "Info" ));
+	GtkToggleToolButton *fullscreen = GTK_TOGGLE_TOOL_BUTTON(gtk_builder_get_object( builder, "Fullscreen" ));
 	GtkWidget *about = GTK_WIDGET(gtk_builder_get_object( builder, "About" ));
 	GtkWidget *infoWindow = GTK_WIDGET(gtk_builder_get_object( builder, "infoWindow" ));
 	GtkWidget *navigationWindow = GTK_WIDGET(gtk_builder_get_object( builder, "navigationWindow" ));
-	GtkWidget *table = GTK_WIDGET(gtk_builder_get_object( builder, "table" ));
+	GtkWidget *table = GTK_WIDGET(gtk_builder_get_object( builder, "tableWorldView" ));
 	GtkWidget *upButton = GTK_WIDGET(gtk_builder_get_object( builder, "up" ));
 	GtkWidget *downButton = GTK_WIDGET(gtk_builder_get_object( builder, "down" ));
 	GtkWidget *backButton = GTK_WIDGET(gtk_builder_get_object( builder, "back" ));
@@ -658,31 +681,39 @@ void initializeDrawers() {
 	gtk_window_set_keep_above(GTK_WINDOW(infoWindow), true);
 	gtk_window_set_keep_above(GTK_WINDOW(navigationWindow), true);
 
+	//change the color of the label's text to white
 	gdk_color_parse("white", &color);
-	for(int frame=1; frame<3; frame++)
-	{
-		gtk_widget_modify_fg(GTK_WIDGET(gtk_builder_get_object( builder,("frame_frameNum"+helper::toString(frame)).c_str())), GTK_STATE_NORMAL, &color);
-		gtk_widget_modify_fg(GTK_WIDGET(gtk_builder_get_object( builder,("frame_serverId"+helper::toString(frame)).c_str())), GTK_STATE_NORMAL, &color);
-		gtk_widget_modify_fg(GTK_WIDGET(gtk_builder_get_object( builder,("frame_serverAdd"+helper::toString(frame)).c_str())), GTK_STATE_NORMAL, &color);
-		gtk_widget_modify_fg(GTK_WIDGET(gtk_builder_get_object( builder,("frame_serverLoc"+helper::toString(frame)).c_str())), GTK_STATE_NORMAL, &color);
+	for (int frame = 1; frame < 3; frame++) {
+		gtk_widget_modify_fg(
+				GTK_WIDGET(gtk_builder_get_object( builder,("frame_frameNum"+helper::toString(frame)).c_str())),
+				GTK_STATE_NORMAL, &color);
+		gtk_widget_modify_fg(
+				GTK_WIDGET(gtk_builder_get_object( builder,("frame_serverId"+helper::toString(frame)).c_str())),
+				GTK_STATE_NORMAL, &color);
+		gtk_widget_modify_fg(
+				GTK_WIDGET(gtk_builder_get_object( builder,("frame_serverAdd"+helper::toString(frame)).c_str())),
+				GTK_STATE_NORMAL, &color);
+		gtk_widget_modify_fg(
+				GTK_WIDGET(gtk_builder_get_object( builder,("frame_serverLoc"+helper::toString(frame)).c_str())),
+				GTK_STATE_NORMAL, &color);
 	}
 
 	//change the color of the main window's background to black
-
 	gdk_color_parse("black", &color);
 	gtk_widget_modify_bg(GTK_WIDGET(mainWindow), GTK_STATE_NORMAL, &color);
 
 	//create a grid to display the received world views
-	for (guint i = 0; i < rows; i++) {
-		for (guint j = 0; j < columns; j++) {
+	for (guint i = 0; i < tableWorldViewRows; i++) {
+		for (guint j = 0; j < tableWorldViewColumns; j++) {
 			GtkDrawingArea* area = GTK_DRAWING_AREA(gtk_drawing_area_new());
-			gtk_table_attach_defaults(GTK_TABLE(table), GTK_WIDGET(area), j, j + 1, i, i + 1);
+			gtk_table_attach(GTK_TABLE(table), GTK_WIDGET(area), j, j + 1, i, i + 1, GTK_FILL, GTK_FILL, 0, 0);
 			worldDrawingArea.push_back(GTK_DRAWING_AREA(area));
 		}
 	}
 
 	g_signal_connect(navigation, "toggled", G_CALLBACK(on_Window_toggled), (gpointer) navigationWindow);
 	g_signal_connect(info, "toggled", G_CALLBACK(on_Window_toggled), (gpointer) infoWindow);
+	g_signal_connect(fullscreen, "toggled", G_CALLBACK(on_Fullscreen_toggled), (gpointer) mainWindow);
 	g_signal_connect(about, "clicked", G_CALLBACK(on_About_clicked), (gpointer) mainWindow);
 	g_signal_connect(upButton, "clicked", G_CALLBACK(on_upButton_clicked), (gpointer) mainWindow);
 	g_signal_connect(downButton, "clicked", G_CALLBACK(on_downButton_clicked), (gpointer) mainWindow);

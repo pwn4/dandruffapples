@@ -166,6 +166,7 @@ void run() {
 	int worldviewerfd = net::do_listen(worldviewerPort);
 	net::set_blocking(worldviewerfd, false);
 
+#ifdef ENABLE_LOGGING
 	//create a new file for logging
 	string logName = helper::getNewName("/tmp/" + helper::defaultLogName);
 	int logfd = open(logName.c_str(), O_WRONLY | O_CREAT, 0644);
@@ -174,6 +175,7 @@ void run() {
 		perror("Failed to create log file");
 		exit(1);
 	}
+#endif
 
 	//create epoll
 	int epoll = epoll_create(16); //9 adjacents, log file, the clock, and a few controllers
@@ -183,7 +185,6 @@ void run() {
 		close(regionfd);
 		close(worldviewerfd);
 		close(clockfd);
-		close(logfd);
 		exit(1);
 	}
 
@@ -204,7 +205,9 @@ void run() {
 	cairo_surface_t *surface;
 
 	//server variables
+#ifdef ENABLE_LOGGING
 	MessageWriter logWriter(logfd);
+#endif
 	TimestepUpdate timestep;
 	TimestepDone tsdone;
 	tsdone.set_done(true);
@@ -422,7 +425,6 @@ void run() {
 							timeSteps++; //Note: only use this for this temp stat taking. use regionarea->curStep for syncing
 
 							if (generateImage) {
-								// Only send an image for one in 20 timesteps
 								surface = regionarea->stepImage;
 								unsigned char *surfaceData = cairo_image_surface_get_data(surface);
 								size_t surfaceLength = cairo_image_surface_get_height(surface)
@@ -662,7 +664,6 @@ void run() {
 	close(regionfd);
 	shutdown(worldviewerfd, SHUT_RDWR);
 	close(worldviewerfd);
-	close(logfd);
 }
 
 //this is the main loop for the server

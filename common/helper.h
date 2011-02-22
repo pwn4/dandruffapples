@@ -12,7 +12,7 @@ using namespace std;
 
 //comment to disable generation of debug for certain programs
 #define DEBUG
-#define ENABLE_LOGGING
+//#define ENABLE_LOGGING
 
 namespace helper {
 
