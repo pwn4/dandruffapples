@@ -45,7 +45,11 @@ bool MessageReader::doRead(MessageType *type, int *len, const void **buffer) {
     
     _typepos += bytes;
 
-    // No byte reordering necessary because it's one byte.    
+    if(_typepos == sizeof(_type)) {
+      // No byte reordering necessary because it's one byte.
+    } else {
+      return false;
+    }
   }
 
   if(_type >= MSG_MAX) {
@@ -78,6 +82,8 @@ bool MessageReader::doRead(MessageType *type, int *len, const void **buffer) {
         _bufsize *= 2;
         _buffer = (uint8_t*)realloc(_buffer, _bufsize);
       }
+    } else {
+      return false;
     }
   }
 
