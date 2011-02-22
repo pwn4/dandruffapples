@@ -650,12 +650,14 @@ void on_Fullscreen_toggled(GtkWidget *widget, gpointer window) {
 		gtk_window_fullscreen(GTK_WINDOW(window));
 		gtk_widget_set_sensitive(GTK_WIDGET(gtk_builder_get_object( builder, "Navigation" )), false);
 		gtk_widget_set_sensitive(GTK_WIDGET(gtk_builder_get_object( builder, "Info" )), false);
+		gtk_container_set_border_width (GTK_CONTAINER (window), 0);
 	}
 	else
 	{
 		gtk_window_unfullscreen(GTK_WINDOW(window));
 		gtk_widget_set_sensitive(GTK_WIDGET(gtk_builder_get_object( builder, "Navigation" )), true);
 		gtk_widget_set_sensitive(GTK_WIDGET(gtk_builder_get_object( builder, "Info" )), true);
+		gtk_container_set_border_width (GTK_CONTAINER (window), 10);
 	}
 }
 
