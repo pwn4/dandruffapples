@@ -30,6 +30,7 @@
 
 #include "../common/helper.h"
 #include "../common/imageconstants.h"
+#include "drawer.h"
 
 #include <gtk/gtk.h>
 #include <cairo.h>
@@ -104,11 +105,8 @@ void displayWorldView(int regionNum, RegionRender render) {
 		position = TOP_RIGHT;
 
 	cairo_t *cr = gdk_cairo_create(worldDrawingArea.at(position)->widget.window);
-	//cairo_surface_t *image = cairo_image_surface_create_for_data((unsigned char*) render.image().c_str(), IMAGEFORMAT, IMAGEWIDTH, IMAGEHEIGHT, cairo_format_stride_for_width(IMAGEFORMAT, IMAGEWIDTH));
-  helper::UnpackImage(render, cr);
+	UnpackImage(render, cr);
 
-	//cairo_set_source_surface(cr, image, 0, 0);
-	//cairo_paint(cr);
 	cairo_destroy(cr);
 }
 

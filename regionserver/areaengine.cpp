@@ -1,7 +1,6 @@
 #include "areaengine.h"
 
 using namespace std;
-using namespace helper;
 
 /*-----------======== Area Engine ========-----------*/
 //NOTES:
