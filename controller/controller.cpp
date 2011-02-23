@@ -14,6 +14,7 @@
 #include <string>
 #include <string.h>
 #include <stdlib.h>
+#include <set>
 
 #include "../common/clientrobot.pb.h"
 #include "../common/serverrobot.pb.h"
@@ -49,7 +50,7 @@ public:
 	ServerConnection(int id_, int epoll, int flags, int fd, Type type) : net::EpollConnection(epoll, flags, fd, type), id(id_) {}
 };
 
-
+//When looking up a robot id, you can figure out which server and client it belongs to
 struct lookup_pair {
   net::EpollConnection *server;
   net::EpollConnection *client;
@@ -67,7 +68,6 @@ struct NoTeamRobot {
 };
 
 vector<NoTeamRobot> unassignedRobots;
-
 
 const char *configFileName;
 int clockfd, listenfd, clientfd;
@@ -117,8 +117,10 @@ int main(int argc, char** argv)
   ServerRobot serverrobot;
   ClaimTeam claimteam;
   Claim claimrobot;
-  vector<ClientConnection*> clients;
+  vector<ClientConnection*> clients;	//can access by client id
   vector<ServerConnection*> servers;
+	set<net::EpollConnection*> seenbyidset;		//to determine who to forward serverrobot msg to
+	pair<set<net::EpollConnection*>::iterator,bool> ret; //return value of insertion
 
   #define MAX_EVENTS 128
   struct epoll_event events[MAX_EVENTS];
@@ -275,9 +277,15 @@ int main(int argc, char** argv)
               clientrobot.ParseFromArray(buffer, len);
               net::EpollConnection *server = robots[clientrobot.id()].server;
               cout << "Received client robot with ID #" << clientrobot.id()
-                   << endl;
-              server->queue.push(MSG_CLIENTROBOT, clientrobot);
-              server->set_writing(true);
+              		 << endl;
+							if(server == NULL){//this should not happen...
+								cout << "Ugh, robot#" << clientrobot.id() << "does not belong to a server?"
+										 << endl;
+							}
+							else{
+		            server->queue.push(MSG_CLIENTROBOT, clientrobot);
+		            server->set_writing(true);
+							}
               break;
             }
 
@@ -310,7 +318,9 @@ int main(int argc, char** argv)
             case MSG_SERVERROBOT:
             {
               serverrobot.ParseFromArray(buffer, len);
-              // Forward to the correct client
+							// TODO:REVIEW THIS!! NOT TESTED
+              // TODO:Forward to the correct client CORRECTLY
+							// Forward to the client, and any clients in the seenbyid
               net::EpollConnection *client = robots[serverrobot.id()].client;
               cout << "Received server robot with ID #" << serverrobot.id()
                    << endl;
@@ -320,6 +330,17 @@ int main(int argc, char** argv)
                 client->queue.push(MSG_SERVERROBOT, serverrobot);
                 client->set_writing(true);
               }
+							//lookup clients using seenbyid and store into set then send to all clients
+							//this resolves sending multiple msgs to same client.
+							for(int i=0; i<serverrobot.seenbyid_size(); i++){
+								ret = seenbyidset.insert(robots[serverrobot.seenbyid(i)].client);
+							}
+							for(set<net::EpollConnection*>::iterator it=seenbyidset.begin(); 
+									it!=seenbyidset.end(); it++){
+								(*it)->queue.push(MSG_SERVERROBOT, serverrobot);
+                (*it)->set_writing(true);
+							}
+							seenbyidset.clear();	//clear for next serverrobot msg
               break;
             }
 
