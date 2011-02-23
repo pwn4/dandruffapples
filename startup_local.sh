@@ -1,9 +1,10 @@
 #!/bin/bash
 
+#This script will parse the clockserver's config file to see how many regionservers to start then it will ( with a sleep time of $sleepTime seconds, as defined bellow ) start the clockserver, the world viewer and the region server(s).
 #Usage: startup_local.sh [debug [run] ]
 #not passing anything to the script will just normally run the regionserver(s), clockserver and worldserver
-#passing the debug argument will launch all the processes in gdb
-#passing debug run will launch all the processes in gdb AND run them
+#passing  "debug" will launch all the processes in gdb
+#passing "debug run" will launch all the processes in gdb AND run them
 #WARNING: this script MUST be run from your root antix directory
 
 clear 
