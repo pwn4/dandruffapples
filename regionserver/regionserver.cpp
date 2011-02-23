@@ -129,7 +129,8 @@ char *parse_port(char *input) {
 //the main function
 void run() {
 	map<int, Bool> sendMoreWorldViews;
-	time_t timeCache;
+	struct timeval timeCache;
+	suseconds_t microTimeCache=0;
 	bool generateImage;
 
 	//this is only here to generate random numbers for the logging
@@ -187,10 +188,10 @@ void run() {
 	}
 
 	// Add clock and client sockets to epoll
-	net::EpollConnection clockconn(epoll, EPOLLIN, clockfd, net::connection::CLOCK),
-    controllerconn(epoll, EPOLLIN, controllerfd, net::connection::CONTROLLER_LISTEN),
-    regionconn(epoll, EPOLLIN, regionfd, net::connection::REGION_LISTEN),
-    worldviewerconn(epoll, EPOLLIN, worldviewerfd, net::connection::WORLDVIEWER_LISTEN);
+	net::EpollConnection clockconn(epoll, EPOLLIN, clockfd, net::connection::CLOCK), controllerconn(epoll, EPOLLIN,
+			controllerfd, net::connection::CONTROLLER_LISTEN), regionconn(epoll, EPOLLIN, regionfd,
+			net::connection::REGION_LISTEN), worldviewerconn(epoll, EPOLLIN, worldviewerfd,
+			net::connection::WORLDVIEWER_LISTEN);
 
 	//handle logging to file initializations
 	PuckStack puckstack;
@@ -211,7 +212,7 @@ void run() {
 	tsdone.set_done(true);
 	WorldInfo worldinfo;
 	RegionInfo regioninfo;
-	unsigned myId;   //region id
+	unsigned myId; //region id
 	//Region Area Variables (should be set by clock server)
 	int regionSideLen = 2500;
 	int robotDiameter = 4;
@@ -258,14 +259,14 @@ void run() {
 	//enter the main loop
 	while (true) {
 		//cache the time, so we don't call it several times
-		timeCache = time(NULL);
+		gettimeofday(&timeCache, NULL);
 
 		//check if its time to output
-		if (timeCache > lastSecond) {
+		if (timeCache.tv_sec > lastSecond) {
 			cout << timeSteps << " timesteps/second" << endl;
 
 			timeSteps = 0;
-			lastSecond = timeCache;
+			lastSecond = timeCache.tv_sec;
 		}
 
 		//wait on epoll
@@ -377,16 +378,24 @@ void run() {
 							int rowCounter = 0;
 							bool firstrow = true;
 							//j is the y, i is the x
-							for (int j = (2 * robotDiameter)+minElementSize; j < (regionSideLen-minElementSize) - (2 * (robotDiameter)) && numRobots	< wantRobots; j += 4 * (robotDiameter)) {
-								for (int i = (2 * robotDiameter)+minElementSize; i < (regionSideLen-minElementSize) - (2 * (robotDiameter)) && numRobots	< wantRobots; i += 5 * (robotDiameter)){
-									if(rowCounter == 0)
-									  regionarea->AddRobot(myRobotIds[numRobots++], i, j, 0, 0, -.1, 0, (myId == 0 ? "red" : (myId == 1 ? "blue" : (myId == 2 ? "green" : "orange"))), true);
-									else if(rowCounter == 1)
-									  regionarea->AddRobot(myRobotIds[numRobots++], i, j, 0, 0, .1, 0, (myId == 0 ? "red" : (myId == 1 ? "blue" : (myId == 2 ? "green" : "orange"))), true);
-									else if(firstrow){
-									  regionarea->AddRobot(myRobotIds[numRobots++], i, j, 0, 0, (double)((rand() % 101)-50.0)/100.0, 0, (myId == 0 ? "red" : (myId == 1 ? "blue" : (myId == 2 ? "green" : "orange"))), true);
+							for (int j = (2 * robotDiameter) + minElementSize; j < (regionSideLen - minElementSize)
+									- (2 * (robotDiameter)) && numRobots < wantRobots; j += 4 * (robotDiameter)) {
+								for (int i = (2 * robotDiameter) + minElementSize; i < (regionSideLen - minElementSize)
+										- (2 * (robotDiameter)) && numRobots < wantRobots; i += 5 * (robotDiameter)) {
+									if (rowCounter == 0)
+										regionarea->AddRobot(myRobotIds[numRobots++], i, j, 0, 0, -.1, 0,
+												(myId == 0 ? "red" : (myId == 1 ? "blue" : (myId == 2 ? "green"
+														: "orange"))), true);
+									else if (rowCounter == 1)
+										regionarea->AddRobot(myRobotIds[numRobots++], i, j, 0, 0, .1, 0,
+												(myId == 0 ? "red" : (myId == 1 ? "blue" : (myId == 2 ? "green"
+														: "orange"))), true);
+									else if (firstrow) {
+										regionarea->AddRobot(myRobotIds[numRobots++], i, j, 0, 0, (double) ((rand()
+												% 101) - 50.0) / 100.0, 0, (myId == 0 ? "red" : (myId == 1 ? "blue"
+												: (myId == 2 ? "green" : "orange"))), true);
 									}
-									rowCounter = (rowCounter+1) % 3;
+									rowCounter = (rowCounter + 1) % 3;
 								}
 								firstrow = true;
 								rowCounter = 0;
@@ -405,18 +414,19 @@ void run() {
 							timestep.ParseFromArray(buffer, len);
 
 							generateImage = false;
-
 							//find out if we even need to generate an image
-							if (regionarea->curStep % 20 == 0) {
+							//generate an image every 100 000  micro seconds ( 10 milliseconds ) if we can
+							if ((timeCache.tv_usec/100000) > (microTimeCache/100000) ) {
 								for (vector<net::EpollConnection*>::const_iterator it = worldviewers.begin(); it
 										!= worldviewers.end(); ++it) {
-									if (sendMoreWorldViews[(*it)->fd].initialized == true && sendMoreWorldViews[(*it)->fd].value
-											== true) {
+									if (sendMoreWorldViews[(*it)->fd].initialized == true
+											&& sendMoreWorldViews[(*it)->fd].value == true) {
 										generateImage = true;
 										break;
 									}
 								}
 							}
+							microTimeCache = timeCache.tv_usec;
 
 							regionarea->Step(generateImage);
 
@@ -433,7 +443,8 @@ void run() {
 								png.set_timestep(timestep.timestep());
 								for (vector<net::EpollConnection*>::const_iterator it = worldviewers.begin(); it
 										!= worldviewers.end(); ++it) {
-									if (sendMoreWorldViews[(*it)->fd].initialized && sendMoreWorldViews[(*it)->fd].value) {
+									if (sendMoreWorldViews[(*it)->fd].initialized
+											&& sendMoreWorldViews[(*it)->fd].value) {
 										(*it)->queue.push(MSG_REGIONVIEW, png);
 										(*it)->set_writing(true);
 									}
@@ -482,7 +493,8 @@ void run() {
 						switch (type) {
 						case MSG_CLIENTROBOT:
 							clientrobot.ParseFromArray(buffer, len);
-							regionarea->ChangeVelocity(clientrobot.id(), clientrobot.velocityx(), clientrobot.velocityy());
+							regionarea->ChangeVelocity(clientrobot.id(), clientrobot.velocityx(),
+									clientrobot.velocityy());
 							regionarea->ChangeAngle(clientrobot.id(), clientrobot.angle());
 
 							break;
@@ -508,8 +520,7 @@ void run() {
 						}
 						case MSG_REGIONINFO: {
 							regioninfo.ParseFromArray(buffer, len);
-							cout << "Found new neighbour, server #" << regioninfo.id()
-									<< endl;
+							cout << "Found new neighbour, server #" << regioninfo.id() << endl;
 							for (int i = 0; i < regioninfo.position_size(); i++) {
 								cout << "  Position: " << regioninfo.position(i) << endl;
 
@@ -540,7 +551,8 @@ void run() {
 
 								sendMoreWorldViews[c->fd].value = doWeSend.enable();
 								sendMoreWorldViews[c->fd].initialized = true;
-								cout << "Setting sendMoreWorldViews for fd " << c->fd << " to " << doWeSend.enable() << endl;
+								cout << "Setting sendMoreWorldViews for fd " << c->fd << " to " << doWeSend.enable()
+										<< endl;
 								break;
 							}
 							default:
@@ -589,7 +601,7 @@ void run() {
 						net::EpollConnection *newconn = new net::EpollConnection(epoll, EPOLLIN, fd,
 								net::connection::CONTROLLER);
 						controllers.push_back(newconn);
-            regionarea->AddController(newconn);
+						regionarea->AddController(newconn);
 					} catch (SystemError e) {
 						cerr << e.what() << endl;
 						return;
@@ -623,15 +635,27 @@ void run() {
 					break;
 				}
 				default:
-					cerr << "Internal error: Got unhandled readable connection type " << c->type
-               << endl;
+					cerr << "Internal error: Got unhandled readable connection type " << c->type << endl;
 
 				}
 			} else if (events[i].events & EPOLLOUT) {
 				switch (c->type) {
-				case net::connection::REGION:
-					// fall through...
 				case net::connection::WORLDVIEWER:
+					try {
+						if (c->queue.doWrite()) {
+							c->set_writing(false);
+						}
+					} catch (runtime_error e) {
+						close(c->fd);
+						sendMoreWorldViews[c->fd].value = false;
+						cout << "world viewer with fd=" << c->fd << " disconnected" << endl;
+
+						// Remove from sets
+						worldviewers.erase(find(worldviewers.begin(), worldviewers.end(), c));
+						delete c;
+					}
+					break;
+				case net::connection::REGION:
 					// fall through...
 				case net::connection::CONTROLLER:
 					// fall through...
