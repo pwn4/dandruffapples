@@ -365,11 +365,13 @@ void run() {
 							int lastRegionIndex = worldinfo.region_size() - 1;
 							myId = worldinfo.region(lastRegionIndex).id();
 							vector<int> myRobotIds;
+							vector<int> myRobotTeams;
 							cout << "My id: " << myId << endl;
 							for (google::protobuf::RepeatedPtrField<const RobotInfo>::const_iterator i =
 									worldinfo.robot().begin(); i != worldinfo.robot().end(); i++) {
 								if (i->region() == myId) {
 									myRobotIds.push_back(i->id());
+									myRobotTeams.push_back(i->team());
 								}
 							}
 							wantRobots = myRobotIds.size();
@@ -380,12 +382,14 @@ void run() {
 							for (int j = (2 * robotDiameter)+minElementSize; j < (regionSideLen-minElementSize) - (2 * (robotDiameter)) && numRobots	< wantRobots; j += 4 * (robotDiameter)) {
 								for (int i = (2 * robotDiameter)+minElementSize; i < (regionSideLen-minElementSize) - (2 * (robotDiameter)) && numRobots	< wantRobots; i += 5 * (robotDiameter)){
 									if(rowCounter == 0)
-									  regionarea->AddRobot(myRobotIds[numRobots++], i, j, 0, 0, -.1, 0, (myId == 0 ? "red" : (myId == 1 ? "blue" : (myId == 2 ? "green" : "orange"))), true);
+									  regionarea->AddRobot(myRobotIds[numRobots], i, j, 0, 0, -.1, 0, myRobotTeams[numRobots], true);
 									else if(rowCounter == 1)
-									  regionarea->AddRobot(myRobotIds[numRobots++], i, j, 0, 0, .1, 0, (myId == 0 ? "red" : (myId == 1 ? "blue" : (myId == 2 ? "green" : "orange"))), true);
+									  regionarea->AddRobot(myRobotIds[numRobots], i, j, 0, 0, .1, 0, myRobotTeams[numRobots], true);
 									else if(firstrow){
-									  regionarea->AddRobot(myRobotIds[numRobots++], i, j, 0, 0, (double)((rand() % 101)-50.0)/100.0, 0, (myId == 0 ? "red" : (myId == 1 ? "blue" : (myId == 2 ? "green" : "orange"))), true);
+									  regionarea->AddRobot(myRobotIds[numRobots], i, j, 0, 0, (double)((rand() % 101)-50.0)/100.0, 0, myRobotTeams[numRobots], true);
 									}
+
+									numRobots++;
 									rowCounter = (rowCounter+1) % 3;
 								}
 								firstrow = true;
@@ -423,14 +427,12 @@ void run() {
 							timeSteps++; //Note: only use this for this temp stat taking. use regionarea->curStep for syncing
 
 							if (generateImage) {
-								surface = regionarea->stepImage;
-								unsigned char *surfaceData = cairo_image_surface_get_data(surface);
+								/*unsigned char *surfaceData = cairo_image_surface_get_data(surface);
 								size_t surfaceLength = cairo_image_surface_get_height(surface)
 										* cairo_format_stride_for_width(cairo_image_surface_get_format(surface),
-												cairo_image_surface_get_width(surface));
+												cairo_image_surface_get_width(surface));*/
 
-								png.set_image((void*) surfaceData, surfaceLength);
-								png.set_timestep(timestep.timestep());
+								png = regionarea->render;
 								for (vector<net::EpollConnection*>::const_iterator it = worldviewers.begin(); it
 										!= worldviewers.end(); ++it) {
 									if (sendMoreWorldViews[(*it)->fd].initialized && sendMoreWorldViews[(*it)->fd].value) {
