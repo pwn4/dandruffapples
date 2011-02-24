@@ -4,8 +4,13 @@ endif(COMMAND cmake_policy)
 
 add_definitions(-std=c++0x)
 
+pkg_check_modules(GTK REQUIRED gtk+-2.0)
+
 find_package(Protobuf REQUIRED)
-include_directories(${CMAKE_CURRENT_BINARY_DIR} ${PROTOBUF_INCLUDE_DIRS})
+
+link_directories(${GTK_LIBRARY_DIRS})
+
+include_directories(${CMAKE_CURRENT_BINARY_DIR} ${PROTOBUF_INCLUDE_DIRS} ${GTK_INCLUDE_DIRS})
 
 find_package(Threads REQUIRED)
 
@@ -29,6 +34,7 @@ add_library(common
   messagequeue.cpp
   parseconf.cpp
   helper.cpp
+  helper.h
   )
 
-target_link_libraries(common ${PROTOBUF_LIBRARY} ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(common ${PROTOBUF_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} ${GTK_LIBRARIES})
