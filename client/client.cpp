@@ -45,6 +45,7 @@ const char *configFileName;
 //Game world variables
 // TODO: organize/move variables out of client.cpp 
 bool simulationStarted = false;
+bool simulationEnded = false;
 int currentTimestep = 0;
 int myTeam;
 int robotsPerTeam; 
@@ -159,7 +160,7 @@ void *artificialIntelligence(void *threadid) {
   bool tempFlag = false;
   bool sendNewData = false;
 
-  while (true) {
+  while (!simulationEnded) {
     if (currentTimestep % 500 == 0) {
       tempFlag = true;
     }
@@ -210,6 +211,7 @@ void *artificialIntelligence(void *threadid) {
     //sleep(5); // delay this thread for 5 seconds
   }
 
+  simulationStarted = false;
   pthread_exit(0);
 }
 
@@ -401,6 +403,11 @@ void run() {
   } catch(SystemError e) {
     cerr << " error performing network I/O: " << e.what() << endl;
   }
+
+  simulationEnded = true;
+  while (simulationStarted) {
+   // Wait until child thread stops
+  } 
 
   // Clean up
   shutdown(controllerfd, SHUT_RDWR);
