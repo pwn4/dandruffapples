@@ -2,4 +2,7 @@ add_executable(client
   client.cpp
   )
 
-target_link_libraries(client common)
+link_directories(${GTK_LIBRARY_DIRS})
+include_directories(${GTK_INCLUDE_DIRS})
+
+target_link_libraries(client common ${GTK_LIBRARIES})
