@@ -1,6 +1,6 @@
 message RegionRender {
   required uint64 timestep = 1;
-  required bytes image = 2;
+  repeated uint32 image = 2;
 }
 
 message SendMoreWorldViews{
