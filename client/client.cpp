@@ -24,6 +24,7 @@ This program communications with controllers.
 
 #include "../common/claimteam.pb.h"
 #include "../common/clientrobot.pb.h"
+#include "../common/puckstack.pb.h"
 #include "../common/serverrobot.pb.h"
 #include "../common/timestep.pb.h"
 #include "../common/worldinfo.pb.h"
@@ -46,11 +47,17 @@ const char *configFileName;
 bool simulationStarted = false;
 int currentTimestep = 0;
 int myTeam;
-int firstTeam; // lowest teamid we control
-int numTeams; // this client computer controls this number of teams.
 int robotsPerTeam; 
 net::EpollConnection* theController;
 int epoll;
+
+class SeenPuck {
+  float relX;
+  float relY;
+  int size;
+
+  SeenPuck() : relX(0.0), relY(0.0), size(1) {}
+};
 
 class Robot {
 public:
@@ -66,25 +73,28 @@ public:
             hasCollided(false) {}
 };
 
+class SeenRobot : public Robot {
+public:
+  int id;
+  int lastTimestepSeen;
+  bool viewable;
+  float relX;
+  float relY;
+
+  SeenRobot() : Robot(), id(-1), lastTimestepSeen(-1), viewable(true),
+      relX(0.0), relY(0.0) {}
+};
+
 class OwnRobot : public Robot {
 public:
   bool pendingCommand;
+  vector<SeenRobot> seenRobots;
+  vector<SeenPuck> seenPucks;
 
   OwnRobot() : Robot(), pendingCommand(false) {}
 };
 
 OwnRobot** ownRobots;
-
-class EnemyRobot : public Robot {
-public:
-  int id;
-  int lastTimestepSeen;
-
-  EnemyRobot() : Robot(), id(-1), lastTimestepSeen(-1) {}
-};
-
-// TODO: Change to a hash table or something
-vector<EnemyRobot*>* enemyRobots;
 
 //Config variables
 vector<string> controllerips; //controller IPs 
