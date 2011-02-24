@@ -2,4 +2,7 @@ add_executable(clockserver
     clockserver.cpp
   )
 
-target_link_libraries(clockserver common)
+link_directories(${GTK_LIBRARY_DIRS})
+include_directories(${GTK_INCLUDE_DIRS})
+
+target_link_libraries(clockserver common ${GTK_LIBRARIES})
