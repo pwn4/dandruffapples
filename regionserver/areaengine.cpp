@@ -88,7 +88,8 @@ AreaEngine::~AreaEngine() {
 
 //this is the color mapping method: teams->Color components
 ColorObject colorFromTeam(int teamId){
-  return ColorObject(0.1, 0.1, 0.1);
+  srand(teamId);  //use the same seed for the same team. That way our random numbers are consistent! lol
+  return ColorObject(0.01*(rand() % 80), 0.01*(rand() % 80), 0.01*(rand() % 80));
 }
 
 //this method checks if a robot at (x1,y1) sees a robot at (x2,y2)
