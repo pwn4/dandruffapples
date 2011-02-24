@@ -44,7 +44,7 @@ struct ColorObject{
 };
 
 ColorObject colorFromTeam(int teamId);
-cairo_surface_t* UnpackImage(RegionRender render);
+void UnpackImage(RegionRender render, cairo_t *stepImageDrawer);
 unsigned int BytePack(int a, int b);
 TwoInt ByteUnpack(unsigned int data);
 
