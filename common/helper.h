@@ -7,6 +7,9 @@
 #include <sys/stat.h>
 #include <map>
 #include <netinet/in.h>
+#include "imageconstants.h"
+#include <cairo.h>
+#include "regionrender.pb.h"
 
 using namespace std;
 
@@ -27,6 +30,23 @@ private:
 	map<string, string> parsedConfig;
 
 };
+
+struct TwoInt{
+  int one, two;
+  
+  TwoInt(int first, int second) : one(first), two(second) {}
+};
+
+struct ColorObject{
+  double r, g, b;
+  
+  ColorObject(double newr, double newg, double newb) : r(newr), g(newg), b(newb) {}
+};
+
+ColorObject colorFromTeam(int teamId);
+cairo_surface_t* UnpackImage(RegionRender render);
+unsigned int BytePack(int a, int b);
+TwoInt ByteUnpack(unsigned int data);
 
 const string defaultLogName = "antix_log";
 const string worldViewerDebugLogName="/tmp/worldviewer_debug.txt";
