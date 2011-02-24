@@ -1,6 +1,7 @@
 #include "areaengine.h"
 
 using namespace std;
+using namespace helper;
 
 /*-----------======== Area Engine ========-----------*/
 //NOTES:
@@ -44,11 +45,7 @@ AreaEngine::AreaEngine(int robotSize, int regionSize, int minElementSize, double
   viewAng = viewAngle;
   maxSpeed = maximumSpeed;
   maxRotate = maximumRotate;
-  
-  //init our surface
-  stepImage = cairo_image_surface_create (IMAGEFORMAT , IMAGEWIDTH, IMAGEHEIGHT);
-  stepImageDrawer = cairo_create (stepImage);
-  
+
   //create our storage array with element size determined by our parameters
   //ensure regionSize can be split nicely
   if((regionSize/robotSize)*robotSize != regionSize)
@@ -86,11 +83,16 @@ AreaEngine::~AreaEngine() {
   delete[] robotArray;
 }
 
-//this is the color mapping method: teams->Color components
-ColorObject colorFromTeam(int teamId){
-  srand(teamId);  //use the same seed for the same team. That way our random numbers are consistent! lol
-  return ColorObject(0.01*(rand() % 80), 0.01*(rand() % 80), 0.01*(rand() % 80));
-}
+//comparator for robot rendering
+class CompareRobotObject {
+    public:
+    bool operator()(RobotObject*& r1, RobotObject*& r2) // Returns true if t1 is earlier than t2
+    {
+       if (r1->y > r2->y) return true;
+       
+       return false;
+    }
+};
 
 //this method checks if a robot at (x1,y1) sees a robot at (x2,y2)
 bool AreaEngine::Sees(double x1, double y1, double x2, double y2){
@@ -211,20 +213,9 @@ void AreaEngine::Step(bool generateImage){
         }
       }
   }
-
-  if(generateImage){
-    //clear the image
-    cairo_set_source_rgb (stepImageDrawer, 1, 1, 1);
-    cairo_paint (stepImageDrawer); 
-    
-    //perhaps just for now, outline the region's boundaries. That way we can see them in the viewer
-    cairo_rectangle (stepImageDrawer, 0, 0, IMAGEWIDTH, IMAGEHEIGHT);
-    //set the color
-    cairo_set_source_rgb(stepImageDrawer, .6, .6, .6);
-    cairo_stroke (stepImageDrawer);
-  }
   
-  int drawX, drawY;
+  //prepare the priority queue
+  priority_queue<RobotObject*, vector<RobotObject*>, CompareRobotObject> pq;
   
   //move the robots, now that we know they won't collide. Because we may remove a robot, we have to increment ourselves
   for(robotIt=robots.begin() ; robotIt != robots.end(); )
@@ -241,34 +232,10 @@ void AreaEngine::Step(bool generateImage){
     curRobot->y += curRobot->vy;
     curRobot->lastStep = curStep;
     
-    if(generateImage){
-      //repaint the robot
-      drawX = ((curRobot->x-(regionRatio/regionBounds)) / regionRatio)*IMAGEWIDTH;
-      drawY = ((curRobot->y-(regionRatio/regionBounds)) / regionRatio)*IMAGEHEIGHT;
-      //drawX = ((curRobot->x) / (regionRatio+(2*(regionRatio/regionBounds))))*IMAGEWIDTH;
-      //drawY = ((curRobot->y) / (regionRatio+(2*(regionRatio/regionBounds))))*IMAGEHEIGHT;
-      //don't draw the overlaps
-      if(drawX >= 0 && drawX < IMAGEWIDTH && drawY >= 0 && drawY < IMAGEHEIGHT)
-      {
-        cairo_rectangle (stepImageDrawer, drawX, drawY, 1, 1);
-        //set the color - HARDCODE FOR NOW
-        if(curRobot->robotColor == "red")
-          cairo_set_source_rgb(stepImageDrawer, 1, 0, 0);
-        else if(curRobot->robotColor == "green")
-          cairo_set_source_rgb(stepImageDrawer, 0, .5, 0);
-        else if(curRobot->robotColor == "blue")
-          cairo_set_source_rgb(stepImageDrawer, 0, 0, 1);
-        else if(curRobot->robotColor == "orange")
-          cairo_set_source_rgb(stepImageDrawer, .7, .4, .103);
-        else
-          cairo_set_source_rgb(stepImageDrawer, .1, .1, .1);
-        cairo_fill (stepImageDrawer);
-      }
-    }
     //check if the robot moves through a[][]
     Index oldIndices = curRobot->arrayLocation;
     Index newIndices = getRobotIndices(curRobot->x, curRobot->y, false);
-    int tmp = curRobot->id;
+
     if(newIndices.x != oldIndices.x || newIndices.y != oldIndices.y)
     {
       //did the robot move such that we now own it? Making this a separate
@@ -291,16 +258,18 @@ void AreaEngine::Step(bool generateImage){
         if(!AreaEngine::RemoveRobot(curRobot->id, oldIndices.x, oldIndices.y, true))
         {
           //cerr << "Remove Robot Failure! This should NOT happen! Id: " << tmp << endl;
-        }else
+        }else{
           //cout << "Removed robot id: " << tmp << endl;
+        }
         robots.erase(robotIt++);
         continue;
       }else{
         if(!AreaEngine::RemoveRobot(curRobot->id, oldIndices.x, oldIndices.y, false))
         {
           //cerr << "Remove Robot Failure! This should NOT happen! Id: " << tmp << endl;
-        }else
+        }else{
           //cout << "Removed robot id: " << tmp << endl;
+        }
           
         curRobot->arrayLocation = newIndices;
         AreaEngine::AddRobot(curRobot);
@@ -308,8 +277,48 @@ void AreaEngine::Step(bool generateImage){
         BroadcastRobot(curRobot, oldIndices, newIndices);
       }
     }
-      
+
+    //add the robot to the sorted draw list
+    pq.push(curRobot);
+
     robotIt++;
+  }
+  
+  //do drawing
+  if(generateImage){
+    int drawX, drawY;
+    render.clear_image();
+    render.set_timestep(curStep);
+    int curY = 0;
+    
+    while(pq.size() > 0)
+    {
+      RobotObject* paintRobot = pq.top();
+      //repaint the robot
+      drawX = ((paintRobot->x-(regionRatio/regionBounds)) / regionRatio)*IMAGEWIDTH;
+      drawY = ((paintRobot->y-(regionRatio/regionBounds)) / regionRatio)*IMAGEHEIGHT;
+      //drawX = ((curRobot->x) / (regionRatio+(2*(regionRatio/regionBounds))))*IMAGEWIDTH;
+      //drawY = ((curRobot->y) / (regionRatio+(2*(regionRatio/regionBounds))))*IMAGEHEIGHT;
+
+      //don't draw the overlaps
+      if(drawX >= 0 && drawX < IMAGEWIDTH && drawY >= 0 && drawY < IMAGEHEIGHT)
+      {
+
+        //update Y coord in output
+        while(curY < drawY){
+          render.add_image(BytePack(65535, 65535));
+          curY++;
+        }
+      
+        if(drawX >= 65535 || drawY >= 65535)
+          throw SystemError("AreaEngine: Draw Size requested too large");
+
+        render.add_image(BytePack(drawX, paintRobot->team));
+      }
+      
+      pq.pop();
+    }
+
   }
 
   //check for sight. Theoretically runs in O(n^2)+O(n)+O(m). In reality, runs O((viewdist*360degrees/robotsize)*robotsinregion)+O(2*(viewdist*360degrees/robotsize))
@@ -384,11 +393,11 @@ void AreaEngine::AddRobot(RobotObject * oldRobot){
   oldRobot->nextRobot = NULL;
 }
 
-RobotObject* AreaEngine::AddRobot(int robotId, double newx, double newy, double newa, double newvx, double newvy, int atStep, string newColor, bool broadcast){
+RobotObject* AreaEngine::AddRobot(int robotId, double newx, double newy, double newa, double newvx, double newvy, int atStep, int teamId, bool broadcast){
   //O(1) insertion  
   Index robotIndices = getRobotIndices(newx, newy, true);
   
-  RobotObject* newRobot = new RobotObject(robotId, newx, newy, newa, newvx, newvy, robotIndices, atStep, newColor);
+  RobotObject* newRobot = new RobotObject(robotId, newx, newy, newa, newvx, newvy, robotIndices, atStep, teamId);
 
   //add the robot to our robots vector (used for timestepping)
   robots.insert(pair<int, RobotObject*>(robotId, newRobot));
@@ -522,7 +531,7 @@ void AreaEngine::SetNeighbour(int placement, EpollConnection *socketHandle){
 void AreaEngine::GotServerRobot(ServerRobot message){
   if(robots.find(message.id()) == robots.end()){
     //new robot
-    AddRobot(message.id(), message.x(), message.y(), message.angle(), message.velocityx(), message.velocityy(), curStep, message.color(), false);
+    AddRobot(message.id(), message.x(), message.y(), message.angle(), message.velocityx(), message.velocityy(), curStep, message.team(), false);
   }else{
     //modify existing;
     //cout << "FFFFFFUUU " << message.id() << endl;
@@ -548,7 +557,7 @@ void AreaEngine::BroadcastRobot(RobotObject *curRobot, Index oldIndices, Index n
   int transy = curRobot->y;
   //continue
   informNeighbour.set_angle(curRobot->angle);
-  informNeighbour.set_color(curRobot->robotColor);
+  informNeighbour.set_team(curRobot->team);
   informNeighbour.set_velocityx(curRobot->vx);
   informNeighbour.set_velocityy(curRobot->vy);
   informNeighbour.set_laststep(curStep);
