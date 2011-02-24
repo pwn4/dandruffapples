@@ -104,8 +104,8 @@ void displayWorldView(int regionNum, RegionRender render) {
 		position = TOP_RIGHT;
 
 	cairo_t *cr = gdk_cairo_create(worldDrawingArea.at(position)->widget.window);
-	cairo_surface_t *image = cairo_image_surface_create_for_data((unsigned char*) render.image().c_str(), IMAGEFORMAT,
-			IMAGEWIDTH, IMAGEHEIGHT, cairo_format_stride_for_width(IMAGEFORMAT, IMAGEWIDTH));
+	//cairo_surface_t *image = cairo_image_surface_create_for_data((unsigned char*) render.image().c_str(), IMAGEFORMAT, IMAGEWIDTH, IMAGEHEIGHT, cairo_format_stride_for_width(IMAGEFORMAT, IMAGEWIDTH));
+  cairo_surface_t *image = helper::UnpackImage(render);
 
 	cairo_set_source_surface(cr, image, 0, 0);
 	cairo_paint(cr);
@@ -276,7 +276,8 @@ gboolean io_regionmessage(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 		switch (type) {
 		case MSG_REGIONVIEW: {
 			RegionRender render;
-			render.ParseFromArray(buffer, len);
+
+      render.ParseFromArray(buffer, len);
 
 #ifdef DEBUG
 			debug << "Received render update from server fd=" << regions.at(regionNum)->fd << " and the timestep is # "
