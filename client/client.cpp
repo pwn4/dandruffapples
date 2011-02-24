@@ -45,6 +45,7 @@ const char *configFileName;
 // TODO: organize/move variables out of client.cpp 
 bool simulationStarted = false;
 int currentTimestep = 0;
+int myTeam;
 int firstTeam; // lowest teamid we control
 int numTeams; // this client computer controls this number of teams.
 int robotsPerTeam; 
@@ -113,16 +114,6 @@ void loadConfigFile()
 				string newcontrollerip = token;
 				controllerips.push_back(newcontrollerip);
 				printf("Storing controller IP: %s\n", newcontrollerip.c_str());
-			} else if (strcmp(token, "FIRSTTEAM") == 0) {
-				token = strtok(NULL, " \n");
-        firstTeam = strtol(token, NULL, 10);
-        cout << "First team ID #" << firstTeam << endl;
-			} else if (strcmp(token, "LASTTEAM") == 0) {
-        int lastTeam;
-				token = strtok(NULL, " \n");
-        lastTeam = strtol(token, NULL, 10);
-        numTeams = lastTeam - firstTeam + 1;
-        cout << "Number of teams: " << numTeams << endl;
       }
 		}
 		
@@ -132,35 +123,16 @@ void loadConfigFile()
 }
 
 int indexToRobotId(int index) {
-  return (index + firstTeam * robotsPerTeam);
+  return (index + myTeam * robotsPerTeam);
 }
 
 int robotIdToIndex(int robotId) {
-  return (robotId - firstTeam * robotsPerTeam);
+  return (robotId - myTeam * robotsPerTeam);
 }
 
-int indexToTeamId(int index) {
-  return (index / robotsPerTeam);
-}
-
-int indexToIndexOfTeam(int index) {
-  return (index % robotsPerTeam);
-}
-
-bool weControlTeam(int teamid) {
-  return ((firstTeam <= teamid && teamid < numTeams) ? true : false);
-}
-
-int totalOwnRobots() {
-  return (numTeams * robotsPerTeam);
-}
-
-int teamIdToTeamIndex(int teamid) {
-  return (teamid - firstTeam);
-}
-
-int teamIndexToTeamId(int teamIndex) {
-  return (teamIndex + firstTeam);
+bool weControlRobot(int robotId) {
+  int index = robotId - myTeam * robotsPerTeam;
+  return (0 <= index && index < robotsPerTeam);
 }
 
 // Destination function for the AI thread.
@@ -181,11 +153,11 @@ void *artificialIntelligence(void *threadid) {
     if (currentTimestep % 500 == 0) {
       tempFlag = true;
     }
-    for (int i = 0; i < totalOwnRobots(); i++) {
+    for (int i = 0; i < robotsPerTeam; i++) {
       sendNewData = false;
       if (!ownRobots[i]->pendingCommand && currentTimestep % 50 == 0) {
         // Simple AI, follow the leader!
-        if (indexToIndexOfTeam(i) == 0 && tempFlag) {
+        if (i == 0 && tempFlag) {
           ownRobots[i]->pendingCommand = true;
           clientRobot.set_id(indexToRobotId(i));
           clientRobot.set_velocityx(((rand() % 11) / 10.0) - 0.5);
@@ -245,7 +217,7 @@ void run() {
     }
     currentController = rand() % controllerips.size();
   }
-  //net::set_blocking(controllerfd, false);
+  net::set_blocking(controllerfd, false);
 
   cout << " connected." << endl;
   
@@ -263,9 +235,6 @@ void run() {
   TimestepUpdate timestep;
   ServerRobot serverrobot;
   ClaimTeam claimteam;
-
-  bool foundFirstTeam = false;
-  bool foundLastTeam = false;
 
   #define MAX_EVENTS 128
   struct epoll_event events[MAX_EVENTS];
@@ -297,10 +266,7 @@ void run() {
                 // Should be the first message we recieve from the controller
                 worldinfo.ParseFromArray(buffer, len);
                 int robotSize = worldinfo.robot_size();
-
-                int maxTeamId = 0;
                 bool sameTeam = true;
-
                 robotsPerTeam = 0; // global var
 
                 // Count number of robots per team 
@@ -311,86 +277,45 @@ void run() {
                     sameTeam = false; 
                   }
                 }
-                maxTeamId = worldinfo.robot(robotSize - 1).team();
+                cout << "Got worldinfo! Calculated " << robotsPerTeam 
+                     << " robots on each team.\n";
 
-                // Check if the number of teams from WorldInfo is less than
-                // the number of teams we want to control per the config file.
-                if (numTeams > maxTeamId - firstTeam + 1) {
-                  numTeams = maxTeamId - firstTeam + 1;
-                }
-
-                cout << "Got worldinfo! Calculated " << numTeams 
-                     << " possible controlled teams with " << robotsPerTeam 
-                     << " robots each.\n";
-
-                // Claim our teams
-                for (int i = 0; i < numTeams; i++) {
-                  claimteam.set_id(i + firstTeam);
-                  c->queue.push(MSG_CLAIMTEAM, claimteam);
-                  c->set_writing(true);
-                  cout << "Generating ClaimTeam message for team ID #"
-                       << i + firstTeam << endl;
-                }
+                // Claim our team
+                claimteam.set_id(myTeam);
+                c->queue.push(MSG_CLAIMTEAM, claimteam);
+                c->set_writing(true);
+                cout << "Generating ClaimTeam message for team ID #"
+                     << myTeam << endl;
 
                 break;
               }
               case MSG_CLAIMTEAM:
                 claimteam.ParseFromArray(buffer, len);
-                // Case 1: Granted
-                //   Case 1.1: This is the first granted team. Update 
-                //   firstTeam and foundFirstTeam.
-                //   Case 1.2: This is the nth sequential granted team. 
-                //   Ignore. 
-                //     Case 1.2.1: This is the last ClaimTeam message. 
-                //     Set foundLastTeam and proceed to create OwnRobots.
-                //   Case 1.3: Non-granted teams are sandwiched by granted
-                //   teams. Ignore.
-                // Case 2: Not granted
-                //   Case 2.1: No granted teams yet. Ignore.
-                //     Case 2.1.1: This was the last ClaimTeam message. Exit.
-                //   Case 2.2: Appears after a granted team. Set foundLastTeam
-                //   and numTeams. 
-                //   Case 2.3: Appears after granted and non-granted teams.
-                //   Ignore.
-                if (claimteam.granted()) {
-                  if (!foundFirstTeam) {
-                    firstTeam = claimteam.id();
-                    foundFirstTeam = true;
-                    cout << "ClaimTeam: Found first team, ID #" << firstTeam 
-                         << endl;
-                  } else { 
-                    // Is this the last ClaimTeam message?
-                    if ((int)claimteam.id() == numTeams + firstTeam -1) {
-                      foundLastTeam = true;
-                    }
-                  }
-                } else { // claimteam.granted() == false
-                  if (!foundFirstTeam) {
-                    // Is this the last ClaimTeam message?
-                    if ((int)claimteam.id() == numTeams + firstTeam -1) {
-                      cout << "Client controls no teams!\n";
-                    }
-                  } else if (foundFirstTeam && !foundLastTeam) {
-                    foundLastTeam = true; 
-                  } 
-                  // ignore otherwise 
-                }
-
-                // Assign teams--can only happen once.
-                if (foundLastTeam && !simulationStarted) {
-                  numTeams = claimteam.id() - firstTeam + 1;
-                  cout << "ClaimTeam: Found last team, ID #" 
-                       << claimteam.id() << endl;
-
-                  ownRobots = new OwnRobot*[totalOwnRobots()];
-                  for (int i = 0; i < totalOwnRobots(); i++) {
-                    // We don't have any initial robot data, yet.
-                    ownRobots[i] = new OwnRobot();
+                if (!simulationStarted) {
+                  if (claimteam.granted()) {
+                    myTeam = claimteam.id();
+                    cout << "ClaimTeam: Success! We control team #" << myTeam 
+                           << endl;
+                  } else { // claimteam.granted() == false
+                    myTeam = -1;
+                    cout << "Client controls no teams!\n";
                   }
 
-                  enemyRobots = new vector<EnemyRobot*>[numTeams];
-                  // Allow AI thread to commence.
-                  simulationStarted = true;
+                  // Assign teams--can only happen once.
+                  if (myTeam > -1) {
+                    ownRobots = new OwnRobot*[robotsPerTeam];
+                    for (int i = 0; i < robotsPerTeam; i++) {
+                      // We don't have any initial robot data, yet.
+                      ownRobots[i] = new OwnRobot();
+                    }
+
+                    //enemyRobots = new vector<EnemyRobot*>[numTeams];
+                    // Allow AI thread to commence.
+                    simulationStarted = true;
+                  }
+                } else {
+                  cout << "Got CLAIMTEAM message after simulation started"
+                       << endl;
                 }
 
                 break;
@@ -400,8 +325,8 @@ void run() {
 
                 if (simulationStarted) {
                   // Update all current positions.
-                  for (int i = 0; i < totalOwnRobots(); i++) {
-                    // TODO: wrapping
+                  for (int i = 0; i < robotsPerTeam; i++) {
+                    // TODO: Change to relative positions
                     ownRobots[i]->x += ownRobots[i]->vx;
                     ownRobots[i]->y += ownRobots[i]->vy;
                   }
@@ -413,9 +338,9 @@ void run() {
               {
                 serverrobot.ParseFromArray(buffer, len);
                 if (simulationStarted) {
-                  int index = serverrobot.id();
-                  int team = indexToTeamId(index);
-                  if (weControlTeam(team)) {
+                  int robotId = serverrobot.id();
+                  if (weControlRobot(robotId)) {
+                    int index = robotIdToIndex(robotId);
                     ownRobots[index]->pendingCommand = false;
                     if (serverrobot.has_velocityx()) 
                       ownRobots[index]->vx = serverrobot.velocityx();
@@ -432,7 +357,7 @@ void run() {
                     if (serverrobot.has_hascollided()) 
                       ownRobots[index]->hasCollided = serverrobot.hascollided();
 
-                    // TODO: Add to all other enemyRobot lists
+                    // TODO: Add to all other enemyRobot/puck lists
                   }
                 }
                 break;
@@ -471,7 +396,7 @@ void run() {
   shutdown(controllerfd, SHUT_RDWR);
   close(controllerfd);
 
-  for (int i = 0; i < numTeams * robotsPerTeam; i++) {
+  for (int i = 0; robotsPerTeam; i++) {
     delete ownRobots[i];
   }
   delete[] ownRobots;
@@ -491,6 +416,12 @@ int main(int argc, char* argv[])
 	helper::Config config(argc, argv);
 	configFileName=(config.getArg("-c").length() == 0 ? "config" : config.getArg("-c").c_str());
 	cout<<"Using config file: "<<configFileName<<endl;
+
+  myTeam = (config.getArg("-t").length() == 0 ? 0 
+      : strtol(config.getArg("-t").c_str(), NULL, 0));
+
+  cout << "Trying to control team #" << myTeam << " (use -t <team> to change)"
+       << endl;
 	
 	loadConfigFile();
 	////////////////////////////////////////////////////
