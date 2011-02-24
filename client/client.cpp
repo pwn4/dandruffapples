@@ -38,6 +38,8 @@ This program communications with controllers.
 #include "../common/helper.h"
 
 using namespace std;
+using namespace google;
+using namespace protobuf;
 
 /////////////////Variables and Declarations/////////////////
 const char *configFileName;
@@ -89,8 +91,8 @@ public:
 class OwnRobot : public Robot {
 public:
   bool pendingCommand;
-  vector<SeenRobot> seenRobots;
-  vector<SeenPuck> seenPucks;
+  vector<SeenRobot*> seenRobots;
+  vector<SeenPuck*> seenPucks;
 
   OwnRobot() : Robot(), pendingCommand(false) {}
 };
@@ -342,7 +344,7 @@ void run() {
                     ownRobots[i]->x += ownRobots[i]->vx;
                     ownRobots[i]->y += ownRobots[i]->vy;
                   }
-                  // TODO: Update enemy robots
+                  // TODO: Update enemy robots in ownrobot lists
                 }
 
                 break;
@@ -369,7 +371,46 @@ void run() {
                     if (serverrobot.has_hascollided()) 
                       ownRobots[index]->hasCollided = serverrobot.hascollided();
 
-                    // TODO: Add to all other enemyRobot/puck lists
+                    // Traverse seenById list to check if we can see.
+                    int listSize = serverrobot.seenbyid_size();
+                    for (int i = 0; i < listSize; i++) {
+                      if (weControlRobot(serverrobot.seenbyid(i))) {
+                        if (serverrobot.viewlostid(i)) {
+                          // Could see before, can't see anymore.
+                          for (vector<SeenRobot*>::iterator it
+                              = ownRobots[index]->seenRobots.begin();
+                              it != ownRobots[index]->seenRobots.end();
+                              it++) {
+                            if ((*it)->id == serverrobot.seenbyid(i)) {
+                              // TODO: we may want to store data about this
+                              // robot on the client for x timesteps after
+                              // it can't see it anymore.
+                              ownRobots[index]->seenRobots.erase(it);
+                              delete *it;
+                              break;
+                            }
+                          }
+                        } else {
+                          // Can see. Add, or update?
+                          bool foundRobot = false;
+                          for (vector<SeenRobot*>::iterator it
+                              = ownRobots[index]->seenRobots.begin();
+                              it != ownRobots[index]->seenRobots.end() &&
+                              !foundRobot; it++) {
+                            if ((*it)->id == serverrobot.seenbyid(i)) {
+                              foundRobot = true;
+                              // TODO: Update fields SeenRobot!
+                            }
+                          }
+                          if (!foundRobot) {
+                            SeenRobot *r = new SeenRobot();
+                            r->id = serverrobot.seenbyid(i);
+                            // TODO: Update seen robot fields.
+                            ownRobots[index]->seenRobots.push_back(r);
+                          }
+                        }
+                      }
+                    }
                   }
                 }
                 break;
