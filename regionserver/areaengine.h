@@ -14,12 +14,14 @@
 #include <stdlib.h>
 #include <time.h>
 #include <map>
+#include <queue>
 #include <gtk/gtk.h>
 #include <cairo.h>
 #include <string>
 #include "../common/claim.pb.h"
 #include "../common/serverrobot.pb.h"
 #include "../common/net.h"
+#include "../common/helper.h"
 
 using namespace std;
 using namespace net;
@@ -56,14 +58,13 @@ struct RobotObject{
   Index arrayLocation;
   time_t lastCollision;
   map<int, bool> *lastSeen;
-  string robotColor;
   RobotObject * nextRobot;
   int controllerfd;
   int team;
  
   
-  RobotObject(int newid, double newx, double newy, double newa, Index aLoc, int curStep, string color) : id(newid), lastStep(curStep), x(newx), y(newy), angle(newa), vx(0), vy(0), arrayLocation(aLoc), lastCollision(time(NULL)), lastSeen(new map<int, bool>), robotColor(color), nextRobot(NULL), controllerfd(-1), team(0) {}
-  RobotObject(int newid, double newx, double newy, double newa, double newvx, double newvy, Index aLoc, int curStep, string color) : id(newid), lastStep(curStep), x(newx), y(newy), angle(newa), vx(newvx), vy(newvy), arrayLocation(aLoc), lastCollision(time(NULL)), lastSeen(new map<int, bool>), robotColor(color), nextRobot(NULL), controllerfd(-1), team(0) {}
+  RobotObject(int newid, double newx, double newy, double newa, Index aLoc, int curStep, int teamId) : id(newid), lastStep(curStep), x(newx), y(newy), angle(newa), vx(0), vy(0), arrayLocation(aLoc), lastCollision(time(NULL)), lastSeen(new map<int, bool>), nextRobot(NULL), controllerfd(-1), team(teamId) {}
+  RobotObject(int newid, double newx, double newy, double newa, double newvx, double newvy, Index aLoc, int curStep, int teamId) : id(newid), lastStep(curStep), x(newx), y(newy), angle(newa), vx(newvx), vy(newvy), arrayLocation(aLoc), lastCollision(time(NULL)), lastSeen(new map<int, bool>), nextRobot(NULL), controllerfd(-1), team(teamId) {}
 };
 
 struct ArrayObject{
@@ -74,12 +75,6 @@ struct ArrayObject{
   PuckStackObject * lastPuckStack;
   
   ArrayObject() : pucks(NULL), robots(NULL), lastRobot(NULL), lastPuckStack(NULL) {}
-};
-
-struct ColorObject{
-  double r, g, b;
-  
-  ColorObject(int newr, int newg, int newb) : r(newr), g(newg), b(newb) {}
 };
 
 
@@ -97,14 +92,11 @@ map<int, RobotObject*> robots;
 map<int, ServerRobot*> updates;
 EpollConnection ** neighbours;
 vector<EpollConnection*> controllers;
-cairo_t *stepImageDrawer;
-
-  ColorObject colorFromTeam(int teamId);
   
   void BroadcastRobot(RobotObject *curRobot, Index oldIndices, Index newIndices);
   
 public:
-  cairo_surface_t *stepImage; //contains the image of the last step called with generateImage=true
+  RegionRender render;
   int curStep;
   Index getRobotIndices(double x, double y, bool clip);
   
@@ -115,7 +107,7 @@ public:
   bool Collides(double x1, double y1, double x2, double y2);
   
   void AddRobot(RobotObject * oldRobot);
-  RobotObject* AddRobot(int robotId, double newx, double newy, double newa, double newvx, double newvy, int atStep, string newColor, bool broadcast);
+  RobotObject* AddRobot(int robotId, double newx, double newy, double newa, double newvx, double newvy, int atStep, int teamId, bool broadcast);
   
   bool RemoveRobot(int robotId, int xInd, int yInd, bool freeMem);
   
