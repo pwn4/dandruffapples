@@ -164,7 +164,7 @@ void *artificialIntelligence(void *threadid) {
     if (currentTimestep % 500 == 0) {
       tempFlag = true;
     }
-    for (int i = 0; i < robotsPerTeam; i++) {
+    for (int i = 0; i < robotsPerTeam && !simulationEnded; i++) {
       sendNewData = false;
       if (!ownRobots[i]->pendingCommand && currentTimestep % 50 == 0) {
         // Simple AI, follow the leader!
@@ -407,17 +407,17 @@ void run() {
   simulationEnded = true;
   while (simulationStarted) {
    // Wait until child thread stops
+   sched_yield();
   } 
 
   // Clean up
   shutdown(controllerfd, SHUT_RDWR);
   close(controllerfd);
 
-  for (int i = 0; robotsPerTeam; i++) {
+  for (int i = 0; i < robotsPerTeam; i++) {
     delete ownRobots[i];
   }
   delete[] ownRobots;
-  
 }
 
 //this is the main loop for the client
