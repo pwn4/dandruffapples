@@ -78,6 +78,10 @@ struct ArrayObject{
   ArrayObject() : pucks(NULL), robots(NULL) {}
 };
 
+class ComparePuckStackObject {
+    public:
+    bool operator()(PuckStackObject* const &r1, PuckStackObject* const &r2); // Returns true if t1 is earlier than t2
+};
 
 class AreaEngine {
 protected:
@@ -92,7 +96,9 @@ map<int, RobotObject*> robots;
 map<int, ServerRobot*> updates;
 EpollConnection ** neighbours;
 vector<EpollConnection*> controllers;
-  
+//for rendering
+map<PuckStackObject*, bool, ComparePuckStackObject> puckq;
+
   void BroadcastRobot(RobotObject *curRobot, Index oldIndices, Index newIndices);
   
 public:
