@@ -34,8 +34,12 @@ TwoInt ByteUnpack(unsigned int data) {
 
 //this is the color mapping method: teams->Color components
 ColorObject colorFromTeam(int teamId){
+  //puck color
+  if(teamId == 65534)
+    return ColorObject(0, 0, 0);
+
   srand(teamId*123);  //use the same seed for the same team. That way our random numbers are consistent! lol
-  return ColorObject(0.01*(rand() % 90), 0.01*(rand() % 90), 0.01*(rand() % 90));
+  return ColorObject(0.01*(rand() % 60) + 0.2, 0.01*(rand() % 60) + 0.2, 0.01*(rand() % 60) + 0.2);
 }
 
 cairo_surface_t * UnpackImage(RegionRender render)
@@ -64,6 +68,8 @@ cairo_surface_t * UnpackImage(RegionRender render)
 
     while(curRobot.one == 65535 && curRobot.two == 65535 && i < render.image_size()){
       i++;
+      if(i >= render.image_size())
+        break;
       curRobot = ByteUnpack(render.image(i));
       curY++;
     }
