@@ -332,8 +332,8 @@ int main(int argc, char** argv)
               }
 							//lookup clients using seenbyid and store into set then send to all clients
 							//this resolves sending multiple msgs to same client.
-							for(int i=0; i<serverrobot.seenbyid_size(); i++){
-								ret = seenbyidset.insert(robots[serverrobot.seenbyid(i)].client);
+							for(int i=0; i<serverrobot.seenrobot_size(); i++){
+								ret = seenbyidset.insert(robots[serverrobot.seenrobot(i).seenbyid()].client);
 							}
 							for(set<net::EpollConnection*>::iterator it=seenbyidset.begin(); 
 									it!=seenbyidset.end(); it++){

@@ -343,8 +343,13 @@ void run() {
                     // TODO: Change to relative positions
                     ownRobots[i]->x += ownRobots[i]->vx;
                     ownRobots[i]->y += ownRobots[i]->vy;
+                    for (vector<SeenRobot*>::iterator it
+                        = ownRobots[i]->seenRobots.begin();
+                        it != ownRobots[i]->seenRobots.end();
+                        it++) {
+                      // TODO: Update enemy robots in ownrobot lists
+                    }
                   }
-                  // TODO: Update enemy robots in ownrobot lists
                 }
 
                 break;
@@ -372,16 +377,16 @@ void run() {
                       ownRobots[index]->hasCollided = serverrobot.hascollided();
 
                     // Traverse seenById list to check if we can see.
-                    int listSize = serverrobot.seenbyid_size();
+                    int listSize = serverrobot.seenrobot_size();
                     for (int i = 0; i < listSize; i++) {
-                      if (weControlRobot(serverrobot.seenbyid(i))) {
-                        if (serverrobot.viewlostid(i)) {
+                      if (weControlRobot(serverrobot.seenrobot(i).seenbyid())) {
+                        if (serverrobot.seenrobot(i).viewlostid()) {
                           // Could see before, can't see anymore.
                           for (vector<SeenRobot*>::iterator it
                               = ownRobots[index]->seenRobots.begin();
                               it != ownRobots[index]->seenRobots.end();
                               it++) {
-                            if ((*it)->id == serverrobot.seenbyid(i)) {
+                            if ((*it)->id == serverrobot.seenrobot(i).seenbyid()) {
                               // TODO: we may want to store data about this
                               // robot on the client for x timesteps after
                               // it can't see it anymore.
@@ -397,14 +402,14 @@ void run() {
                               = ownRobots[index]->seenRobots.begin();
                               it != ownRobots[index]->seenRobots.end() &&
                               !foundRobot; it++) {
-                            if ((*it)->id == serverrobot.seenbyid(i)) {
+                            if ((*it)->id == serverrobot.seenrobot(i).seenbyid()) {
                               foundRobot = true;
                               // TODO: Update fields SeenRobot!
                             }
                           }
                           if (!foundRobot) {
                             SeenRobot *r = new SeenRobot();
-                            r->id = serverrobot.seenbyid(i);
+                            r->id = serverrobot.seenrobot(i).seenbyid();
                             // TODO: Update seen robot fields.
                             ownRobots[index]->seenRobots.push_back(r);
                           }

@@ -1,3 +1,11 @@
+message SeenServerRobot {
+  required bool viewLostId = 1; // robot specified by seenById can no 
+                                // longer see this robot
+  required fixed32 seenById = 2; // list of robots now viewing
+  optional float relx = 3; 
+  optional float rely = 4;
+}
+  
 message ServerRobot {  
   required fixed32 id = 1;
   optional float velocityx = 2;
@@ -10,8 +18,5 @@ message ServerRobot {
   optional fixed32 controllerIp = 9;
   optional fixed32 lastStep = 10;
   optional fixed32 team = 11;
-  repeated bool viewLostId = 12; // robot specified by seenById can no 
-                                // longer see this robot
-  repeated fixed32 seenById = 13; // list of robots now viewing
-
+  repeated SeenServerRobot seenrobot = 12;
 }
