@@ -200,7 +200,6 @@ void run() {
 	puckstack.set_x(1);
 	puckstack.set_y(1);
 
-	RegionRender png;
 	cairo_surface_t *surface;
 
 	//server variables
@@ -435,12 +434,11 @@ void run() {
 										* cairo_format_stride_for_width(cairo_image_surface_get_format(surface),
 												cairo_image_surface_get_width(surface));*/
 
-								png = regionarea->render;
 								for (vector<net::EpollConnection*>::const_iterator it = worldviewers.begin(); it
 										!= worldviewers.end(); ++it) {
 									if (sendMoreWorldViews[(*it)->fd].initialized
 											&& sendMoreWorldViews[(*it)->fd].value) {
-										(*it)->queue.push(MSG_REGIONVIEW, png);
+										(*it)->queue.push(MSG_REGIONVIEW, regionarea->render);
 										(*it)->set_writing(true);
 									}
 								}
