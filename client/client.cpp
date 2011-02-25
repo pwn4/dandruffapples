@@ -55,24 +55,22 @@ net::EpollConnection* theController;
 int epoll;
 
 class SeenPuck {
-  float relX;
-  float relY;
+  float relx;
+  float rely;
   int size;
 
-  SeenPuck() : relX(0.0), relY(0.0), size(1) {}
+  SeenPuck() : relx(0.0), rely(0.0), size(1) {}
 };
 
 class Robot {
 public:
-  float x;
-  float y;
   float vx;
   float vy;
   float angle;
   bool hasPuck;
   bool hasCollided;  
 
-  Robot() : x(0.0), y(0.0), vx(0.0), vy(0.0), angle(0.0), hasPuck(false),
+  Robot() : vx(0.0), vy(0.0), angle(0.0), hasPuck(false),
             hasCollided(false) {}
 };
 
@@ -81,11 +79,11 @@ public:
   int id;
   int lastTimestepSeen;
   bool viewable;
-  float relX;
-  float relY;
+  float relx;
+  float rely;
 
   SeenRobot() : Robot(), id(-1), lastTimestepSeen(-1), viewable(true),
-      relX(0.0), relY(0.0) {}
+      relx(0.0), rely(0.0) {}
 };
 
 class OwnRobot : public Robot {
@@ -148,6 +146,111 @@ bool weControlRobot(int robotId) {
   return (0 <= index && index < robotsPerTeam);
 }
 
+float relDistance(float x1, float y1) {
+  return (sqrt(x1*x1 + y1*y1));
+}
+
+void executeAiVersion(int type, OwnRobot* ownRobot, ClientRobot* clientRobot) {
+  float velocity = 1.0;
+  if (type == 0) {
+    // Aggressive robot!
+    if (ownRobot->seenRobots.size() > 0) {
+      // Find the closest seen robot. If none, do nothing.
+      vector<SeenRobot*>::iterator closest;
+      float minDistance = 9000.01; // Over nine thousand!
+      bool foundRobot = false;
+      for (vector<SeenRobot*>::iterator it
+          = ownRobot->seenRobots.begin();
+          it != ownRobot->seenRobots.end(); it++) {
+        if (relDistance((*it)->relx, (*it)->rely) < minDistance &&
+            !weControlRobot((*it)->id)) {
+          closest = it;
+          foundRobot = true;
+        }
+      }
+
+      if (foundRobot) {
+        // TODO: Do trig here?
+        if ((*closest)->relx > 0.0 && ownRobot->vx != velocity) {
+          // Move right!
+          ownRobot->pendingCommand = true;
+          clientRobot->set_velocityx(velocity);
+        } else if ((*closest)->relx < 0.0 && 
+            ownRobot->vx != velocity * -1.0) {
+          ownRobot->pendingCommand = true;
+          clientRobot->set_velocityx(velocity * -1.0);
+        } else if ((*closest)->relx == 0.0 && ownRobot->vx != 0.0) {
+          ownRobot->pendingCommand = true;
+          clientRobot->set_velocityx(0.0);
+        }
+        if ((*closest)->rely > 0.0 && ownRobot->vy != velocity) {
+          // Move down!
+          ownRobot->pendingCommand = true;
+          clientRobot->set_velocityy(velocity);
+        } else if ((*closest)->rely < 0.0 && 
+            ownRobot->vy != velocity * -1.0) {
+          ownRobot->pendingCommand = true;
+          clientRobot->set_velocityy(velocity * -1.0);
+        } else if ((*closest)->rely == 0.0 && ownRobot->vy != 0.0) {
+          ownRobot->pendingCommand = true;
+          clientRobot->set_velocityy(0.0);
+        }
+      } 
+    } else {
+      // No seen robots. Make sure we're moving.
+      if (ownRobot->vx == 0.0 || ownRobot->vy == 0.0) {
+        ownRobot->pendingCommand = true;
+        clientRobot->set_velocityx(((rand() % 11) / 10.0) - 0.5);
+        clientRobot->set_velocityy(((rand() % 11) / 10.0) - 0.5);
+      }
+    }
+  } else if (type == 1) {
+    // Scared robot!
+    if (ownRobot->seenRobots.size() > 0) {
+      // Find the closest seen robot. If none, do nothing.
+      vector<SeenRobot*>::iterator closest;
+      float minDistance = 9000.01; // Over nine thousand!
+      bool foundRobot = false;
+      for (vector<SeenRobot*>::iterator it
+          = ownRobot->seenRobots.begin();
+          it != ownRobot->seenRobots.end(); it++) {
+        if (relDistance((*it)->relx, (*it)->rely) < minDistance) {
+          closest = it;
+          foundRobot = true;
+        }
+      }
+
+      if (foundRobot) {
+        if ((*closest)->relx <= 0.0 && ownRobot->vx != velocity) {
+          // Move right!
+          ownRobot->pendingCommand = true;
+          clientRobot->set_velocityx(velocity);
+        } else if ((*closest)->relx > 0.0 && 
+            ownRobot->vx != velocity * -1.0) {
+          ownRobot->pendingCommand = true;
+          clientRobot->set_velocityx(velocity * -1.0);
+        }
+        if ((*closest)->rely <= 0.0 && ownRobot->vy != velocity) {
+          // Move down!
+          ownRobot->pendingCommand = true;
+          clientRobot->set_velocityy(velocity);
+        } else if ((*closest)->rely > 0.0 && 
+            ownRobot->vy != velocity * -1.0) {
+          ownRobot->pendingCommand = true;
+          clientRobot->set_velocityy(velocity * -1.0);
+        }
+      } 
+    } else {
+      // No seen robots. Make sure we're moving.
+      if (ownRobot->vx == 0.0 || ownRobot->vy == 0.0) {
+        ownRobot->pendingCommand = true;
+        clientRobot->set_velocityx(((rand() % 11) / 10.0) - 0.5);
+        clientRobot->set_velocityy(((rand() % 11) / 10.0) - 0.5);
+      }
+    }
+  }
+}
+
 // Destination function for the AI thread.
 void *artificialIntelligence(void *threadid) {
   while (!simulationStarted) {
@@ -156,60 +259,22 @@ void *artificialIntelligence(void *threadid) {
   }
 
   ClientRobot clientRobot;
-  float velocity = 0.1;
-  float angle = 3.0;
-  int tempId = 0;
-  bool tempFlag = false;
-  bool sendNewData = false;
-
   while (!simulationEnded) {
-    if (currentTimestep % 500 == 0) {
-      tempFlag = true;
-    }
     for (int i = 0; i < robotsPerTeam && !simulationEnded; i++) {
-      sendNewData = false;
-      if (!ownRobots[i]->pendingCommand && currentTimestep % 50 == 0) {
-        // Simple AI, follow the leader!
-        if (i == 0 && tempFlag) {
-          ownRobots[i]->pendingCommand = true;
+      if (!ownRobots[i]->pendingCommand) {
+        // Run different AIs depending on i.
+        executeAiVersion(i % 1, ownRobots[i], &clientRobot); 
+        // Did we want to send a command?
+        if (ownRobots[i]->pendingCommand) {
           clientRobot.set_id(indexToRobotId(i));
-          clientRobot.set_velocityx(((rand() % 11) / 10.0) - 0.5);
-          clientRobot.set_velocityy(((rand() % 11) / 10.0) - 0.5);
-          clientRobot.set_angle(angle);
-          tempId = i;
-        } else {
-          ownRobots[i]->pendingCommand = true;
-          clientRobot.set_id(indexToRobotId(i));
-          if (ownRobots[tempId]->x > ownRobots[i]->x) {
-            // Move right!
-            clientRobot.set_velocityx(velocity);
-          } else if (ownRobots[tempId]->x == ownRobots[i]->x) {
-            clientRobot.set_velocityx(0.0);
-          } else {
-            clientRobot.set_velocityx(velocity * -1.0);
-          }
-          if (ownRobots[tempId]->y > ownRobots[i]->y) {
-            // Move up!
-            clientRobot.set_velocityy(velocity);
-          } else if (ownRobots[tempId]->y == ownRobots[i]->y) {
-            clientRobot.set_velocityy(0.0);
-          } else {
-            clientRobot.set_velocityy(velocity * -1.0);
-          }
-          clientRobot.set_angle(angle);
+          clientRobot.set_angle(0.0); // TODO: implement angle
+          theController->queue.push(MSG_CLIENTROBOT, clientRobot);
+          theController->set_writing(true);
         }
-
-        //cout << "vels" << clientRobot.velocityx() << clientRobot.velocityy() << endl;
-        theController->queue.push(MSG_CLIENTROBOT, clientRobot);
-        theController->set_writing(true);
       } else {
         sched_yield(); // Let the other thread read and write
-        //cout << "Pending command exists for robot #" << indexToRobotId(i)
-        //     << endl;
       } 
     }
-
-    //sched_yield(); // Let the other thread read and write
     //sleep(5); // delay this thread for 5 seconds
   }
 
@@ -340,14 +405,12 @@ void run() {
                 if (simulationStarted) {
                   // Update all current positions.
                   for (int i = 0; i < robotsPerTeam; i++) {
-                    // TODO: Change to relative positions
-                    ownRobots[i]->x += ownRobots[i]->vx;
-                    ownRobots[i]->y += ownRobots[i]->vy;
                     for (vector<SeenRobot*>::iterator it
                         = ownRobots[i]->seenRobots.begin();
                         it != ownRobots[i]->seenRobots.end();
                         it++) {
-                      // TODO: Update enemy robots in ownrobot lists
+                      (*it)->relx += (*it)->vx - ownRobots[i]->vx;
+                      (*it)->rely += (*it)->vy - ownRobots[i]->vy;
                     }
                   }
                 }
@@ -359,6 +422,7 @@ void run() {
                 if (simulationStarted) {
                   int robotId = serverrobot.id();
                   if (weControlRobot(robotId)) {
+                    // The serverrobot is from our team.
                     int index = robotIdToIndex(robotId);
                     ownRobots[index]->pendingCommand = false;
                     if (serverrobot.has_velocityx()) 
@@ -369,10 +433,6 @@ void run() {
                       ownRobots[index]->angle = serverrobot.angle();
                     if (serverrobot.has_haspuck()) 
                       ownRobots[index]->hasPuck = serverrobot.haspuck();
-                    if (serverrobot.has_x()) 
-                      ownRobots[index]->x = serverrobot.x();
-                    if (serverrobot.has_y()) 
-                      ownRobots[index]->y = serverrobot.y();
                     if (serverrobot.has_hascollided()) 
                       ownRobots[index]->hasCollided = serverrobot.hascollided();
                   }
@@ -382,6 +442,7 @@ void run() {
                   int listSize = serverrobot.seenrobot_size();
                   for (int i = 0; i < listSize; i++) {
                     if (weControlRobot(serverrobot.seenrobot(i).seenbyid())) {
+                      // The serverrobot is not on our team. Can we see it?
                       index = robotIdToIndex(serverrobot.seenrobot(i).
                           seenbyid());
                       if (serverrobot.seenrobot(i).viewlostid()) {
@@ -413,15 +474,40 @@ void run() {
                             cout << "Our #" << index << " update see "
                                  << serverrobot.id() << " at relx: " 
                                  << serverrobot.seenrobot(i).relx() << endl;
-                            // TODO: Update fields SeenRobot!
+                            if (serverrobot.has_velocityx()) 
+                              (*it)->vx = serverrobot.velocityx();
+                            if (serverrobot.has_velocityy()) 
+                              (*it)->vy = serverrobot.velocityy();
+                            if (serverrobot.has_angle()) 
+                              (*it)->angle = serverrobot.angle();
+                            if (serverrobot.has_haspuck()) 
+                              (*it)->hasPuck = serverrobot.haspuck();
+                            if (serverrobot.has_hascollided()) 
+                              (*it)->hasCollided = serverrobot.hascollided();
+                            (*it)->id = serverrobot.id();
+                            (*it)->relx = serverrobot.seenrobot(i).relx();
+                            (*it)->rely = serverrobot.seenrobot(i).rely();
+                            (*it)->lastTimestepSeen = currentTimestep;
                           }
                         }
                         if (!foundRobot) {
                           SeenRobot *r = new SeenRobot();
-                          r->id = serverrobot.seenrobot(i).seenbyid();
-                          // TODO: Update seen robot fields.
                           cout << "Our #" << index << " begin see "
                                << serverrobot.id() << endl;
+                          if (serverrobot.has_velocityx()) 
+                            r->vx = serverrobot.velocityx();
+                          if (serverrobot.has_velocityy()) 
+                            r->vy = serverrobot.velocityy();
+                          if (serverrobot.has_angle()) 
+                            r->angle = serverrobot.angle();
+                          if (serverrobot.has_haspuck()) 
+                            r->hasPuck = serverrobot.haspuck();
+                          if (serverrobot.has_hascollided()) 
+                            r->hasCollided = serverrobot.hascollided();
+                          r->id = serverrobot.seenrobot(i).seenbyid();
+                          r->relx = serverrobot.seenrobot(i).relx();
+                          r->rely = serverrobot.seenrobot(i).rely();
+                          r->lastTimestepSeen = currentTimestep;
                           ownRobots[index]->seenRobots.push_back(r);
                         }
                       }
