@@ -73,10 +73,7 @@ struct ArrayObject{
   PuckStackObject * pucks;
   RobotObject * robots;
   
-  RobotObject * lastRobot;
-  PuckStackObject * lastPuckStack;
-  
-  ArrayObject() : pucks(NULL), robots(NULL), lastRobot(NULL), lastPuckStack(NULL) {}
+  ArrayObject() : pucks(NULL), robots(NULL) {}
 };
 
 
