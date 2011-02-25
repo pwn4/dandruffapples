@@ -3,6 +3,7 @@
 
 #include <netinet/in.h>
 #include <cairo.h>
+#include <stdio.h>
 #include "../common/imageconstants.h"
 #include "../common/regionrender.pb.h"
 
