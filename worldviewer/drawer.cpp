@@ -79,6 +79,8 @@ cairo_surface_t * UnpackImage(RegionRender render)
 
     cairo_fill (stepImageDrawer);
   }
+  
+  cairo_destroy(stepImageDrawer);
 
   return stepImage;
 }
