@@ -63,9 +63,6 @@ AreaEngine::AreaEngine(int robotSize, int regionSize, int minElementSize, double
   neighbours = new EpollConnection*[8];
   for(int i = 0; i < 8; i++)
     neighbours[i] = NULL;
-  puckArray = new int*[regionRatio];
-  for(int i = 0; i < regionRatio; i++)
-    puckArray[i] = new int[regionRatio];
   regionBounds = min(regionRatio/robotRatio, regionRatio/minElementSize); 
   elementSize = regionRatio/regionBounds;
   //add two for the overlaps in regions
@@ -77,11 +74,8 @@ AreaEngine::AreaEngine(int robotSize, int regionSize, int minElementSize, double
 
 //destructor for cleanup
 AreaEngine::~AreaEngine() {
-  for(int i = 0; i < regionRatio; i++)
-    delete[] puckArray[i];
   for(int i = 0; i < regionBounds; i++)
     delete[] robotArray[i];
-  delete[] puckArray;
   delete[] robotArray;
 }
 
@@ -386,7 +380,65 @@ void AreaEngine::Step(bool generateImage){
   }
 }
 
-//add a robot to the system. returns the robotobject that is created for convenience
+//add a puck to the system.
+void AreaEngine::AddPuck(double newx, double newy){
+  Index puckElement = getRobotIndices(newx, newy, true);
+  
+  ArrayObject *element = &robotArray[puckElement.x][puckElement.y];
+  
+  int x = (int) newx;
+  int y = (int) newy;
+  
+  PuckStackObject * curStack = element->pucks;
+  //iterate through the pucks, looking for a match
+  while(curStack != NULL)
+  {
+    if(curStack->x == x && curStack->y == y)
+      break;
+    curStack = curStack->nextStack;
+  }
+  
+  if(curStack == NULL)
+  {
+    //new stack
+    curStack = new PuckStackObject(x, y);
+    curStack->nextStack = element->pucks;
+    element->pucks = curStack;
+    return;
+  }else{
+    //increment
+    curStack->count++;
+    return;
+  }
+}
+
+//remove a puck - returns a success boolean. This way we can just call the method when a client
+//requests and not bother checking ourselves
+bool AreaEngine::RemovePuck(double x, double y){
+  Index puckElement = getRobotIndices(x, y, true);
+  
+  ArrayObject *element = &robotArray[puckElement.x][puckElement.y];
+  
+  int ix = (int) x;
+  int iy = (int) y;
+  
+  PuckStackObject * curStack = element->pucks;
+  //iterate through the pucks, looking for a match
+  while(curStack != NULL)
+  {
+    if(curStack->x == ix && curStack->y == iy)
+      break;
+    curStack = curStack->nextStack;
+  }
+  
+  if(curStack == NULL)
+    return false;
+   
+  curStack->count++;
+  return true;
+}
+
+//add a robot to the system.
 //overload
 void AreaEngine::AddRobot(RobotObject * oldRobot){
   //find where it belongs in a[][] and add it

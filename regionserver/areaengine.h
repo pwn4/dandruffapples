@@ -49,6 +49,8 @@ struct PuckStackObject{
   int count;
   
   PuckStackObject * nextStack;
+  
+  PuckStackObject(int newx, int newy) : x(newx), y(newy), count(1), nextStack(NULL) {}
 };
 
 struct RobotObject{
@@ -84,7 +86,6 @@ int regionBounds;
 int elementSize;  //in pucks
 double viewDist, viewAng;
 int coolDown; //cooldown before being able to change velocities
-int** puckArray;
 double maxSpeed, maxRotate; //a bound on the speed of robots. Should be passed by the clock.
 ArrayObject** robotArray;
 map<int, RobotObject*> robots;
@@ -104,6 +105,9 @@ public:
   bool Sees(double x1, double y1, double x2, double y2);
   
   bool Collides(double x1, double y1, double x2, double y2);
+  
+  void AddPuck(double newx, double newy);
+  bool RemovePuck(double x, double y);
   
   void AddRobot(RobotObject * oldRobot);
   RobotObject* AddRobot(int robotId, double newx, double newy, double newa, double newvx, double newvy, int atStep, int teamId, bool broadcast);
