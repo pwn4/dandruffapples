@@ -377,6 +377,10 @@ void AreaEngine::Step(bool generateImage){
     topLeft = getRobotIndices(curRobot->x-viewDist, curRobot->y-viewDist, true);
     botRight = getRobotIndices(curRobot->x+viewDist, curRobot->y+viewDist, true);
 
+    //create the serverrobot object
+    ServerRobot serverrobot;
+    serverrobot.set_id(curRobot->id);
+
     for(int j = topLeft.x; j <= botRight.x; j++)
       for(int k = topLeft.y; k <= botRight.y; k++)
         {
@@ -384,9 +388,7 @@ void AreaEngine::Step(bool generateImage){
           ArrayObject * element = &robotArray[j][k];
 
           RobotObject *otherRobot = element->robots;
-          //check its elements
-          ServerRobot serverrobot;
-          serverrobot.set_id(curRobot->id);
+
           while(otherRobot != NULL) {    
             if(curRobot->id != otherRobot->id && AreaEngine::Sees(otherRobot->x, otherRobot->y, curRobot->x, curRobot->y)){
               //instead of forming nowSeen and lastSeen, and then comparing. Do that shit on the FLY.
@@ -417,16 +419,16 @@ void AreaEngine::Step(bool generateImage){
 
             otherRobot = otherRobot->nextRobot;
           }
-
-          // Send update if at least one seenById exists
-          if (serverrobot.seenrobot_size() > 0) {
-            for (vector<EpollConnection*>::const_iterator it = 
-                 controllers.begin(); it != controllers.end(); it++) {
-              (*it)->queue.push(MSG_SERVERROBOT, serverrobot);
-              (*it)->set_writing(true); 
-            }
-          }
         }
+        
+    // Send update if at least one seenById exists
+    if (serverrobot.seenrobot_size() > 0) {
+      for (vector<EpollConnection*>::const_iterator it = 
+           controllers.begin(); it != controllers.end(); it++) {
+        (*it)->queue.push(MSG_SERVERROBOT, serverrobot);
+        (*it)->set_writing(true); 
+      }
+    }
   }
 
   //FORCE all updates to neighbors to occur before we finish the step (necessary for synchronization)
