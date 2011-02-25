@@ -108,7 +108,7 @@ public:
   void AddRobot(RobotObject * oldRobot);
   RobotObject* AddRobot(int robotId, double newx, double newy, double newa, double newvx, double newvy, int atStep, int teamId, bool broadcast);
   
-  bool RemoveRobot(int robotId, int xInd, int yInd, bool freeMem);
+  void RemoveRobot(int robotId, int xInd, int yInd, bool freeMem);
   
   AreaEngine(int robotSize, int regionSize, int minElementSize, double viewDistance, double viewAngle, double maximumSpeed, double maximumRotate);
   ~AreaEngine();
