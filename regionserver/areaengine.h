@@ -59,24 +59,21 @@ struct RobotObject{
   bool holdingPuck;
   Index arrayLocation;
   time_t lastCollision;
-  map<int, bool> *lastSeen;
+  map<int, bool> lastSeen;
   RobotObject * nextRobot;
   int controllerfd;
   int team;
  
   
-  RobotObject(int newid, double newx, double newy, double newa, Index aLoc, int curStep, int teamId) : id(newid), lastStep(curStep), x(newx), y(newy), angle(newa), vx(0), vy(0), arrayLocation(aLoc), lastCollision(time(NULL)), lastSeen(new map<int, bool>), nextRobot(NULL), controllerfd(-1), team(teamId) {}
-  RobotObject(int newid, double newx, double newy, double newa, double newvx, double newvy, Index aLoc, int curStep, int teamId) : id(newid), lastStep(curStep), x(newx), y(newy), angle(newa), vx(newvx), vy(newvy), arrayLocation(aLoc), lastCollision(time(NULL)), lastSeen(new map<int, bool>), nextRobot(NULL), controllerfd(-1), team(teamId) {}
+  RobotObject(int newid, double newx, double newy, double newa, Index aLoc, int curStep, int teamId) : id(newid), lastStep(curStep), x(newx), y(newy), angle(newa), vx(0), vy(0), arrayLocation(aLoc), lastCollision(time(NULL)), nextRobot(NULL), controllerfd(-1), team(teamId) {}
+  RobotObject(int newid, double newx, double newy, double newa, double newvx, double newvy, Index aLoc, int curStep, int teamId) : id(newid), lastStep(curStep), x(newx), y(newy), angle(newa), vx(newvx), vy(newvy), arrayLocation(aLoc), lastCollision(time(NULL)), nextRobot(NULL), controllerfd(-1), team(teamId) {}
 };
 
 struct ArrayObject{
   PuckStackObject * pucks;
   RobotObject * robots;
   
-  RobotObject * lastRobot;
-  PuckStackObject * lastPuckStack;
-  
-  ArrayObject() : pucks(NULL), robots(NULL), lastRobot(NULL), lastPuckStack(NULL) {}
+  ArrayObject() : pucks(NULL), robots(NULL) {}
 };
 
 
@@ -111,7 +108,7 @@ public:
   void AddRobot(RobotObject * oldRobot);
   RobotObject* AddRobot(int robotId, double newx, double newy, double newa, double newvx, double newvy, int atStep, int teamId, bool broadcast);
   
-  bool RemoveRobot(int robotId, int xInd, int yInd, bool freeMem);
+  void RemoveRobot(int robotId, int xInd, int yInd, bool freeMem);
   
   AreaEngine(int robotSize, int regionSize, int minElementSize, double viewDistance, double viewAngle, double maximumSpeed, double maximumRotate);
   ~AreaEngine();

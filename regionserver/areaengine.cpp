@@ -24,9 +24,12 @@ Index AreaEngine::getRobotIndices(double x, double y, bool clip){
       
     if(rtn.x >= regionBounds+2)
       rtn.x = regionBounds+1;
-    if(rtn.y >= regionBounds)
+    if(rtn.y >= regionBounds+2)
       rtn.y = regionBounds+1;
   }
+  
+  if(rtn.x < -1 || rtn.y < -1 || rtn.x > regionBounds+2 || rtn.y > regionBounds+2)
+    throw "AreaEngine: Robot tracked too far out of bounds.";
   
   return rtn;
 }
@@ -254,22 +257,11 @@ void AreaEngine::Step(bool generateImage){
       //the robot moved, so...if we no longer track it
       if(newIndices.x < 0 || newIndices.y < 0 || newIndices.x >= regionBounds+2 || newIndices.y >= regionBounds+2)
       {
-        if(!AreaEngine::RemoveRobot(curRobot->id, oldIndices.x, oldIndices.y, true))
-        {
-          //cerr << "Remove Robot Failure! This should NOT happen! Id: " << tmp << endl;
-        }else{
-          //cout << "Removed robot id: " << tmp << endl;
-        }
+        AreaEngine::RemoveRobot(curRobot->id, oldIndices.x, oldIndices.y, true);
         robots.erase(robotIt++);
         continue;
       }else{
-        if(!AreaEngine::RemoveRobot(curRobot->id, oldIndices.x, oldIndices.y, false))
-        {
-          //cerr << "Remove Robot Failure! This should NOT happen! Id: " << tmp << endl;
-        }else{
-          //cout << "Removed robot id: " << tmp << endl;
-        }
-          
+        AreaEngine::RemoveRobot(curRobot->id, oldIndices.x, oldIndices.y, false);          
         curRobot->arrayLocation = newIndices;
         AreaEngine::AddRobot(curRobot);
         //check if we need to inform a neighbor that its entered an overlap - but ONLY if we just entered an OVERLAP!
@@ -326,7 +318,7 @@ void AreaEngine::Step(bool generateImage){
   {
   
     RobotObject * curRobot = (*robotIt).second;
-    nowSaw = curRobot->lastSeen;
+    nowSaw = &curRobot->lastSeen;
     
     //may make this better. don't need to check full 360 degrees if we only see a cone
     topLeft = getRobotIndices(curRobot->x-viewDist, curRobot->y-viewDist, true);
@@ -381,15 +373,15 @@ void AreaEngine::AddRobot(RobotObject * oldRobot){
   ArrayObject *element = &robotArray[oldRobot->arrayLocation.x][oldRobot->arrayLocation.y];
 
   //check if the area is empty first
-  if(element->lastRobot == NULL)
+  if(element->robots == NULL)
   {
     element->robots = oldRobot;
-    element->lastRobot = oldRobot;
+    oldRobot->nextRobot = NULL;
   }else{
-    element->lastRobot->nextRobot = oldRobot;
-    element->lastRobot = oldRobot;
+    oldRobot->nextRobot = element->robots;
+    element->robots = oldRobot;
   }
-  oldRobot->nextRobot = NULL;
+  
 }
 
 RobotObject* AreaEngine::AddRobot(int robotId, double newx, double newy, double newa, double newvx, double newvy, int atStep, int teamId, bool broadcast){
@@ -404,15 +396,14 @@ RobotObject* AreaEngine::AddRobot(int robotId, double newx, double newy, double 
   //find where it belongs in a[][] and add it
   ArrayObject *element = &robotArray[robotIndices.x][robotIndices.y];
   //check if the area is empty first
-  if(element->lastRobot == NULL)
+  if(element->robots == NULL)
   {
     element->robots = newRobot;
-    element->lastRobot = newRobot;
+    newRobot->nextRobot = NULL;
   }else{
-    element->lastRobot->nextRobot = newRobot;
-    element->lastRobot = newRobot;
+    newRobot->nextRobot = element->robots;
+    element->robots = newRobot;
   }
-  newRobot->nextRobot = NULL;
   
   if(broadcast)
     BroadcastRobot(newRobot, Index(regionBounds/2, regionBounds/2), robotIndices);
@@ -421,13 +412,13 @@ RobotObject* AreaEngine::AddRobot(int robotId, double newx, double newy, double 
 }
 
 //remove a robot with id robotId from the a[xInd][yInd] array element. cleanup. returns true if a robot was deleted
-bool AreaEngine::RemoveRobot(int robotId, int xInd, int yInd, bool freeMem){
+void AreaEngine::RemoveRobot(int robotId, int xInd, int yInd, bool freeMem){
   //O(1) Deletion. Would be O(m), but m (robots in area) is bounded by a constant, so actually O(1)
 
   ArrayObject *element = &robotArray[xInd][yInd];
   //check if the area is empty first
   if(element->robots == NULL)
-    return false;
+    throw "AreaEngine: Remove Robot In-method failure (1)";
 
   RobotObject *curRobot = element->robots;
   //check it if its first
@@ -437,7 +428,7 @@ bool AreaEngine::RemoveRobot(int robotId, int xInd, int yInd, bool freeMem){
     if(freeMem){
       delete curRobot;
     }
-    return true;
+    return;
   }
 
   RobotObject * lastRobot = curRobot;
@@ -450,13 +441,13 @@ bool AreaEngine::RemoveRobot(int robotId, int xInd, int yInd, bool freeMem){
       if(freeMem){
         delete curRobot;
       }
-      return true;
+      return;
     }
     lastRobot = curRobot;
     curRobot = lastRobot->nextRobot;
   }
   
-  return false;
+  throw "AreaEngine: Remove Robot In-method failure (2)";
 }
 
 bool AreaEngine::ChangeVelocity(int robotId, double newvx, double newvy){

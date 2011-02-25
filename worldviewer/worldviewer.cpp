@@ -104,9 +104,14 @@ void displayWorldView(int regionNum, RegionRender render) {
 	else if (horizontalView && regions.at(regionNum) == pivotRegionBuddy)
 		position = TOP_RIGHT;
 
+  //double buffer the images
 	cairo_t *cr = gdk_cairo_create(worldDrawingArea.at(position)->widget.window);
-	UnpackImage(render, cr);
+	cairo_surface_t *image = UnpackImage(render);
+ 
+	cairo_set_source_surface(cr, image, 0, 0);
+	cairo_paint(cr);
 
+  cairo_surface_destroy(image);
 	cairo_destroy(cr);
 }
 

@@ -3,6 +3,7 @@
 
 #include <netinet/in.h>
 #include <cairo.h>
+#include <stdio.h>
 #include "../common/imageconstants.h"
 #include "../common/regionrender.pb.h"
 
@@ -19,7 +20,7 @@ struct ColorObject{
 };
 
 ColorObject colorFromTeam(int teamId);
-void UnpackImage(RegionRender render, cairo_t *stepImageDrawer);
+cairo_surface_t * UnpackImage(RegionRender render);
 unsigned int BytePack(int a, int b);
 TwoInt ByteUnpack(unsigned int data);
 
