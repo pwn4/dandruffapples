@@ -326,7 +326,7 @@ void AreaEngine::Step(bool generateImage){
   {
   
     RobotObject * curRobot = (*robotIt).second;
-    nowSaw = curRobot->lastSeen;
+    nowSaw = &curRobot->lastSeen;
     
     //may make this better. don't need to check full 360 degrees if we only see a cone
     topLeft = getRobotIndices(curRobot->x-viewDist, curRobot->y-viewDist, true);
