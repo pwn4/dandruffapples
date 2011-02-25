@@ -59,7 +59,7 @@ struct RobotObject{
   bool holdingPuck;
   Index arrayLocation;
   time_t lastCollision;
-  map<int, bool> lastSeen;
+  map<int, bool> lastSeenBy;
   RobotObject * nextRobot;
   int controllerfd;
   int team;

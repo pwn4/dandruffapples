@@ -116,7 +116,7 @@ void AreaEngine::Step(bool generateImage){
   curStep++;
   //some worker variables
   Index topLeft, botRight;
-  map<int, bool> *nowSaw;
+  map<int, bool> *nowSeenBy;
   map<int, RobotObject*>::iterator robotIt;
   
   MessageType type;
@@ -318,7 +318,7 @@ void AreaEngine::Step(bool generateImage){
   {
   
     RobotObject * curRobot = (*robotIt).second;
-    nowSaw = &curRobot->lastSeen;
+    nowSeenBy = &curRobot->lastSeenBy;
     
     //may make this better. don't need to check full 360 degrees if we only see a cone
     topLeft = getRobotIndices(curRobot->x-viewDist, curRobot->y-viewDist, true);
@@ -332,30 +332,50 @@ void AreaEngine::Step(bool generateImage){
 
           RobotObject *otherRobot = element->robots;
           //check its elements
+          ServerRobot serverrobot;
+          serverrobot.set_id(curRobot->id);
           while(otherRobot != NULL) {    
-            if(curRobot->id != otherRobot->id && AreaEngine::Sees(curRobot->x, curRobot->y, otherRobot->x, otherRobot->y)){
+            if(curRobot->id != otherRobot->id && AreaEngine::Sees(otherRobot->x, otherRobot->y, curRobot->x, curRobot->y)){
               //instead of forming nowSeen and lastSeen, and then comparing. Do that shit on the FLY.
-              //first, that which we hadn't seen but now do
-              if(nowSaw->find(otherRobot->id) == nowSaw->end())
+              //first, that which we hadn't been seen by but now are
+              if(nowSeenBy->find(otherRobot->id) == nowSeenBy->end())
               {
-                nowSaw->insert(pair<int, bool>(otherRobot->id, true));
-                //TODO: add network code... send to curRobot that it now sees *setIterator
+                nowSeenBy->insert(pair<int, bool>(otherRobot->id, true));
+                SeenServerRobot* seenRobot = serverrobot.add_seenrobot();
+                seenRobot->set_viewlostid(false);
+                seenRobot->set_seenbyid(otherRobot->id);
+                seenRobot->set_relx(curRobot->x - otherRobot->x);
+                seenRobot->set_rely(curRobot->y - otherRobot->y);
               }
               //curRobot->nowSeen->insert(pair<int, bool>(otherRobot->id, true));
             }else{
             //then, that which we did see, but now don't
-              if(nowSaw->find(otherRobot->id) != nowSaw->end())
+              if(nowSeenBy->find(otherRobot->id) != nowSeenBy->end())
               {
-                nowSaw->erase(otherRobot->id);
+                nowSeenBy->erase(otherRobot->id);
                 //TODO: add network code... send to curRobot that it no longer sees *setIterator
+                SeenServerRobot* seenRobot = serverrobot.add_seenrobot();
+                seenRobot->set_viewlostid(true);
+                seenRobot->set_seenbyid(otherRobot->id);
+                seenRobot->set_relx(curRobot->x - otherRobot->x);
+                seenRobot->set_rely(curRobot->y - otherRobot->y);
               }
             }
 
             otherRobot = otherRobot->nextRobot;
           }
+
+          // Send update if at least one seenById exists
+          if (serverrobot.seenrobot_size() > 0) {
+            for (vector<EpollConnection*>::const_iterator it = 
+                 controllers.begin(); it != controllers.end(); it++) {
+              (*it)->queue.push(MSG_SERVERROBOT, serverrobot);
+              (*it)->set_writing(true); 
+            }
+          }
         }
   }
-  
+
   //FORCE all updates to neighbors to occur before we finish the step (necessary for synchronization)
   for(int i = 0; i < 8; i++)
   {
