@@ -225,8 +225,6 @@ void run() {
 	//create robots for benchmarking!
 	int numRobots = 0;
 	int wantRobots = 1000;
-	//regionarea->AddRobot(numRobots++, 10, 10, 0, .1, 0, 0, "red");
-	//regionarea->AddRobot(numRobots++, 1800, 10, 0, -.1, 0, 0, "red");
 
 	MessageWriter writer(clockfd);
 	MessageReader reader(clockfd);
@@ -378,14 +376,18 @@ void run() {
 							numRobots = 0;
 							int rowCounter = 0;
 							bool firstrow = true;
+							//add some test pucks for now
+							regionarea->AddPuck((2 * robotDiameter)+minElementSize+104, (2 * robotDiameter)+minElementSize+110);
+							regionarea->AddPuck((2 * robotDiameter)+minElementSize+204, (2 * robotDiameter)+minElementSize+130);
+							regionarea->AddPuck((2 * robotDiameter)+minElementSize+304, (2 * robotDiameter)+minElementSize+150);
 							//j is the y, i is the x
 
 							for (int j = (2 * robotDiameter)+minElementSize; j < (regionSideLen-minElementSize) - (2 * (robotDiameter)) && numRobots	< wantRobots; j += 4 * (robotDiameter)) {
 								for (int i = (2 * robotDiameter)+minElementSize; i < (regionSideLen-minElementSize) - (2 * (robotDiameter)) && numRobots	< wantRobots; i += 5 * (robotDiameter)){
 									if(rowCounter == 0)
-									  regionarea->AddRobot(myRobotIds[numRobots], i, j, 0, 0, -.1, 0, myRobotTeams[numRobots], true);
+									  regionarea->AddRobot(myRobotIds[numRobots], i, j, 0, 0, -.5, 0, myRobotTeams[numRobots], true);
 									else if(rowCounter == 1)
-									  regionarea->AddRobot(myRobotIds[numRobots], i, j, 0, 0, .1, 0, myRobotTeams[numRobots], true);
+									  regionarea->AddRobot(myRobotIds[numRobots], i, j, 0, 0, .5, 0, myRobotTeams[numRobots], true);
 									else if(firstrow){
 									  regionarea->AddRobot(myRobotIds[numRobots], i, j, 0, 0, (double)((rand() % 101)-50.0)/100.0, 0, myRobotTeams[numRobots], true);
 									}
