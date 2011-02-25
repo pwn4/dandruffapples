@@ -414,7 +414,7 @@ RobotObject* AreaEngine::AddRobot(int robotId, double newx, double newy, double 
 //remove a robot with id robotId from the a[xInd][yInd] array element. cleanup. returns true if a robot was deleted
 void AreaEngine::RemoveRobot(int robotId, int xInd, int yInd, bool freeMem){
   //O(1) Deletion. Would be O(m), but m (robots in area) is bounded by a constant, so actually O(1)
-freeMem = false;
+
   ArrayObject *element = &robotArray[xInd][yInd];
   //check if the area is empty first
   if(element->robots == NULL)
