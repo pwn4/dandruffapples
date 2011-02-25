@@ -111,6 +111,7 @@ void displayWorldView(int regionNum, RegionRender render) {
 	cairo_set_source_surface(cr, image, 0, 0);
 	cairo_paint(cr);
 
+  cairo_surface_destroy(image);
 	cairo_destroy(cr);
 }
 
