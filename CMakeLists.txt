@@ -8,6 +8,9 @@ IF(NOT CMAKE_BUILD_TYPE)
       FORCE)
 ENDIF(NOT CMAKE_BUILD_TYPE)
 
+SET(CMAKE_CXX_FLAGS_PROFILE "-g -pg")
+
+
 find_package(PkgConfig)
 
 add_definitions(-Wall -Wextra)
