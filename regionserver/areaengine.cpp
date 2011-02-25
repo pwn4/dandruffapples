@@ -380,40 +380,60 @@ void AreaEngine::Step(bool generateImage){
     //create the serverrobot object
     ServerRobot serverrobot;
     serverrobot.set_id(curRobot->id);
+    
+    //first check sight losses
+    map<int, bool>::iterator sightCheck;
+    map<int, bool>::iterator sightEnd = (*nowSeenBy).end();
+    RobotObject *otherRobot;
+    
+    for(sightCheck = (*nowSeenBy).begin(); sightCheck != sightEnd; )
+    {
+      if(robots.find((*sightCheck).first) == robots.end())
+      {
+        nowSeenBy->erase(sightCheck++);
+        continue;
+      }
+      otherRobot = robots[(*sightCheck).first];
+      if(!AreaEngine::Sees(otherRobot->x, otherRobot->y, curRobot->x, curRobot->y)){
+      
+        nowSeenBy->erase(sightCheck++);
+        
+        //TODO: add network code... send to curRobot that it no longer sees
+        SeenServerRobot* seenRobot = serverrobot.add_seenrobot();
+        seenRobot->set_viewlostid(true);
+        seenRobot->set_seenbyid(otherRobot->id);
+        seenRobot->set_relx(curRobot->x - otherRobot->x);
+        seenRobot->set_rely(curRobot->y - otherRobot->y);
+        continue;
+      }
+      
+      sightCheck++;
+    }
 
+    //then sight acquires
     for(int j = topLeft.x; j <= botRight.x; j++)
       for(int k = topLeft.y; k <= botRight.y; k++)
         {
           //we have an a[][] element again. Iterate through the robots in it
           ArrayObject * element = &robotArray[j][k];
 
-          RobotObject *otherRobot = element->robots;
+          otherRobot = element->robots;
 
           while(otherRobot != NULL) {    
-            if(curRobot->id != otherRobot->id && AreaEngine::Sees(otherRobot->x, otherRobot->y, curRobot->x, curRobot->y)){
-              //instead of forming nowSeen and lastSeen, and then comparing. Do that shit on the FLY.
-              //first, that which we hadn't been seen by but now are
+            if(curRobot->id != otherRobot->id){
               if(nowSeenBy->find(otherRobot->id) == nowSeenBy->end())
               {
-                nowSeenBy->insert(pair<int, bool>(otherRobot->id, true));
-                SeenServerRobot* seenRobot = serverrobot.add_seenrobot();
-                seenRobot->set_viewlostid(false);
-                seenRobot->set_seenbyid(otherRobot->id);
-                seenRobot->set_relx(curRobot->x - otherRobot->x);
-                seenRobot->set_rely(curRobot->y - otherRobot->y);
-              }
-              //curRobot->nowSeen->insert(pair<int, bool>(otherRobot->id, true));
-            }else{
-            //then, that which we did see, but now don't
-              if(nowSeenBy->find(otherRobot->id) != nowSeenBy->end())
-              {
-                nowSeenBy->erase(otherRobot->id);
-                //TODO: add network code... send to curRobot that it no longer sees *setIterator
-                SeenServerRobot* seenRobot = serverrobot.add_seenrobot();
-                seenRobot->set_viewlostid(true);
-                seenRobot->set_seenbyid(otherRobot->id);
-                seenRobot->set_relx(curRobot->x - otherRobot->x);
-                seenRobot->set_rely(curRobot->y - otherRobot->y);
+                if(AreaEngine::Sees(otherRobot->x, otherRobot->y, curRobot->x, curRobot->y)){
+                //instead of forming nowSeen and lastSeen, and then comparing. Do that shit on the FLY.
+                //first, that which we hadn't been seen by but now are
+
+                  nowSeenBy->insert(pair<int, bool>(otherRobot->id, true));
+                  SeenServerRobot* seenRobot = serverrobot.add_seenrobot();
+                  seenRobot->set_viewlostid(false);
+                  seenRobot->set_seenbyid(otherRobot->id);
+                  seenRobot->set_relx(curRobot->x - otherRobot->x);
+                  seenRobot->set_rely(curRobot->y - otherRobot->y);
+                }
               }
             }
 
