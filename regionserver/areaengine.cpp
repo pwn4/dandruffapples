@@ -24,9 +24,12 @@ Index AreaEngine::getRobotIndices(double x, double y, bool clip){
       
     if(rtn.x >= regionBounds+2)
       rtn.x = regionBounds+1;
-    if(rtn.y >= regionBounds)
+    if(rtn.y >= regionBounds+2)
       rtn.y = regionBounds+1;
   }
+  
+  if(rtn.x < -1 || rtn.y < -1 || rtn.x > regionBounds+2 || rtn.y > regionBounds+2)
+    throw "AreaEngine: Robot tracked too far out of bounds.";
   
   return rtn;
 }
@@ -423,7 +426,7 @@ RobotObject* AreaEngine::AddRobot(int robotId, double newx, double newy, double 
 //remove a robot with id robotId from the a[xInd][yInd] array element. cleanup. returns true if a robot was deleted
 bool AreaEngine::RemoveRobot(int robotId, int xInd, int yInd, bool freeMem){
   //O(1) Deletion. Would be O(m), but m (robots in area) is bounded by a constant, so actually O(1)
-
+freeMem = false;
   ArrayObject *element = &robotArray[xInd][yInd];
   //check if the area is empty first
   if(element->robots == NULL)
