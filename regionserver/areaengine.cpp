@@ -90,6 +90,14 @@ class CompareRobotObject {
     }
 };
 
+//comparator for puck rendering
+bool ComparePuckStackObject::operator()(PuckStackObject* const &r1, PuckStackObject* const &r2) // Returns true if t1 is earlier than t2
+{
+   if (r1->y > r2->y) return true;
+   
+   return false;
+}
+
 //this method checks if a robot at (x1,y1) sees a robot at (x2,y2)
 bool AreaEngine::Sees(double x1, double y1, double x2, double y2){
 //assumes robots can see from any part of themselves
@@ -272,36 +280,87 @@ void AreaEngine::Step(bool generateImage){
   //do drawing
   if(generateImage){
     int drawX, drawY;
+    int pdrawX, pdrawY;
+    int minY = 0;
     render.clear_image();
     render.set_timestep(curStep);
     int curY = 0;
     
-    while(pq.size() > 0)
+    map<PuckStackObject*, bool>::iterator puckIt;
+    map<PuckStackObject*, bool>::iterator puckEnd = puckq.end();
+    puckIt=puckq.begin();
+    RobotObject* paintRobot = pq.top();
+    PuckStackObject* paintPuck = NULL;
+    if(puckIt != puckEnd)
+      paintPuck = (*puckIt).first;
+
+    //we have to iterate through robots and pucks at the same time... it's TRICKAY! TRICKY TRICKY TRICKY TRICKY
+    while(true)
     {
-      RobotObject* paintRobot = pq.top();
-      //repaint the robot
-      drawX = ((paintRobot->x-(regionRatio/regionBounds)) / regionRatio)*IMAGEWIDTH;
-      drawY = ((paintRobot->y-(regionRatio/regionBounds)) / regionRatio)*IMAGEHEIGHT;
-      //drawX = ((curRobot->x) / (regionRatio+(2*(regionRatio/regionBounds))))*IMAGEWIDTH;
-      //drawY = ((curRobot->y) / (regionRatio+(2*(regionRatio/regionBounds))))*IMAGEHEIGHT;
-
-      //don't draw the overlaps
-      if(drawX >= 0 && drawX < IMAGEWIDTH && drawY >= 0 && drawY < IMAGEHEIGHT)
-      {
-
-        //update Y coord in output
-        while(curY < drawY){
-          render.add_image(BytePack(65535, 65535));
-          curY++;
-        }
-      
-        if(drawX >= 65535 || drawY >= 65535)
-          throw SystemError("AreaEngine: Draw Size requested too large");
-
-        render.add_image(BytePack(drawX, paintRobot->team));
+      if(pq.empty()){
+        paintRobot = NULL;
+        drawX = INT_MAX;
+        drawY = INT_MAX;
+      }else{
+        drawX = ((paintRobot->x-(regionRatio/regionBounds)) / regionRatio)*IMAGEWIDTH;
+        drawY = ((paintRobot->y-(regionRatio/regionBounds)) / regionRatio)*IMAGEHEIGHT;
       }
       
-      pq.pop();
+      if(puckIt == puckEnd){
+        paintPuck = NULL;
+        pdrawX = INT_MAX;
+        pdrawY = INT_MAX;
+      }else{
+        pdrawX = (((double)(paintPuck->x)-(regionRatio/regionBounds)) / regionRatio)*IMAGEWIDTH;
+        pdrawY = (((double)(paintPuck->y)-(regionRatio/regionBounds)) / regionRatio)*IMAGEHEIGHT;
+      }
+      
+      if(paintRobot == NULL && paintPuck == NULL)
+        break;
+      
+      //catch up with our Y's
+      minY = min(drawY, pdrawY);
+      
+      while(curY < minY){
+        render.add_image(BytePack(65535, 65535));
+        curY++;
+        
+        //don't draw more than we have to
+        if(curY > IMAGEHEIGHT)
+          break;
+      }
+      
+      if(curY > IMAGEHEIGHT)
+        break;
+
+      //don't draw the overlaps
+      if(paintRobot != NULL && drawY == minY)
+      {
+        if(drawX >= 0 && drawX < IMAGEWIDTH && drawY >= 0 && drawY < IMAGEHEIGHT)
+        {
+          if(drawX >= 65535 || drawY >= 65535)
+            throw SystemError("AreaEngine: Draw Size requested too large");
+
+          render.add_image(BytePack(drawX, paintRobot->team));
+        }
+        pq.pop();
+        paintRobot = pq.top();
+      }
+      
+      //don't draw the overlaps
+      if(paintPuck != NULL && pdrawY == minY)
+      {
+        if(pdrawX >= 0 && pdrawX < IMAGEWIDTH && pdrawY >= 0 && pdrawY < IMAGEHEIGHT)
+        {
+          if(pdrawX >= 65535 || pdrawY >= 65535)
+            throw SystemError("AreaEngine: Draw Size requested too large");
+
+          render.add_image(BytePack(pdrawX, 65534));  //let 65534 be reserved for pucks
+          puckIt++;
+          paintPuck = (*puckIt).first;
+        }
+      }
+      
     }
 
   }
@@ -384,6 +443,7 @@ void AreaEngine::AddPuck(double newx, double newy){
     curStack = new PuckStackObject(x, y);
     curStack->nextStack = element->pucks;
     element->pucks = curStack;
+    puckq[curStack] = true;
     return;
   }else{
     //increment
@@ -414,7 +474,13 @@ bool AreaEngine::RemovePuck(double x, double y){
   if(curStack == NULL)
     return false;
    
-  curStack->count++;
+  curStack->count--;
+  //check it
+  if(curStack->count == 0)
+  {
+    puckq.erase(curStack);
+  }
+  
   return true;
 }
 
