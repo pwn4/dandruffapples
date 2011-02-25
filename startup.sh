@@ -48,7 +48,7 @@ fi
 if [ "$1" == "worldviewer" ] || [ "$1" == "all" ]; then
   echo -e "Starting the world viewer with command: xterm -T \"World Viewer\" -e \"$gdbCmd$directory/worldviewer/worldviewer -c $directory/worldviewer/config\" & \n"
   xterm -T "World Viewer" -e "$gdbCmd$directory/worldviewer/worldviewer -c $directory/worldviewer/config" &
-  sleep $sleep
+  sleep $sleepTime
 fi
 
 if [ "$1" == "regionserver" ] || [ "$1" == "all" ]; then
