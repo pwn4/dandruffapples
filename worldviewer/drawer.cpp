@@ -38,8 +38,15 @@ ColorObject colorFromTeam(int teamId){
   return ColorObject(0.01*(rand() % 90), 0.01*(rand() % 90), 0.01*(rand() % 90));
 }
 
-void UnpackImage(RegionRender render, cairo_t *stepImageDrawer)
+cairo_surface_t * UnpackImage(RegionRender render)
 {
+  //double buffer
+  cairo_surface_t *stepImage;
+  cairo_t *stepImageDrawer;
+  
+  //init our surface
+  stepImage = cairo_image_surface_create (IMAGEFORMAT , IMAGEWIDTH, IMAGEHEIGHT);
+  stepImageDrawer = cairo_create (stepImage);
 
   //clear the image
   cairo_set_source_rgb (stepImageDrawer, 1, 1, 1);
@@ -73,4 +80,5 @@ void UnpackImage(RegionRender render, cairo_t *stepImageDrawer)
     cairo_fill (stepImageDrawer);
   }
 
+  return stepImage;
 }
