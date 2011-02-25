@@ -216,7 +216,7 @@ void run() {
 	//Region Area Variables (should be set by clock server)
 	int regionSideLen = 2500;
 	int robotDiameter = 4;
-	int minElementSize = 50;
+	int minElementSize = 25;
 	double viewDistance = 20;
 	double viewAngle = 360;
 	double maxSpeed = 4;
