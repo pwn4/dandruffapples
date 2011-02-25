@@ -259,6 +259,17 @@ void *artificialIntelligence(void *threadid) {
   }
 
   ClientRobot clientRobot;
+
+  // Initialize robots to some random velocity.
+  for (int i = 0; i < robotsPerTeam; i++) {
+    clientRobot.set_id(indexToRobotId(i));
+    clientRobot.set_velocityx(((rand() % 11) / 10.0) - 0.5);
+    clientRobot.set_velocityy(((rand() % 11) / 10.0) - 0.5);
+    clientRobot.set_angle(0.0);
+    theController->queue.push(MSG_CLIENTROBOT, clientRobot);
+    theController->set_writing(true);
+  }
+
   while (!simulationEnded) {
     for (int i = 0; i < robotsPerTeam && !simulationEnded; i++) {
       if (!ownRobots[i]->pendingCommand) {
