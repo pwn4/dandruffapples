@@ -63,8 +63,8 @@ cairo_surface_t * UnpackImage(RegionRender render)
     TwoInt curRobot = ByteUnpack(render.image(i));
 
     while(curRobot.one == 65535 && curRobot.two == 65535 && i < render.image_size()){
-      curRobot = ByteUnpack(render.image(i));
       i++;
+      curRobot = ByteUnpack(render.image(i));
       curY++;
     }
 
