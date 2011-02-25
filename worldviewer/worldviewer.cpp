@@ -181,8 +181,11 @@ void updateInfoWindow() {
 
 //enable the info/navigation buttons found in the main window's toolbar and do some work to initialize them
 void initializeToolbarButtons() {
-	gtk_widget_set_sensitive(GTK_WIDGET(gtk_builder_get_object( builder, "Navigation" )), true);
-	gtk_widget_set_sensitive(GTK_WIDGET(gtk_builder_get_object( builder, "Info" )), true);
+	if(!gtk_toggle_tool_button_get_active(GTK_TOGGLE_TOOL_BUTTON(gtk_builder_get_object( builder, "Fullscreen" ))) )
+	{
+		gtk_widget_set_sensitive(GTK_WIDGET(gtk_builder_get_object( builder, "Navigation" )), true);
+		gtk_widget_set_sensitive(GTK_WIDGET(gtk_builder_get_object( builder, "Info" )), true);
+	}
 
 	int navigationWindowWidth, navigationWindowLength;
 	GtkWidget *navigationWindow = GTK_WIDGET(gtk_builder_get_object( builder, "navigationWindow" ));
@@ -651,17 +654,17 @@ void on_Fullscreen_toggled(GtkWidget *widget, gpointer window) {
 	//so might as well disable the buttons
 	if (gtk_toggle_tool_button_get_active(GTK_TOGGLE_TOOL_BUTTON(widget)))
 	{
-		gtk_window_fullscreen(GTK_WINDOW(window));
 		gtk_widget_set_sensitive(GTK_WIDGET(gtk_builder_get_object( builder, "Navigation" )), false);
 		gtk_widget_set_sensitive(GTK_WIDGET(gtk_builder_get_object( builder, "Info" )), false);
 		gtk_container_set_border_width (GTK_CONTAINER (window), 0);
+		gtk_window_fullscreen(GTK_WINDOW(window));
 	}
 	else
 	{
-		gtk_window_unfullscreen(GTK_WINDOW(window));
 		gtk_widget_set_sensitive(GTK_WIDGET(gtk_builder_get_object( builder, "Navigation" )), true);
 		gtk_widget_set_sensitive(GTK_WIDGET(gtk_builder_get_object( builder, "Info" )), true);
 		gtk_container_set_border_width (GTK_CONTAINER (window), 10);
+		gtk_window_unfullscreen(GTK_WINDOW(window));
 	}
 }
 
