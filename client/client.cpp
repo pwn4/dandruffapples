@@ -375,44 +375,54 @@ void run() {
                       ownRobots[index]->y = serverrobot.y();
                     if (serverrobot.has_hascollided()) 
                       ownRobots[index]->hasCollided = serverrobot.hascollided();
+                  }
 
-                    // Traverse seenById list to check if we can see.
-                    int listSize = serverrobot.seenrobot_size();
-                    for (int i = 0; i < listSize; i++) {
-                      if (weControlRobot(serverrobot.seenrobot(i).seenbyid())) {
-                        if (serverrobot.seenrobot(i).viewlostid()) {
-                          // Could see before, can't see anymore.
-                          for (vector<SeenRobot*>::iterator it
-                              = ownRobots[index]->seenRobots.begin();
-                              it != ownRobots[index]->seenRobots.end();
-                              it++) {
-                            if ((*it)->id == serverrobot.seenrobot(i).seenbyid()) {
-                              // TODO: we may want to store data about this
-                              // robot on the client for x timesteps after
-                              // it can't see it anymore.
-                              ownRobots[index]->seenRobots.erase(it);
-                              delete *it;
-                              break;
-                            }
+                  // Traverse seenById list to check if we can see.
+                  int index;
+                  int listSize = serverrobot.seenrobot_size();
+                  for (int i = 0; i < listSize; i++) {
+                    if (weControlRobot(serverrobot.seenrobot(i).seenbyid())) {
+                      index = robotIdToIndex(serverrobot.seenrobot(i).
+                          seenbyid());
+                      if (serverrobot.seenrobot(i).viewlostid()) {
+                        // Could see before, can't see anymore.
+                        for (vector<SeenRobot*>::iterator it
+                            = ownRobots[index]->seenRobots.begin();
+                            it != ownRobots[index]->seenRobots.end();
+                            it++) {
+                          if ((*it)->id == serverrobot.seenrobot(i).seenbyid()) {
+                            // TODO: we may want to store data about this
+                            // robot on the client for x timesteps after
+                            // it can't see it anymore.
+                            cout << "Our #" << index << " lost see "
+                                 << serverrobot.id() << endl;
+                            delete *it; 
+                            ownRobots[index]->seenRobots.erase(it);
+                            break;
                           }
-                        } else {
-                          // Can see. Add, or update?
-                          bool foundRobot = false;
-                          for (vector<SeenRobot*>::iterator it
-                              = ownRobots[index]->seenRobots.begin();
-                              it != ownRobots[index]->seenRobots.end() &&
-                              !foundRobot; it++) {
-                            if ((*it)->id == serverrobot.seenrobot(i).seenbyid()) {
-                              foundRobot = true;
-                              // TODO: Update fields SeenRobot!
-                            }
+                        }
+                      } else {
+                        // Can see. Add, or update?
+                        bool foundRobot = false;
+                        for (vector<SeenRobot*>::iterator it
+                            = ownRobots[index]->seenRobots.begin();
+                            it != ownRobots[index]->seenRobots.end() &&
+                            !foundRobot; it++) {
+                          if ((*it)->id == serverrobot.seenrobot(i).seenbyid()) {
+                            foundRobot = true;
+                            cout << "Our #" << index << " update see "
+                                 << serverrobot.id() << " at relx: " 
+                                 << serverrobot.seenrobot(i).relx() << endl;
+                            // TODO: Update fields SeenRobot!
                           }
-                          if (!foundRobot) {
-                            SeenRobot *r = new SeenRobot();
-                            r->id = serverrobot.seenrobot(i).seenbyid();
-                            // TODO: Update seen robot fields.
-                            ownRobots[index]->seenRobots.push_back(r);
-                          }
+                        }
+                        if (!foundRobot) {
+                          SeenRobot *r = new SeenRobot();
+                          r->id = serverrobot.seenrobot(i).seenbyid();
+                          // TODO: Update seen robot fields.
+                          cout << "Our #" << index << " begin see "
+                               << serverrobot.id() << endl;
+                          ownRobots[index]->seenRobots.push_back(r);
                         }
                       }
                     }

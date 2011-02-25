@@ -333,7 +333,11 @@ int main(int argc, char** argv)
 							//lookup clients using seenbyid and store into set then send to all clients
 							//this resolves sending multiple msgs to same client.
 							for(int i=0; i<serverrobot.seenrobot_size(); i++){
-								ret = seenbyidset.insert(robots[serverrobot.seenrobot(i).seenbyid()].client);
+                if (robots[serverrobot.seenrobot(i).seenbyid()].client != 
+                    NULL) {
+                  ret = seenbyidset.insert(robots[serverrobot.seenrobot(i).
+                      seenbyid()].client);
+                }
 							}
 							for(set<net::EpollConnection*>::iterator it=seenbyidset.begin(); 
 									it!=seenbyidset.end(); it++){
@@ -348,8 +352,6 @@ int main(int argc, char** argv)
               // Update lookup table
               claimrobot.ParseFromArray(buffer, len);
               robots[claimrobot.id()].server = c;
-              cout << "Do we get claims? Robot ID #" << claimrobot.id()
-                   << endl;
               break;
 
             default:
