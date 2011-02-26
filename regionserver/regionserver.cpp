@@ -488,11 +488,41 @@ void run() {
 						switch (type) {
 						case MSG_CLIENTROBOT:
 							clientrobot.ParseFromArray(buffer, len);
-							regionarea->ChangeVelocity(clientrobot.id(), clientrobot.velocityx(),
-									clientrobot.velocityy());
+							if (!regionarea->ChangeVelocity(clientrobot.id(), 
+                    clientrobot.velocityx(), clientrobot.velocityy())) {
+                // Not my robot!
+                BouncedRobot bouncedrobot;
+                ClientRobot* newClientRobot = bouncedrobot.mutable_clientrobot();
+                newClientRobot->CopyFrom(clientrobot);
+                bouncedrobot.set_bounces(1);
+
+                c->queue.push(MSG_BOUNCEDROBOT, bouncedrobot);
+                c->set_writing(true);
+              }
+              // TODO: Combine angle and velocity into ChangeState, or 
+              // something to that effect.
 							regionarea->ChangeAngle(clientrobot.id(), clientrobot.angle());
 
 							break;
+            case MSG_BOUNCEDROBOT:
+            {
+              BouncedRobot bouncedrobot;
+              bouncedrobot.ParseFromArray(buffer, len);
+              if (regionarea->WeControlRobot(bouncedrobot.clientrobot().id())) {
+                // Robot is ours. Process clientrobot message.
+                // TODO: Change angle/state too
+                regionarea->ChangeVelocity(bouncedrobot.clientrobot().id(), 
+                    bouncedrobot.clientrobot().velocityx(), 
+                    bouncedrobot.clientrobot().velocityy());
+              } else {
+                // Not our robot. Tell the controller.
+                bouncedrobot.set_bounces(bouncedrobot.bounces() + 1);
+                c->queue.push(MSG_BOUNCEDROBOT, bouncedrobot);
+                c->set_writing(true);
+              }
+
+              break;
+            }
 						default:
 							cerr << "Unexpected readable message from Controller\n";
 							break;

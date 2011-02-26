@@ -122,6 +122,8 @@ public:
   
   AreaEngine(int robotSize, int regionSize, int minElementSize, double viewDistance, double viewAngle, double maximumSpeed, double maximumRotate);
   ~AreaEngine();
+
+  bool WeControlRobot(int robotId);
   
   //Robot modifiers
   bool ChangeVelocity(int robotId, double newvx, double newvy); //Allows strafing, if we may want it

@@ -13,6 +13,7 @@ enum MessageType {
   MSG_PUCKSTACK,
   MSG_CLAIMTEAM,
   MSG_CLAIM,
+  MSG_BOUNCEDROBOT,
   MSG_MAX
 };
 

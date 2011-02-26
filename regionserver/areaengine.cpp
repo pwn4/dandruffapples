@@ -640,6 +640,10 @@ void AreaEngine::RemoveRobot(int robotId, int xInd, int yInd, bool freeMem){
   throw "AreaEngine: Remove Robot In-method failure (2)";
 }
 
+bool AreaEngine::WeControlRobot(int robotId) {
+  return (robots.find(robotId) != robots.end());
+}
+
 bool AreaEngine::ChangeVelocity(int robotId, double newvx, double newvy){
   if(robots.find(robotId) == robots.end())
     return false;

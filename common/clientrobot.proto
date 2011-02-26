@@ -6,3 +6,8 @@ message ClientRobot {
   optional bool puckPickup = 5; // true - try to get a puck,
                                 // false - try to drop a puck
 }
+
+message BouncedRobot {
+  required ClientRobot clientrobot = 1;
+  required uint32 bounces = 2;
+}

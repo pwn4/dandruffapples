@@ -375,6 +375,13 @@ int main(int argc, char** argv)
               robots[claimrobot.id()].server = c;
               break;
 
+            case MSG_BOUNCEDROBOT:
+            {
+              BouncedRobot bouncedrobot;
+              bouncedrobot.ParseFromArray(buffer, len);
+              cout << "Received bounce with ID #" << bouncedrobot.clientrobot().id() << endl;
+              break;
+            }
             default:
               cerr << "Unexpected readable socket from client!" << endl;
               break;
