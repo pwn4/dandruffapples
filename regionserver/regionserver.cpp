@@ -27,6 +27,7 @@
 
 #include "../common/timestep.pb.h"
 #include "../common/net.h"
+#include "../common/claim.pb.h"
 #include "../common/clientrobot.pb.h"
 #include "../common/serverrobot.pb.h"
 #include "../common/puckstack.pb.h"
@@ -514,6 +515,23 @@ void run() {
                 regionarea->ChangeVelocity(bouncedrobot.clientrobot().id(), 
                     bouncedrobot.clientrobot().velocityx(), 
                     bouncedrobot.clientrobot().velocityy());
+                /*
+                if (bouncedrobot.bounces() == 2) {
+                  cout << "Sending bounce claim: ID #" 
+                       << bouncedrobot.clientrobot().id() << endl;
+                  // Message was broadcast to all. Let's claim the robot.
+                  Claim claim;
+                  claim.set_id(bouncedrobot.clientrobot().id());
+                  // Send claim to all controllers
+                  vector<net::EpollConnection*>::iterator it;
+                  vector<net::EpollConnection*>::iterator last = 
+                      controllers.end();
+                  for (it = controllers.begin(); it != last; it++) {
+                    (*it)->queue.push(MSG_CLAIM, claim);
+                    (*it)->set_writing(true);
+                  }
+                }
+                */
               } else {
                 // Not our robot. Tell the controller.
                 bouncedrobot.set_bounces(bouncedrobot.bounces() + 1);

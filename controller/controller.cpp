@@ -377,9 +377,38 @@ int main(int argc, char** argv)
 
             case MSG_BOUNCEDROBOT:
             {
+              // 1 bounce, try again. 2 bounces, broadcast
               BouncedRobot bouncedrobot;
               bouncedrobot.ParseFromArray(buffer, len);
-              cout << "Received bounce with ID #" << bouncedrobot.clientrobot().id() << endl;
+              if (bouncedrobot.bounces() == 1) {
+                cout << "Retrying bounced robot for ID #" 
+                     << bouncedrobot.clientrobot().id() << endl;
+                // Retry on one server.
+                net::EpollConnection* server = 
+                    robots[bouncedrobot.clientrobot().id()].server;
+                server->queue.push(MSG_BOUNCEDROBOT, bouncedrobot);
+                server->set_writing(true);
+                sentClientRobot++;
+              } 
+              /*
+              else if (bouncedrobot.bounces() == 2) {
+                // Broadcast to all servers. We should get a Claim message
+                // from the actual Owner
+                cout << "Broadcasting due to 2 bounces: ID #" 
+                     << bouncedrobot.clientrobot().id() << endl;
+                vector<ServerConnection*>::iterator it;
+                vector<ServerConnection*>::iterator last = servers.end();
+                for (it = servers.begin(); it != last; it++) {
+                  (*it)->queue.push(MSG_BOUNCEDROBOT, bouncedrobot);
+                  (*it)->set_writing(true);
+                  sentClientRobot++;
+                }
+              }
+              */
+              else {
+                cerr << "BouncedRobot error: No region owns robot ID #"
+                     << bouncedrobot.clientrobot().id() << "!" << endl;
+              }
               break;
             }
             default:
