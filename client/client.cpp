@@ -53,6 +53,7 @@ int myTeam;
 int robotsPerTeam; 
 net::EpollConnection* theController;
 int epoll;
+pthread_mutex_t connectionMutex = PTHREAD_MUTEX_INITIALIZER;
 
 class SeenPuck {
   float relx;
@@ -262,17 +263,20 @@ void *artificialIntelligence(void *threadid) {
 
   // Initialize robots to some random velocity.
   for (int i = 0; i < robotsPerTeam; i++) {
+    pthread_mutex_lock(&connectionMutex);
     clientRobot.set_id(indexToRobotId(i));
     clientRobot.set_velocityx(((rand() % 11) / 10.0) - 0.5);
     clientRobot.set_velocityy(((rand() % 11) / 10.0) - 0.5);
     clientRobot.set_angle(0.0);
     theController->queue.push(MSG_CLIENTROBOT, clientRobot);
     theController->set_writing(true);
+    pthread_mutex_unlock(&connectionMutex);
   }
 
   while (!simulationEnded) {
     for (int i = 0; i < robotsPerTeam && !simulationEnded; i++) {
       if (!ownRobots[i]->pendingCommand) {
+        pthread_mutex_lock(&connectionMutex);
         // Run different AIs depending on i.
         executeAiVersion(i % 1, ownRobots[i], &clientRobot); 
         // Did we want to send a command?
@@ -282,6 +286,7 @@ void *artificialIntelligence(void *threadid) {
           theController->queue.push(MSG_CLIENTROBOT, clientRobot);
           theController->set_writing(true);
         }
+        pthread_mutex_unlock(&connectionMutex);
       } else {
         sched_yield(); // Let the other thread read and write
       } 
@@ -410,6 +415,7 @@ void run() {
 
                 break;
               case MSG_TIMESTEPUPDATE:
+                pthread_mutex_lock(&connectionMutex);
                 timestep.ParseFromArray(buffer, len);
                 currentTimestep = timestep.timestep();
 
@@ -425,10 +431,12 @@ void run() {
                     }
                   }
                 }
+                pthread_mutex_unlock(&connectionMutex);
 
                 break;
               case MSG_SERVERROBOT:
-              {
+              { 
+                pthread_mutex_lock(&connectionMutex);
                 serverrobot.ParseFromArray(buffer, len);
                 if (simulationStarted) {
                   int robotId = serverrobot.id();
@@ -525,6 +533,7 @@ void run() {
                     }
                   }
                 }
+                pthread_mutex_unlock(&connectionMutex);
                 break;
               }
               default:
@@ -540,9 +549,11 @@ void run() {
         } else if(events[i].events & EPOLLOUT) {
           switch(c->type) {
           case net::connection::CONTROLLER:
+            pthread_mutex_lock(&connectionMutex);
             if(c->queue.doWrite()) {
               c->set_writing(false);
             }
+            pthread_mutex_unlock(&connectionMutex);
             break;
           default:
             cerr << "Internal error: Got unexpected readable event of type " << c->type << endl;
