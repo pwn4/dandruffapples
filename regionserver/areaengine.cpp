@@ -490,6 +490,12 @@ void AreaEngine::Step(bool generateImage){
         (*neighbours)->queue.doWrite();
     }
   }
+  //Force all Claim messages to controllers in this step!
+  for (vector<EpollConnection*>::const_iterator it = 
+       controllers.begin(); it != controllers.end(); it++) {
+    while((*it)->queue.remaining() != 0)
+      (*it)->queue.doWrite(); 
+  }
 }
 
 //add a puck to the system.
@@ -654,6 +660,7 @@ bool AreaEngine::ChangeVelocity(int robotId, double newvx, double newvy){
   if (!WeControlRobot(robotId))
     return false; 
 
+  cout << "we get here for #" << robotId << endl;
   //enforce max speed
   double len = sqrt(newvx*newvx + newvy*newvy);
   if(len > maxSpeed)
