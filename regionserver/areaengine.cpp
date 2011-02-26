@@ -651,21 +651,34 @@ bool AreaEngine::ChangeVelocity(int robotId, double newvx, double newvy){
     newvx *= (maxSpeed/len);
     newvy *= (maxSpeed/len);
   }
+  // TODO: Add collision status. Check if collided before changing velocity.
   
   robots[robotId]->vx = newvx;
   robots[robotId]->vy = newvy;
 
-  // Send updates to the clients.
-  // TODO: Set seenByIDs
-  // TODO: Set collision
+  // Send update over the network.
   ServerRobot serverrobot;
   serverrobot.set_id(robotId);
   serverrobot.set_velocityx(newvx); 
   serverrobot.set_velocityy(newvy); 
-  serverrobot.set_x(robots[robotId]->x); 
-  serverrobot.set_y(robots[robotId]->y); 
   serverrobot.set_angle(robots[robotId]->angle); 
   serverrobot.set_haspuck(robots[robotId]->holdingPuck); 
+
+  // Inform robots that can see this one of state change.
+  map<int, bool> *nowSeenBy = &robots[robotId]->lastSeenBy;
+  if ((*nowSeenBy).size() > 0) {
+    map<int, bool>::iterator sightCheck;
+    map<int, bool>::iterator sightEnd = (*nowSeenBy).end();
+    for(sightCheck = (*nowSeenBy).begin(); sightCheck != sightEnd;
+        sightCheck++)
+    {
+      SeenServerRobot* seenRobot = serverrobot.add_seenrobot();
+      seenRobot->set_viewlostid(false); 
+      seenRobot->set_seenbyid(sightCheck->first);
+    }
+  } 
+
+  // Send updates to controllers.
   for (vector<EpollConnection*>::const_iterator it = controllers.begin();
        it != controllers.end(); it++) {
     (*it)->queue.push(MSG_SERVERROBOT, serverrobot);
