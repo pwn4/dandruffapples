@@ -61,6 +61,7 @@ time_t lastSecond = time(NULL);
 int sentMessages = 0;
 int receivedMessages = 0;
 int pendingMessages = 0;
+int timeoutMessages = 0;
 
 class SeenPuck {
   float relx;
@@ -361,11 +362,13 @@ void run() {
       if (lastSecond < time(NULL)) {
         cout << "Sent " << sentMessages << " per second." << endl;
         cout << "Pending " << pendingMessages << " per second." << endl;
-        cout << "Received " << receivedMessages << " per second.\n" << endl;
+        cout << "Received " << receivedMessages << " per second." << endl;
+        cout << "Timeout " << timeoutMessages << " per second.\n" << endl;
         lastSecond = time(NULL);
         sentMessages = 0;
         pendingMessages = 0;
         receivedMessages = 0;
+        timeoutMessages = 0;
       }
       pthread_mutex_unlock(&connectionMutex);
 
@@ -453,6 +456,7 @@ void run() {
                       // new ClientRobot messages.
                       // TODO: Lower from 100.
                       ownRobots[i]->pendingCommand = false;
+                      timeoutMessages++;
                     }
                     for (vector<SeenRobot*>::iterator it
                         = ownRobots[i]->seenRobots.begin();
