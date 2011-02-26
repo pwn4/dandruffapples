@@ -276,7 +276,9 @@ void AreaEngine::Step(bool generateImage){
       //did the robot move such that we now own it? Making this a separate
       //if statement for now incase I screw something up.
       if(!(newIndices.x < 1 || newIndices.y < 1 || newIndices.x > regionBounds 
-          || newIndices.y > regionBounds)) {
+          || newIndices.y > regionBounds) && (oldIndices.x < 1 
+          || oldIndices.y < 1 || oldIndices.x > regionBounds
+          || oldIndices.y > regionBounds)) {
         // All newIndices must be within our own, non-shared area.
         // And At least one oldIndices must be within the shared area.
         Claim claim;
@@ -660,7 +662,6 @@ bool AreaEngine::ChangeVelocity(int robotId, double newvx, double newvy){
   if (!WeControlRobot(robotId))
     return false; 
 
-  cout << "we get here for #" << robotId << endl;
   //enforce max speed
   double len = sqrt(newvx*newvx + newvy*newvy);
   if(len > maxSpeed)
