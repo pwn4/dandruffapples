@@ -97,10 +97,11 @@ public:
 class OwnRobot : public Robot {
 public:
   bool pendingCommand;
+  int whenLastSent;
   vector<SeenRobot*> seenRobots;
   vector<SeenPuck*> seenPucks;
 
-  OwnRobot() : Robot(), pendingCommand(false) {}
+  OwnRobot() : Robot(), pendingCommand(false), whenLastSent(-1) {}
 };
 
 OwnRobot** ownRobots;
@@ -277,6 +278,7 @@ void *artificialIntelligence(void *threadid) {
     clientRobot.set_angle(0.0);
     theController->queue.push(MSG_CLIENTROBOT, clientRobot);
     theController->set_writing(true);
+    ownRobots[i]->whenLastSent = currentTimestep;
     pthread_mutex_unlock(&connectionMutex);
   }
 
@@ -292,6 +294,7 @@ void *artificialIntelligence(void *threadid) {
           clientRobot.set_angle(0.0); // TODO: implement angle
           theController->queue.push(MSG_CLIENTROBOT, clientRobot);
           theController->set_writing(true);
+          ownRobots[i]->whenLastSent = currentTimestep;
           sentMessages++;
         }
         pthread_mutex_unlock(&connectionMutex);
@@ -444,6 +447,13 @@ void run() {
                 if (simulationStarted) {
                   // Update all current positions.
                   for (int i = 0; i < robotsPerTeam; i++) {
+                    if (ownRobots[i]->pendingCommand && 
+                        currentTimestep - ownRobots[i]->whenLastSent > 100) {
+                      // If we've waited too long for an update, send
+                      // new ClientRobot messages.
+                      // TODO: Lower from 100.
+                      ownRobots[i]->pendingCommand = false;
+                    }
                     for (vector<SeenRobot*>::iterator it
                         = ownRobots[i]->seenRobots.begin();
                         it != ownRobots[i]->seenRobots.end();
