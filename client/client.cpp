@@ -549,7 +549,7 @@ void run() {
                             = ownRobots[index]->seenRobots.begin();
                             it != ownRobots[index]->seenRobots.end();
                             it++) {
-                          if ((*it)->id == serverrobot.seenrobot(i).seenbyid()) {
+                          if ((*it)->id == serverrobot.id()) {
                             // TODO: we may want to store data about this
                             // robot on the client for x timesteps after
                             // it can't see it anymore.
@@ -567,7 +567,7 @@ void run() {
                             = ownRobots[index]->seenRobots.begin();
                             it != ownRobots[index]->seenRobots.end() &&
                             !foundRobot; it++) {
-                          if ((*it)->id == serverrobot.seenrobot(i).seenbyid()) {
+                          if ((*it)->id == serverrobot.id()) {
                             foundRobot = true;
                             //cout << "Our #" << index << " update see "
                             //     << serverrobot.id() << " at relx: " 
@@ -582,7 +582,6 @@ void run() {
                               (*it)->hasPuck = serverrobot.haspuck();
                             if (serverrobot.has_hascollided()) 
                               (*it)->hasCollided = serverrobot.hascollided();
-                            (*it)->id = serverrobot.id();
                             (*it)->relx = serverrobot.seenrobot(i).relx();
                             (*it)->rely = serverrobot.seenrobot(i).rely();
                             (*it)->lastTimestepSeen = currentTimestep;
@@ -602,7 +601,7 @@ void run() {
                             r->hasPuck = serverrobot.haspuck();
                           if (serverrobot.has_hascollided()) 
                             r->hasCollided = serverrobot.hascollided();
-                          r->id = serverrobot.seenrobot(i).seenbyid();
+                          r->id = serverrobot.id();
                           r->relx = serverrobot.seenrobot(i).relx();
                           r->rely = serverrobot.seenrobot(i).rely();
                           r->lastTimestepSeen = currentTimestep;
