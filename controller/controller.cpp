@@ -94,6 +94,13 @@ int main(int argc, char** argv)
   helper::Config config(argc, argv);
   configFileName=(config.getArg("-c").length() == 0 ? "config" : config.getArg("-c").c_str());
   loadConfigFile();
+  
+  // Stat variables
+  time_t lastSecond = time(NULL);
+  int receivedClientRobot = 0;
+  int sentClientRobot = 0;
+  int receivedServerRobot = 0;
+  int sentServerRobot = 0;
 
   // Print a starting message
   printf("--== Controller Server Software ==-\n");
@@ -125,6 +132,23 @@ int main(int argc, char** argv)
   #define MAX_EVENTS 128
   struct epoll_event events[MAX_EVENTS];
   while(true) {
+    // Stats: Check message send rate
+    if (lastSecond < time(NULL)) {
+      cout << "Received " << receivedClientRobot 
+           << " ClientRobot messages per second." << endl;
+      cout << "Sent " << sentClientRobot 
+           << " ClientRobot messages per second." << endl;
+      cout << "Received " << receivedServerRobot 
+           << " ServerRobot messages per second." << endl;
+      cout << "Sent " << sentServerRobot 
+           << " ServerRobot messages per second.\n" << endl;
+      lastSecond = time(NULL);
+      receivedClientRobot = 0;
+      sentClientRobot = 0;
+      receivedServerRobot = 0;
+      sentServerRobot = 0;
+    }
+
     int eventcount = epoll_wait(epoll, events, MAX_EVENTS, -1);
     if(0 > eventcount) {
       perror("Failed to wait on sockets");
@@ -240,8 +264,6 @@ int main(int argc, char** argv)
                     i != unassignedRobots.end(); ++i) {
                   if (i->teamId == (int)claimteam.id()) {
                     robots[i->robotId].client = clients[client];
-                    cout << "Assigned robot " << i->robotId << " to client "
-                         << client << endl;
                     // TODO: Erase unassignedRobot entries when done.
                   }
                 }
@@ -273,11 +295,10 @@ int main(int argc, char** argv)
             switch(type) {
             case MSG_CLIENTROBOT:
             {
+              receivedClientRobot++;
               // Forward to the correct server
               clientrobot.ParseFromArray(buffer, len);
               net::EpollConnection *server = robots[clientrobot.id()].server;
-              cout << "Received client robot with ID #" << clientrobot.id()
-              		 << endl;
 							if(server == NULL){//this should not happen...
 								cout << "Ugh, robot#" << clientrobot.id() << "does not belong to a server?"
 										 << endl;
@@ -285,6 +306,7 @@ int main(int argc, char** argv)
 							else{
 		            server->queue.push(MSG_CLIENTROBOT, clientrobot);
 		            server->set_writing(true);
+                sentClientRobot++;
 							}
               break;
             }
@@ -317,18 +339,16 @@ int main(int argc, char** argv)
             switch(type) {
             case MSG_SERVERROBOT:
             {
+              receivedServerRobot++;
               serverrobot.ParseFromArray(buffer, len);
 							// TODO:REVIEW THIS!! NOT TESTED
               // TODO:Forward to the correct client CORRECTLY
 							// Forward to the client, and any clients in the seenbyid
               net::EpollConnection *client = robots[serverrobot.id()].client;
-              cout << "Received server robot with ID #" << serverrobot.id()
-                   << endl;
-              if (client == NULL) {
-                cout << "No client has claimed this robot yet!\n";
-              } else {
+              if (client != NULL) {
                 client->queue.push(MSG_SERVERROBOT, serverrobot);
                 client->set_writing(true);
+                sentServerRobot++;
               }
 							//lookup clients using seenbyid and store into set then send to all clients
 							//this resolves sending multiple msgs to same client.
@@ -343,6 +363,7 @@ int main(int argc, char** argv)
 									it!=seenbyidset.end(); it++){
 								(*it)->queue.push(MSG_SERVERROBOT, serverrobot);
                 (*it)->set_writing(true);
+                sentServerRobot++;
 							}
 							seenbyidset.clear();	//clear for next serverrobot msg
               break;

@@ -60,6 +60,7 @@ pthread_mutex_t connectionMutex = PTHREAD_MUTEX_INITIALIZER;
 time_t lastSecond = time(NULL);
 int sentMessages = 0;
 int receivedMessages = 0;
+int pendingMessages = 0;
 
 class SeenPuck {
   float relx;
@@ -296,6 +297,7 @@ void *artificialIntelligence(void *threadid) {
         pthread_mutex_unlock(&connectionMutex);
       } else {
         // We're waiting for a serverrobot update.
+        pendingMessages++; // should have a mutex, but oh well
         sched_yield();
       }
     }
@@ -355,9 +357,11 @@ void run() {
       // Stats: Received messages per second
       if (lastSecond < time(NULL)) {
         cout << "Sent " << sentMessages << " per second." << endl;
+        cout << "Pending " << pendingMessages << " per second." << endl;
         cout << "Received " << receivedMessages << " per second.\n" << endl;
         lastSecond = time(NULL);
         sentMessages = 0;
+        pendingMessages = 0;
         receivedMessages = 0;
       }
       pthread_mutex_unlock(&connectionMutex);
