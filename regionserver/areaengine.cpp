@@ -165,7 +165,7 @@ void AreaEngine::Step(bool generateImage){
     //calculate the bounds of the a[][] elements we need to check
     topLeft = getRobotIndices(curRobot->x-(maxSpeed+robotRatio/2), curRobot->y-(maxSpeed+robotRatio/2), true);
     botRight = getRobotIndices(curRobot->x+(maxSpeed+robotRatio/2), curRobot->y+(maxSpeed+robotRatio/2), true);
-
+    bool collided = false;
     for(int j = topLeft.x; j <= botRight.x; j++)
       for(int k = topLeft.y; k <= botRight.y; k++)
       {
@@ -184,9 +184,7 @@ void AreaEngine::Step(bool generateImage){
                 curRobot->vy = 0;
                 otherRobot->vx = 0;
                 otherRobot->vy = 0;
-                
-                //here we will send messages to these robots and those watching that they've stopped
-                //TODO:add this networking code
+                collided = true; // send update over the network
                 
                 //the lastCollision time_t variable is checked by setVelocity when it's called
                 curRobot->lastCollision = time(NULL);
@@ -202,9 +200,7 @@ void AreaEngine::Step(bool generateImage){
                 curRobot->vy = 0;
                 otherRobot->vx = 0;
                 otherRobot->vy = 0;
-                
-                //here we will send messages to these robots and those watching that they've stopped
-                //TODO:add this networking code
+                collided = true; // send update over the network
                 
                 //the lastCollision time_t variable is checked by setVelocity when it's called
                 curRobot->lastCollision = time(NULL);
@@ -216,6 +212,41 @@ void AreaEngine::Step(bool generateImage){
           otherRobot = otherRobot->nextRobot;
         }
       }
+
+    //here we will send messages to these robots and those watching that 
+    //they've stopped
+    if (collided) {
+      ServerRobot serverrobot;
+      serverrobot.set_id(curRobot->id);
+      serverrobot.set_velocityx(curRobot->vx);
+      serverrobot.set_velocityy(curRobot->vy); 
+      serverrobot.set_angle(curRobot->angle);
+      serverrobot.set_hascollided(collided); 
+      serverrobot.set_haspuck(false); 
+
+      // Is this robot seen by others?
+      nowSeenBy = &curRobot->lastSeenBy;
+      if ((*nowSeenBy).size() > 0) {
+        map<int, bool>::iterator sightCheck;
+        map<int, bool>::iterator sightEnd = (*nowSeenBy).end();
+        for(sightCheck = (*nowSeenBy).begin(); sightCheck != sightEnd;
+            sightCheck++)
+        {
+          SeenServerRobot* seenRobot = serverrobot.add_seenrobot();
+          seenRobot->set_viewlostid(false); 
+          seenRobot->set_seenbyid(sightCheck->first);
+          // Omitting relx and rely data. Updates will come in the
+          // sight loop.
+        }
+      } 
+
+      // Send update.
+      for (vector<EpollConnection*>::const_iterator it = 
+           controllers.begin(); it != controllers.end(); it++) {
+        (*it)->queue.push(MSG_SERVERROBOT, serverrobot);
+        (*it)->set_writing(true); 
+      }
+    }
   }
   
   //prepare the priority queue
@@ -398,7 +429,6 @@ void AreaEngine::Step(bool generateImage){
       
         nowSeenBy->erase(sightCheck++);
         
-        //TODO: add network code... send to curRobot that it no longer sees
         SeenServerRobot* seenRobot = serverrobot.add_seenrobot();
         seenRobot->set_viewlostid(true);
         seenRobot->set_seenbyid(otherRobot->id);
