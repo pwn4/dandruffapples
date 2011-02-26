@@ -10,6 +10,7 @@ This program communications with controllers.
 #include <math.h>
 
 #include <unistd.h>
+#include <sched.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -54,6 +55,11 @@ int robotsPerTeam;
 net::EpollConnection* theController;
 int epoll;
 pthread_mutex_t connectionMutex = PTHREAD_MUTEX_INITIALIZER;
+
+// Stat variables
+time_t lastSecond = time(NULL);
+int sentMessages = 0;
+int receivedMessages = 0;
 
 class SeenPuck {
   float relx;
@@ -152,7 +158,7 @@ float relDistance(float x1, float y1) {
 }
 
 void executeAiVersion(int type, OwnRobot* ownRobot, ClientRobot* clientRobot) {
-  float velocity = 1.0;
+  float velocity = 0.1;
   if (type == 0) {
     // Aggressive robot!
     if (ownRobot->seenRobots.size() > 0) {
@@ -285,11 +291,13 @@ void *artificialIntelligence(void *threadid) {
           clientRobot.set_angle(0.0); // TODO: implement angle
           theController->queue.push(MSG_CLIENTROBOT, clientRobot);
           theController->set_writing(true);
+          sentMessages++;
         }
         pthread_mutex_unlock(&connectionMutex);
       } else {
-        sched_yield(); // Let the other thread read and write
-      } 
+        // We're waiting for a serverrobot update.
+        sched_yield();
+      }
     }
     //sleep(5); // delay this thread for 5 seconds
   }
@@ -343,8 +351,18 @@ void run() {
 
   try {
     while(true) {
-      int eventcount = epoll_wait(epoll, events, MAX_EVENTS, -1);
+      pthread_mutex_lock(&connectionMutex);
+      // Stats: Received messages per second
+      if (lastSecond < time(NULL)) {
+        cout << "Sent " << sentMessages << " per second." << endl;
+        cout << "Received " << receivedMessages << " per second.\n" << endl;
+        lastSecond = time(NULL);
+        sentMessages = 0;
+        receivedMessages = 0;
+      }
+      pthread_mutex_unlock(&connectionMutex);
 
+      int eventcount = epoll_wait(epoll, events, MAX_EVENTS, -1);
       for(size_t i = 0; i < (unsigned)eventcount; i++) {
         net::EpollConnection *c = (net::EpollConnection*)events[i].data.ptr;
         if(events[i].events & EPOLLIN) {
@@ -438,6 +456,7 @@ void run() {
               { 
                 pthread_mutex_lock(&connectionMutex);
                 serverrobot.ParseFromArray(buffer, len);
+                receivedMessages++;
                 if (simulationStarted) {
                   int robotId = serverrobot.id();
                   if (weControlRobot(robotId)) {
@@ -474,8 +493,8 @@ void run() {
                             // TODO: we may want to store data about this
                             // robot on the client for x timesteps after
                             // it can't see it anymore.
-                            cout << "Our #" << index << " lost see "
-                                 << serverrobot.id() << endl;
+                            //cout << "Our #" << index << " lost see "
+                            //     << serverrobot.id() << endl;
                             delete *it; 
                             ownRobots[index]->seenRobots.erase(it);
                             break;
@@ -490,9 +509,9 @@ void run() {
                             !foundRobot; it++) {
                           if ((*it)->id == serverrobot.seenrobot(i).seenbyid()) {
                             foundRobot = true;
-                            cout << "Our #" << index << " update see "
-                                 << serverrobot.id() << " at relx: " 
-                                 << serverrobot.seenrobot(i).relx() << endl;
+                            //cout << "Our #" << index << " update see "
+                            //     << serverrobot.id() << " at relx: " 
+                            //     << serverrobot.seenrobot(i).relx() << endl;
                             if (serverrobot.has_velocityx()) 
                               (*it)->vx = serverrobot.velocityx();
                             if (serverrobot.has_velocityy()) 
@@ -511,8 +530,8 @@ void run() {
                         }
                         if (!foundRobot) {
                           SeenRobot *r = new SeenRobot();
-                          cout << "Our #" << index << " begin see "
-                               << serverrobot.id() << endl;
+                          //cout << "Our #" << index << " begin see "
+                          //     << serverrobot.id() << endl;
                           if (serverrobot.has_velocityx()) 
                             r->vx = serverrobot.velocityx();
                           if (serverrobot.has_velocityy()) 
