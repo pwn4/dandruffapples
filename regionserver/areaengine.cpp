@@ -83,7 +83,7 @@ AreaEngine::~AreaEngine() {
 //comparator for robot rendering
 class CompareRobotObject {
     public:
-    bool operator()(RobotObject*& r1, RobotObject*& r2) // Returns true if t1 is earlier than t2
+    bool operator()(RobotObject*& r1, RobotObject*& r2) // Returns true if t1 is later than t2
     {
        if (r1->y > r2->y) return true;
        
@@ -92,9 +92,17 @@ class CompareRobotObject {
 };
 
 //comparator for puck rendering
-bool ComparePuckStackObject::operator()(PuckStackObject* const &r1, PuckStackObject* const &r2) // Returns true if t1 is earlier than t2
+bool ComparePuckStackObject::operator()(PuckStackObject* const &r1, PuckStackObject* const &r2) // Returns true if t1 is later than t2
 {
    if (r1->y > r2->y) return true;
+   
+   return false;
+}
+
+//comparator for Command queueing
+bool CompareCommand::operator()(Command const &r1, Command const &r2) // Returns true if t1 is later than t2
+{
+   if (r1.step > r2.step) return true;
    
    return false;
 }
@@ -156,7 +164,7 @@ void AreaEngine::Step(bool generateImage){
     //apply all changes for this step before we simulate (clients)
     while(clientChangeQueue.size() > 0)
     {
-      Command newCommand = clientChangeQueue[0];
+      Command newCommand = clientChangeQueue.top();
       
       if(newCommand.step == curStep){
         
@@ -171,7 +179,7 @@ void AreaEngine::Step(bool generateImage){
         if(newCommand.angle != INT_MAX)
           curRobot->angle = newCommand.angle;
           
-        clientChangeQueue.erase(clientChangeQueue.begin());
+        clientChangeQueue.pop();
       }else if(newCommand.step < curStep)
         throw "AreaEngine: Old client robot change leftover.";
       else
@@ -181,7 +189,7 @@ void AreaEngine::Step(bool generateImage){
     //apply all changes for this step before we simulate (servers)
     while(serverChangeQueue.size() > 0)
     {
-      Command newCommand = serverChangeQueue[0];
+      Command newCommand = serverChangeQueue.top();
       
       if(newCommand.step == curStep){
         
@@ -196,7 +204,7 @@ void AreaEngine::Step(bool generateImage){
         if(newCommand.angle != INT_MAX)
           curRobot->angle = newCommand.angle;
           
-        serverChangeQueue.erase(serverChangeQueue.begin());
+        serverChangeQueue.pop();
       }else if(newCommand.step < curStep)
         throw "AreaEngine: Old server robot change leftover.";
       else
@@ -302,7 +310,7 @@ void AreaEngine::Step(bool generateImage){
           switch (type) {
 				    case MSG_SERVERROBOT: {
 				      ServerRobot serverrobot;
-				      serverrobot.ParseFromArray(buffer, len);
+				      serverrobot.ParseFromArray(buffer, len);				      
 				      GotServerRobot(serverrobot);
 				      break;
 				    }
@@ -318,7 +326,7 @@ void AreaEngine::Step(bool generateImage){
     //apply all changes for this step before we simulate (servers)
     while(serverChangeQueue.size() > 0)
     {
-      Command newCommand = serverChangeQueue[0];
+      Command newCommand = serverChangeQueue.top();
       
       if(newCommand.step == curStep){
         
@@ -333,7 +341,7 @@ void AreaEngine::Step(bool generateImage){
         if(newCommand.angle != INT_MAX)
           curRobot->angle = newCommand.angle;
           
-        serverChangeQueue.erase(serverChangeQueue.begin());
+        serverChangeQueue.pop();
       }else if(newCommand.step < curStep)
         throw "AreaEngine: Old server robot change leftover.";
       else
@@ -699,7 +707,7 @@ RobotObject* AreaEngine::AddRobot(int robotId, double newx, double newy, double 
   }
   
   if(broadcast)
-    BroadcastRobot(newRobot, Index(regionBounds/2, regionBounds/2), robotIndices, curStep);
+    BroadcastRobot(newRobot, Index(regionBounds/2, regionBounds/2), robotIndices, atStep);
   
   return newRobot;
 }
@@ -778,7 +786,7 @@ bool AreaEngine::ChangeVelocity(int robotId, double newvx, double newvy){
   newCommand.velocityx = newvx;
   newCommand.velocityy = newvy;
   
-  clientChangeQueue.push_back(newCommand);
+  clientChangeQueue.push(newCommand);
 
   // Send update over the network.
   ServerRobot serverrobot;
@@ -851,11 +859,15 @@ void AreaEngine::GotServerRobot(ServerRobot message){
     AddRobot(message.id(), message.x(), message.y(), message.angle(), message.velocityx(), message.velocityy(), message.laststep(), message.team(), false);
   }else{
     //modify existing;
-    
+
     //store all changes, and purge during step
     if(message.laststep() < curStep)
-      throw "AreaEngine: ServerRobot received a step late. Impossible desync occurred.";
-    else{
+    {
+      cout << "Received out of sync serverrobot (dropping it): msgstep " << message.laststep() << ", curstep " << curStep << ", x " << message.x() << ", y " << message.y() << endl;
+      
+      //throw "AreaEngine: ServerRobot received late. Impossible desync occurred.";
+      return;
+    }else{
       //store it
       Command newCommand;
       
@@ -871,7 +883,7 @@ void AreaEngine::GotServerRobot(ServerRobot message){
       if(message.has_angle()) 
         newCommand.angle = message.angle();
       
-      serverChangeQueue.push_back(newCommand);
+      serverChangeQueue.push(newCommand);
     }
   }
 }
