@@ -305,11 +305,11 @@ int main(int argc, char **argv) {
             //check if its time to output
             if(time(NULL) > lastSecond)
             {
-              cout << timeSteps << " timesteps/second. second: " << second++ << endl;
+              cout << timeSteps/2 << " timesteps/second. second: " << second++ << endl;
               //do some stats calculations
-              totalpersecond += timeSteps;
+              totalpersecond += timeSteps/2;
               number++;
-              values[freeval++] = (long)timeSteps;
+              values[freeval++] = (long)timeSteps/2;
               long avg = (totalpersecond / number);
               cout << avg << " timesteps/second on average" <<endl;
               //calc std dev
