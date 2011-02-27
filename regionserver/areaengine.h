@@ -92,6 +92,12 @@ struct Command {
   Command() : robotId(-1), velocityx(INT_MAX), velocityy(INT_MAX), angle(INT_MAX), step(-1) {}
 };
 
+class CompareCommand {
+    public:
+    bool operator()(Command const &r1, Command const &r2); // Returns true if t1 is earlier than t2
+};
+
+
 class AreaEngine {
 protected:
 int robotRatio, regionRatio;    //robotDiameter:puckDiameter, regionSideLength:puckDiameter
@@ -105,8 +111,8 @@ map<int, RobotObject*> robots;
 map<int, ServerRobot*> updates;
 EpollConnection ** neighbours;
 vector<EpollConnection*> controllers;
-vector<Command> serverChangeQueue;
-vector<Command> clientChangeQueue;
+priority_queue<Command, vector<Command>, CompareCommand> serverChangeQueue;
+priority_queue<Command*, vector<Command>, CompareCommand> clientChangeQueue;
 //for rendering
 map<PuckStackObject*, bool, ComparePuckStackObject> puckq;
 
