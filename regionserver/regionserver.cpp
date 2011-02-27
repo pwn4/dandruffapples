@@ -383,8 +383,8 @@ void run() {
 							regionarea->AddPuck((2 * robotDiameter)+minElementSize+304, (2 * robotDiameter)+minElementSize+150);
 							//j is the y, i is the x
 
-							for (int j = (2 * robotDiameter)+minElementSize; j < (regionSideLen-minElementSize) - (2 * (robotDiameter)) && numRobots	< wantRobots; j += 4 * (robotDiameter)) {
-								for (int i = (2 * robotDiameter)+minElementSize; i < (regionSideLen-minElementSize) - (2 * (robotDiameter)) && numRobots	< wantRobots; i += 5 * (robotDiameter)){
+							for (int j = (2 * robotDiameter)+(2 * minElementSize); j < (regionSideLen-(2 * minElementSize)) - (2 * (robotDiameter)) && numRobots	< wantRobots; j += 2 * (robotDiameter)) {
+								for (int i = (2 * robotDiameter)+(2 * minElementSize); i < (regionSideLen-(2 * minElementSize)) - (2 * (robotDiameter)) && numRobots	< wantRobots; i += 5 * (robotDiameter)){
 									if(rowCounter == 0)
 									  regionarea->AddRobot(myRobotIds[numRobots], i, j, 0, 0, -.5, 0, myRobotTeams[numRobots], true);
 									else if(rowCounter == 1)

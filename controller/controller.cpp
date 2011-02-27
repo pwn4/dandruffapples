@@ -405,7 +405,7 @@ int main(int argc, char** argv)
               }
               */
               else {
-                cerr << "BouncedRobot error: No region owns robot ID #"
+                cerr << "BouncedRobot error: Retry failed. Dropping ClientRobot #"
                      << bouncedrobot.clientrobot().id() << "!" << endl;
               }
               break;
