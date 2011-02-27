@@ -130,8 +130,8 @@ char *parse_port(char *input) {
 //the main function
 void run() {
 	map<int, Bool> sendMoreWorldViews;
-	struct timeval timeCache;
-	suseconds_t microTimeCache=0;
+	struct timeval timeCache, microTimeCache;
+	gettimeofday(&microTimeCache, NULL);
 	bool generateImage;
 
 	//this is only here to generate random numbers for the logging
@@ -261,7 +261,7 @@ void run() {
 
 		//check if its time to output
 		if (timeCache.tv_sec > lastSecond) {
-			cout << timeSteps << " timesteps/second" << endl;
+			cout << timeSteps/2 << " timesteps/second" << endl;
 
 			timeSteps = 0;
 			lastSecond = timeCache.tv_sec;
@@ -383,7 +383,7 @@ void run() {
 							regionarea->AddPuck((2 * robotDiameter)+minElementSize+304, (2 * robotDiameter)+minElementSize+150);
 							//j is the y, i is the x
 
-							for (int j = (2 * robotDiameter)+(2 * minElementSize); j < (regionSideLen-(2 * minElementSize)) - (2 * (robotDiameter)) && numRobots	< wantRobots; j += 2 * (robotDiameter)) {
+							for (int j = (2 * robotDiameter)+(2 * minElementSize); j < (regionSideLen-(2 * minElementSize)) - (2 * (robotDiameter)) && numRobots	< wantRobots; j += 5 * (robotDiameter)) {
 								for (int i = (2 * robotDiameter)+(2 * minElementSize); i < (regionSideLen-(2 * minElementSize)) - (2 * (robotDiameter)) && numRobots	< wantRobots; i += 5 * (robotDiameter)){
 									if(rowCounter == 0)
 									  regionarea->AddRobot(myRobotIds[numRobots], i, j, 0, 0, -.5, 0, myRobotTeams[numRobots], true);
@@ -414,19 +414,19 @@ void run() {
 
 							generateImage = false;
 							//find out if we even need to generate an image
-							//generate an image every 100 000  micro seconds ( 10 milliseconds ) if we can
-							if ((timeCache.tv_usec/100000) > (microTimeCache/100000) ) {
+							//generate an image every ( 50 milliseconds ) if we can
+							if ((timeCache.tv_sec*1000000 + timeCache.tv_usec) > (microTimeCache.tv_sec*1000000 + microTimeCache.tv_usec)+20000) {
 								for (vector<net::EpollConnection*>::const_iterator it = worldviewers.begin(); it
 										!= worldviewers.end(); ++it) {
 									if (sendMoreWorldViews[(*it)->fd].initialized == true
 											&& sendMoreWorldViews[(*it)->fd].value == true) {
 										generateImage = true;
+										microTimeCache = timeCache;
 										break;
 									}
 								}
 							}
-							microTimeCache = timeCache.tv_usec;
-
+							
 							regionarea->Step(generateImage);
 
 							timeSteps++; //Note: only use this for this temp stat taking. use regionarea->curStep for syncing
