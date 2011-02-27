@@ -94,7 +94,7 @@ struct Command {
 
 class CompareCommand {
     public:
-    bool operator()(Command const &r1, Command const &r2); // Returns true if t1 is earlier than t2
+    bool operator()(Command* const &r1, Command* const &r2); // Returns true if t1 is earlier than t2
 };
 
 
@@ -111,8 +111,8 @@ map<int, RobotObject*> robots;
 map<int, ServerRobot*> updates;
 EpollConnection ** neighbours;
 vector<EpollConnection*> controllers;
-priority_queue<Command, vector<Command>, CompareCommand> serverChangeQueue;
-priority_queue<Command, vector<Command>, CompareCommand> clientChangeQueue;
+priority_queue<Command*, vector<Command*>, CompareCommand> serverChangeQueue;
+priority_queue<Command*, vector<Command*>, CompareCommand> clientChangeQueue;
 //for rendering
 map<PuckStackObject*, bool, ComparePuckStackObject> puckq;
 
