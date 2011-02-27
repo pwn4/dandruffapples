@@ -4,6 +4,7 @@
  //////////////////////////////////////////////////////////////////////////////////////////////////*/
 #include <sstream>
 #include <iostream>
+#include <iomanip>
 #include <cstdio>
 #include <cstring>
 #include <cerrno>
@@ -226,6 +227,7 @@ void run() {
 	//create robots for benchmarking!
 	int numRobots = 0;
 	int wantRobots = 1000;
+  int serverByPosition[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 
 	MessageWriter writer(clockfd);
 	MessageReader reader(clockfd);
@@ -289,12 +291,34 @@ void run() {
 						case MSG_WORLDINFO: {
 							worldinfo.ParseFromArray(buffer, len);
 							cout << "Got world info." << endl;
-							for (int region = 0; region < worldinfo.region_size(); region++) {
-								for (int pos = 0; pos < worldinfo.region(region).position_size(); pos++) {
-									cout << "Server #" << worldinfo.region(region).id() << " position: ";
-									cout << worldinfo.region(region).position(pos) << endl;
-								}
-							}
+							int lastRegionIndex = worldinfo.region_size() - 1;
+							myId = worldinfo.region(lastRegionIndex).id();
+							cout << "My id: " << myId << endl;
+              // Draw this:
+              // 00 | 01 | 02
+              // ---+----+---
+              // 07 | ME | 03
+              // ---+----+---
+              // 06 | 05 | 04
+              for (int region = 0; region < worldinfo.region_size(); region++) {
+                for (int pos = 0; 
+                    pos < worldinfo.region(region).position_size(); pos++) {
+                  serverByPosition[(int)(worldinfo.region(region).
+                      position(pos))] = worldinfo.region(region).id();
+                }
+              }
+              cout << std::setw(2) << std::setfill('0') << serverByPosition[0] 
+                   << " | " << std::setw(2) << std::setfill('0')
+                   << serverByPosition[1] << " | " << std::setw(2) 
+                   << std::setfill('0') << serverByPosition[2] << endl 
+                   << "---+----+---\n" << std::setw(2) << std::setfill('0') 
+                   << serverByPosition[7] << " | ME | " << std::setw(2) 
+                   << std::setfill('0') << serverByPosition[3] 
+                   << endl << "---+----+---\n" << std::setw(2) 
+                   << std::setfill('0') << serverByPosition[6] << " | " 
+                   << std::setw(2) << std::setfill('0') << serverByPosition[5] 
+                   << " | " << std::setw(2) << std::setfill('0') 
+                   << serverByPosition[4] << endl;
 
 							// Connect to existing RegionServers.
 							for (int i = 0; i < worldinfo.region_size() - 1; i++) {
@@ -321,6 +345,7 @@ void run() {
 										// Inform AreaEngine who our neighbours are.
 										regionarea->SetNeighbour((int) worldinfo.region(i).position(j), newconn);
 
+                    worldinfo.mutable_region(i)->set_id(myId);
 										// Flip Positions to tell other RegionServers that I am
 										// your new neighbour.
 										switch (worldinfo.region(i).position(j)) {
@@ -361,11 +386,8 @@ void run() {
 							}
 
 							// Find our robots, and add to the simulation
-							int lastRegionIndex = worldinfo.region_size() - 1;
-							myId = worldinfo.region(lastRegionIndex).id();
 							vector<int> myRobotIds;
 							vector<int> myRobotTeams;
-							cout << "My id: " << myId << endl;
 							for (google::protobuf::RepeatedPtrField<const RobotInfo>::const_iterator i =
 									worldinfo.robot().begin(); i != worldinfo.robot().end(); i++) {
 								if (i->region() == myId) {
@@ -565,11 +587,25 @@ void run() {
 							regioninfo.ParseFromArray(buffer, len);
 							cout << "Found new neighbour, server #" << regioninfo.id() << endl;
 							for (int i = 0; i < regioninfo.position_size(); i++) {
-								cout << "  Position: " << regioninfo.position(i) << endl;
+                serverByPosition[(int)(regioninfo.position(i))] = 
+                    regioninfo.id();
 
 								// Inform AreaEngine of our new neighbour.
 								regionarea->SetNeighbour((int) regioninfo.position(i), c);
 							}
+
+              cout << std::setw(2) << std::setfill('0') << serverByPosition[0] 
+                   << " | " << std::setw(2) << std::setfill('0')
+                   << serverByPosition[1] << " | " << std::setw(2) 
+                   << std::setfill('0') << serverByPosition[2] << endl 
+                   << "---+----+---\n" << std::setw(2) << std::setfill('0') 
+                   << serverByPosition[7] << " | ME | " << std::setw(2) 
+                   << std::setfill('0') << serverByPosition[3] 
+                   << endl << "---+----+---\n" << std::setw(2) 
+                   << std::setfill('0') << serverByPosition[6] << " | " 
+                   << std::setw(2) << std::setfill('0') << serverByPosition[5] 
+                   << " | " << std::setw(2) << std::setfill('0') 
+                   << serverByPosition[4] << endl;
 							break;
 						}
 						default:
