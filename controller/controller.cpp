@@ -341,29 +341,28 @@ int main(int argc, char** argv)
             {
               receivedServerRobot++;
               serverrobot.ParseFromArray(buffer, len);
-							// TODO:REVIEW THIS!! NOT TESTED
-              // TODO:Forward to the correct client CORRECTLY
 							// Forward to the client, and any clients in the seenbyid
               net::EpollConnection *client = robots[serverrobot.id()].client;
               if (client != NULL) {
-                client->queue.push(MSG_SERVERROBOT, serverrobot);
-                client->set_writing(true);
-                sentServerRobot++;
+								ret = seenbyidset.insert(client);
+								if(ret.second){
+		              client->queue.push(MSG_SERVERROBOT, serverrobot);
+		              client->set_writing(true);
+	                sentServerRobot++;
+								}
               }
 							//lookup clients using seenbyid and store into set then send to all clients
 							//this resolves sending multiple msgs to same client.
 							for(int i=0; i<serverrobot.seenrobot_size(); i++){
-                if (robots[serverrobot.seenrobot(i).seenbyid()].client != 
-                    NULL) {
-                  ret = seenbyidset.insert(robots[serverrobot.seenrobot(i).
-                      seenbyid()].client);
+								client = robots[serverrobot.seenrobot(i).seenbyid()].client;
+                if (client != NULL) {
+                  ret = seenbyidset.insert(client);
+									if(ret.second){
+										client->queue.push(MSG_SERVERROBOT, serverrobot);
+				            client->set_writing(true);
+			              sentServerRobot++;
+									}
                 }
-							}
-							for(set<net::EpollConnection*>::iterator it=seenbyidset.begin(); 
-									it!=seenbyidset.end(); it++){
-								(*it)->queue.push(MSG_SERVERROBOT, serverrobot);
-                (*it)->set_writing(true);
-                sentServerRobot++;
 							}
 							seenbyidset.clear();	//clear for next serverrobot msg
               break;
@@ -406,7 +405,7 @@ int main(int argc, char** argv)
               }
               */
               else {
-                cerr << "BouncedRobot error: No region owns robot ID #"
+                cerr << "BouncedRobot error: Retry failed. Dropping ClientRobot #"
                      << bouncedrobot.clientrobot().id() << "!" << endl;
               }
               break;
@@ -451,7 +450,7 @@ int main(int argc, char** argv)
           // Fall through...
         case net::connection::REGION:
           if(c->queue.doWrite()) {
-            c->set_writing(false);
+          	c->set_writing(false);
           }
           break;
         default:

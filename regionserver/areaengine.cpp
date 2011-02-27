@@ -776,12 +776,14 @@ void AreaEngine::BroadcastRobot(RobotObject *curRobot, Index oldIndices, Index n
   informNeighbour.set_velocityy(curRobot->vy);
   informNeighbour.set_laststep(curStep);
 
+  /*
   bool keepGoing = true;
   for (int i = 0; i < 8 && keepGoing; i++) {
     if (neighbours[i] == NULL) {
       // TODO: Check first if the robot will wrap to ourselves. 
     }
   } 
+  */
 
   if(newIndices.x == 1 && neighbours[LEFT] != NULL){
     if(oldIndices.x > 1){
