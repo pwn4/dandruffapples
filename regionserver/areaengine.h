@@ -112,7 +112,7 @@ map<int, ServerRobot*> updates;
 EpollConnection ** neighbours;
 vector<EpollConnection*> controllers;
 priority_queue<Command, vector<Command>, CompareCommand> serverChangeQueue;
-priority_queue<Command*, vector<Command>, CompareCommand> clientChangeQueue;
+priority_queue<Command, vector<Command>, CompareCommand> clientChangeQueue;
 //for rendering
 map<PuckStackObject*, bool, ComparePuckStackObject> puckq;
 
