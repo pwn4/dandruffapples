@@ -267,6 +267,7 @@ void AreaEngine::Step(bool generateImage){
       if (collided) {
         ServerRobot serverrobot;
         serverrobot.set_id(curRobot->id);
+        serverrobot.set_laststep(-1); //set this to -1 so that we can detect stray messages
         serverrobot.set_velocityx(curRobot->vx);
         serverrobot.set_velocityy(curRobot->vy); 
         serverrobot.set_angle(curRobot->angle);
@@ -510,6 +511,7 @@ void AreaEngine::Step(bool generateImage){
       //create the serverrobot object
       ServerRobot serverrobot;
       serverrobot.set_id(curRobot->id);
+      serverrobot.set_laststep(-1);   //allow stray msg detection
       
       //first check sight losses
       map<int, bool>::iterator sightCheck;
@@ -777,6 +779,9 @@ bool AreaEngine::ChangeVelocity(int robotId, double newvx, double newvy){
   if(appliedStep % 2 == 0)
     appliedStep++;
   
+  if(appliedStep == 0)
+    throw "AreaEngine: AppliedStep = 0. This should never happen.";
+    
   //store it
   Command newCommand;
   
@@ -791,6 +796,7 @@ bool AreaEngine::ChangeVelocity(int robotId, double newvx, double newvy){
   // Send update over the network.
   ServerRobot serverrobot;
   serverrobot.set_id(robotId);
+  serverrobot.set_laststep(appliedStep);
   serverrobot.set_velocityx(newvx); 
   serverrobot.set_velocityy(newvy); 
   serverrobot.set_angle(robots[robotId]->angle); 
@@ -903,6 +909,7 @@ void AreaEngine::BroadcastRobot(RobotObject *curRobot, Index oldIndices, Index n
   informNeighbour.set_team(curRobot->team);
   informNeighbour.set_velocityx(curRobot->vx);
   informNeighbour.set_velocityy(curRobot->vy);
+    
   informNeighbour.set_laststep(step);
 
   /*
@@ -916,6 +923,8 @@ void AreaEngine::BroadcastRobot(RobotObject *curRobot, Index oldIndices, Index n
 
   if(newIndices.x == 1 && neighbours[LEFT] != NULL){
     if(oldIndices.x > 1){
+      if(step == 0)
+        throw "AreaEngine: Broadcast step = 0 attempt.";
       informNeighbour.set_x(transx + regionRatio);
       informNeighbour.set_y(transy);
       neighbours[LEFT]->queue.push(MSG_SERVERROBOT, informNeighbour);
@@ -923,6 +932,8 @@ void AreaEngine::BroadcastRobot(RobotObject *curRobot, Index oldIndices, Index n
 	  }
 		if(newIndices.y == 1 && neighbours[TOP_LEFT] != NULL){
 		  if(oldIndices.x > 1 || oldIndices.y > 1){
+        if(step == 0)
+          throw "AreaEngine: Broadcast step = 0 attempt.";
         informNeighbour.set_x(transx + regionRatio);
         informNeighbour.set_y(transy + regionRatio);
         neighbours[TOP_LEFT]->queue.push(MSG_SERVERROBOT, informNeighbour);
@@ -930,6 +941,8 @@ void AreaEngine::BroadcastRobot(RobotObject *curRobot, Index oldIndices, Index n
 	    }
     }else if(newIndices.y == regionBounds && neighbours[BOTTOM_LEFT] != NULL){
       if(oldIndices.x > 1 || oldIndices.y < regionBounds){
+        if(step == 0)
+          throw "AreaEngine: Broadcast step = 0 attempt.";
         informNeighbour.set_x(transx + regionRatio);
         informNeighbour.set_y(transy - regionRatio);
         neighbours[BOTTOM_LEFT]->queue.push(MSG_SERVERROBOT, informNeighbour);
@@ -938,6 +951,8 @@ void AreaEngine::BroadcastRobot(RobotObject *curRobot, Index oldIndices, Index n
     }
   }else if(newIndices.x == regionBounds && neighbours[RIGHT] != NULL){
     if(oldIndices.x < regionBounds){
+      if(step == 0)
+        throw "AreaEngine: Broadcast step = 0 attempt.";
       informNeighbour.set_x(transx - regionRatio);
       informNeighbour.set_y(transy);
       neighbours[RIGHT]->queue.push(MSG_SERVERROBOT, informNeighbour);
@@ -945,6 +960,8 @@ void AreaEngine::BroadcastRobot(RobotObject *curRobot, Index oldIndices, Index n
 		}
 		if(newIndices.y == 1 && neighbours[TOP_RIGHT] != NULL){
 		  if(oldIndices.x < regionBounds || oldIndices.y > 1){
+        if(step == 0)
+          throw "AreaEngine: Broadcast step = 0 attempt.";
         informNeighbour.set_x(transx - regionRatio);
         informNeighbour.set_y(transy + regionRatio);
         neighbours[TOP_RIGHT]->queue.push(MSG_SERVERROBOT, informNeighbour);
@@ -952,6 +969,8 @@ void AreaEngine::BroadcastRobot(RobotObject *curRobot, Index oldIndices, Index n
 	    }
     }else if(newIndices.y == regionBounds && neighbours[BOTTOM_RIGHT] != NULL){
       if(oldIndices.x < regionBounds || oldIndices.y < regionBounds){
+        if(step == 0)
+          throw "AreaEngine: Broadcast step = 0 attempt.";
         informNeighbour.set_x(transx - regionRatio);
         informNeighbour.set_y(transy - regionRatio);
         neighbours[BOTTOM_RIGHT]->queue.push(MSG_SERVERROBOT, informNeighbour);
@@ -961,6 +980,8 @@ void AreaEngine::BroadcastRobot(RobotObject *curRobot, Index oldIndices, Index n
   }
   if(newIndices.y == 1 && neighbours[TOP] != NULL){
     if(oldIndices.y > 1){
+      if(step == 0)
+        throw "AreaEngine: Broadcast step = 0 attempt.";
       informNeighbour.set_x(transx);
       informNeighbour.set_y(transy + regionRatio);
       neighbours[TOP]->queue.push(MSG_SERVERROBOT, informNeighbour);
@@ -968,6 +989,8 @@ void AreaEngine::BroadcastRobot(RobotObject *curRobot, Index oldIndices, Index n
 	  }
   }else if(newIndices.y == regionBounds && neighbours[BOTTOM] != NULL){
     if(oldIndices.y < regionBounds){
+      if(step == 0)
+        throw "AreaEngine: Broadcast step = 0 attempt.";
       informNeighbour.set_x(transx);
       informNeighbour.set_y(transy - regionRatio);
       neighbours[BOTTOM]->queue.push(MSG_SERVERROBOT, informNeighbour);
