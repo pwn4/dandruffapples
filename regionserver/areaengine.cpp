@@ -225,7 +225,7 @@ void AreaEngine::Step(bool generateImage){
       serverrobot.set_haspuck(false); 
 
       // Is this robot seen by others?
-      nowSeenBy = &curRobot->lastSeenBy;
+      nowSeenBy = &(curRobot->lastSeenBy);
       if ((*nowSeenBy).size() > 0) {
         map<int, bool>::iterator sightCheck;
         map<int, bool>::iterator sightEnd = (*nowSeenBy).end();
@@ -405,7 +405,7 @@ void AreaEngine::Step(bool generateImage){
   {
   
     RobotObject * curRobot = (*robotIt).second;
-    nowSeenBy = &curRobot->lastSeenBy;
+    nowSeenBy = &(curRobot->lastSeenBy);
     
     //may make this better. don't need to check full 360 degrees if we only see a cone
     topLeft = getRobotIndices(curRobot->x-viewDist, curRobot->y-viewDist, true);
