@@ -60,6 +60,11 @@ void MessageQueue::push(MessageType typeTag, const google::protobuf::MessageLite
       _writept = 0;
     }
   }
+  
+  //if we try to WRITE a zero length message, throw an error too
+  if(msglen == 0) {
+    std::runtime_error("Tried to write a message length of 0!");
+  }
 
   // Enter message into buffer
   _buffer[_appendpt] = typeTag;
