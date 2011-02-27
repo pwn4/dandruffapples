@@ -100,9 +100,9 @@ bool ComparePuckStackObject::operator()(PuckStackObject* const &r1, PuckStackObj
 }
 
 //comparator for Command queueing
-bool CompareCommand::operator()(Command const &r1, Command const &r2) // Returns true if t1 is later than t2
+bool CompareCommand::operator()(Command* const &r1, Command* const &r2) // Returns true if t1 is later than t2
 {
-   if (r1.step > r2.step) return true;
+   if (r1->step > r2->step) return true;
    
    return false;
 }
@@ -164,23 +164,24 @@ void AreaEngine::Step(bool generateImage){
     //apply all changes for this step before we simulate (clients)
     while(clientChangeQueue.size() > 0)
     {
-      Command newCommand = clientChangeQueue.top();
+      Command *newCommand = clientChangeQueue.top();
       
-      if(newCommand.step == curStep){
+      if(newCommand->step == curStep){
         
-        RobotObject* curRobot = robots[newCommand.robotId];
+        RobotObject* curRobot = robots[newCommand->robotId];
         
-        if(newCommand.velocityx != INT_MAX) 
-          curRobot->vx = newCommand.velocityx;
+        if(newCommand->velocityx != INT_MAX) 
+          curRobot->vx = newCommand->velocityx;
           
-        if(newCommand.velocityy != INT_MAX)
-          curRobot->vy = newCommand.velocityy;
+        if(newCommand->velocityy != INT_MAX)
+          curRobot->vy = newCommand->velocityy;
           
-        if(newCommand.angle != INT_MAX)
-          curRobot->angle = newCommand.angle;
-          
+        if(newCommand->angle != INT_MAX)
+          curRobot->angle = newCommand->angle;
+        
+        delete newCommand;
         clientChangeQueue.pop();
-      }else if(newCommand.step < curStep)
+      }else if(newCommand->step < curStep && false)
         throw "AreaEngine: Old client robot change leftover.";
       else
         break;
@@ -189,23 +190,24 @@ void AreaEngine::Step(bool generateImage){
     //apply all changes for this step before we simulate (servers)
     while(serverChangeQueue.size() > 0)
     {
-      Command newCommand = serverChangeQueue.top();
+      Command *newCommand = serverChangeQueue.top();
       
-      if(newCommand.step == curStep){
+      if(newCommand->step == curStep){
         
-        RobotObject* curRobot = robots[newCommand.robotId];
+        RobotObject* curRobot = robots[newCommand->robotId];
         
-        if(newCommand.velocityx != INT_MAX) 
-          curRobot->vx = newCommand.velocityx;
+        if(newCommand->velocityx != INT_MAX) 
+          curRobot->vx = newCommand->velocityx;
           
-        if(newCommand.velocityy != INT_MAX)
-          curRobot->vy = newCommand.velocityy;
+        if(newCommand->velocityy != INT_MAX)
+          curRobot->vy = newCommand->velocityy;
           
-        if(newCommand.angle != INT_MAX)
-          curRobot->angle = newCommand.angle;
+        if(newCommand->angle != INT_MAX)
+          curRobot->angle = newCommand->angle;
           
+        delete newCommand;
         serverChangeQueue.pop();
-      }else if(newCommand.step < curStep)
+      }else if(newCommand->step < curStep && false)
         throw "AreaEngine: Old server robot change leftover.";
       else
         break;
@@ -327,23 +329,24 @@ void AreaEngine::Step(bool generateImage){
     //apply all changes for this step before we simulate (servers)
     while(serverChangeQueue.size() > 0)
     {
-      Command newCommand = serverChangeQueue.top();
+      Command *newCommand = serverChangeQueue.top();
       
-      if(newCommand.step == curStep){
+      if(newCommand->step == curStep){
         
-        RobotObject* curRobot = robots[newCommand.robotId];
+        RobotObject* curRobot = robots[newCommand->robotId];
         
-        if(newCommand.velocityx != INT_MAX) 
-          curRobot->vx = newCommand.velocityx;
+        if(newCommand->velocityx != INT_MAX) 
+          curRobot->vx = newCommand->velocityx;
           
-        if(newCommand.velocityy != INT_MAX)
-          curRobot->vy = newCommand.velocityy;
+        if(newCommand->velocityy != INT_MAX)
+          curRobot->vy = newCommand->velocityy;
           
-        if(newCommand.angle != INT_MAX)
-          curRobot->angle = newCommand.angle;
+        if(newCommand->angle != INT_MAX)
+          curRobot->angle = newCommand->angle;
           
+        delete newCommand;
         serverChangeQueue.pop();
-      }else if(newCommand.step < curStep)
+      }else if(newCommand->step < curStep && false)
         throw "AreaEngine: Old server robot change leftover.";
       else
         break;
@@ -783,13 +786,13 @@ bool AreaEngine::ChangeVelocity(int robotId, double newvx, double newvy){
     throw "AreaEngine: AppliedStep = 0. This should never happen.";
     
   //store it
-  Command newCommand;
+  Command *newCommand = new Command();
   
-  newCommand.robotId = robotId;
-  newCommand.step = appliedStep;
+  newCommand->robotId = robotId;
+  newCommand->step = appliedStep;
   
-  newCommand.velocityx = newvx;
-  newCommand.velocityy = newvy;
+  newCommand->velocityx = newvx;
+  newCommand->velocityy = newvy;
   
   clientChangeQueue.push(newCommand);
 
@@ -875,19 +878,19 @@ void AreaEngine::GotServerRobot(ServerRobot message){
       return;
     }else{
       //store it
-      Command newCommand;
+      Command *newCommand = new Command();
       
-      newCommand.robotId = message.id();
-      newCommand.step = message.laststep();
+      newCommand->robotId = message.id();
+      newCommand->step = message.laststep();
       
       if(message.has_velocityx()) 
-        newCommand.velocityx = message.velocityx();
+        newCommand->velocityx = message.velocityx();
         
       if(message.has_velocityy()) 
-        newCommand.velocityy = message.velocityy();
+        newCommand->velocityy = message.velocityy();
         
       if(message.has_angle()) 
-        newCommand.angle = message.angle();
+        newCommand->angle = message.angle();
       
       serverChangeQueue.push(newCommand);
     }
