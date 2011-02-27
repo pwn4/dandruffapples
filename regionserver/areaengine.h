@@ -67,8 +67,8 @@ struct RobotObject{
   int team;
  
   
-  RobotObject(int newid, double newx, double newy, double newa, Index aLoc, int curStep, int teamId) : id(newid), lastStep(curStep), x(newx), y(newy), angle(newa), vx(0), vy(0), arrayLocation(aLoc), lastCollision(time(NULL)), nextRobot(NULL), controllerfd(-1), team(teamId) {}
-  RobotObject(int newid, double newx, double newy, double newa, double newvx, double newvy, Index aLoc, int curStep, int teamId) : id(newid), lastStep(curStep), x(newx), y(newy), angle(newa), vx(newvx), vy(newvy), arrayLocation(aLoc), lastCollision(time(NULL)), nextRobot(NULL), controllerfd(-1), team(teamId) {}
+  RobotObject(int newid, double newx, double newy, double newa, Index aLoc, int curStep, int teamId) : id(newid), lastStep(curStep-1), x(newx), y(newy), angle(newa), vx(0), vy(0), arrayLocation(aLoc), lastCollision(time(NULL)), nextRobot(NULL), controllerfd(-1), team(teamId) {}
+  RobotObject(int newid, double newx, double newy, double newa, double newvx, double newvy, Index aLoc, int curStep, int teamId) : id(newid), lastStep(curStep-1), x(newx), y(newy), angle(newa), vx(newvx), vy(newvy), arrayLocation(aLoc), lastCollision(time(NULL)), nextRobot(NULL), controllerfd(-1), team(teamId) {}
 };
 
 struct ArrayObject{
@@ -81,6 +81,15 @@ struct ArrayObject{
 class ComparePuckStackObject {
     public:
     bool operator()(PuckStackObject* const &r1, PuckStackObject* const &r2); // Returns true if t1 is earlier than t2
+};
+
+struct Command {
+  int robotId;
+  int velocityx, velocityy;
+  int angle;
+  int step;
+  
+  Command() : robotId(-1), velocityx(INT_MAX), velocityy(INT_MAX), angle(INT_MAX), step(-1) {}
 };
 
 class AreaEngine {
@@ -96,10 +105,12 @@ map<int, RobotObject*> robots;
 map<int, ServerRobot*> updates;
 EpollConnection ** neighbours;
 vector<EpollConnection*> controllers;
+vector<Command> serverChangeQueue;
+vector<Command> clientChangeQueue;
 //for rendering
 map<PuckStackObject*, bool, ComparePuckStackObject> puckq;
 
-  void BroadcastRobot(RobotObject *curRobot, Index oldIndices, Index newIndices);
+  void BroadcastRobot(RobotObject *curRobot, Index oldIndices, Index newIndices, int step);
   
 public:
   RegionRender render;
