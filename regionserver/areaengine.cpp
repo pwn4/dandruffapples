@@ -172,16 +172,55 @@ void AreaEngine::Step(bool generateImage){
       
       if(newCommand->step == curStep-1 || newCommand->step == curStep-2){
         
+        // Send update over the network.
+        ServerRobot serverrobot;
+        serverrobot.set_id(newCommand->robotId);
         RobotObject* curRobot = robots[newCommand->robotId];
         
         if(newCommand->velocityx != INT_MAX) 
+        {
           curRobot->vx = newCommand->velocityx;
+          serverrobot.set_velocityx(curRobot->vx); 
+        }
           
         if(newCommand->velocityy != INT_MAX)
+        {
           curRobot->vy = newCommand->velocityy;
+          serverrobot.set_velocityy(curRobot->vy); 
+        }
           
         if(newCommand->angle != INT_MAX)
+        {
           curRobot->angle = newCommand->angle;
+          serverrobot.set_angle(curRobot->angle);
+        }
+          
+        serverrobot.set_laststep(-1); //for stray packet detection
+        //serverrobot.set_haspuck(robots[robotId]->holdingPuck); 
+
+        // Inform robots that can see this one of state change.
+        map<int, bool> *nowSeenBy = &robots[newCommand->robotId]->lastSeenBy;
+        if ((*nowSeenBy).size() > 0) {
+          map<int, bool>::iterator sightCheck;
+          map<int, bool>::iterator sightEnd = (*nowSeenBy).end();
+          for(sightCheck = (*nowSeenBy).begin(); sightCheck != sightEnd;
+              sightCheck++)
+          {
+            SeenServerRobot* seenRobot = serverrobot.add_seenrobot();
+            seenRobot->set_viewlostid(false); 
+            seenRobot->set_seenbyid(sightCheck->first);
+          }
+        } 
+
+        // Send updates to controllers.
+        for (vector<EpollConnection*>::const_iterator it = controllers.begin();
+             it != controllers.end(); it++) {
+          (*it)->queue.push(MSG_SERVERROBOT, serverrobot);
+          (*it)->set_writing(true); 
+        }
+
+        // Broadcast velocity change to other servers - BroadcastRobot checks if robot is in border cell
+        BroadcastRobot(robots[newCommand->robotId], Index(regionBounds/2, regionBounds/2), robots[newCommand->robotId]->arrayLocation, curStep);
         
         delete newCommand;
         clientChangeQueue.pop();
@@ -826,41 +865,8 @@ bool AreaEngine::ChangeVelocity(int robotId, double newvx, double newvy){
   
   newCommand->velocityx = newvx;
   newCommand->velocityy = newvy;
-  
+
   clientChangeQueue.push(newCommand);
-
-  // Send update over the network.
-  ServerRobot serverrobot;
-  serverrobot.set_id(robotId);
-  serverrobot.set_laststep(appliedStep);
-  serverrobot.set_velocityx(newvx); 
-  serverrobot.set_velocityy(newvy); 
-  serverrobot.set_angle(robots[robotId]->angle); 
-  serverrobot.set_haspuck(robots[robotId]->holdingPuck); 
-
-  // Inform robots that can see this one of state change.
-  map<int, bool> *nowSeenBy = &robots[robotId]->lastSeenBy;
-  if ((*nowSeenBy).size() > 0) {
-    map<int, bool>::iterator sightCheck;
-    map<int, bool>::iterator sightEnd = (*nowSeenBy).end();
-    for(sightCheck = (*nowSeenBy).begin(); sightCheck != sightEnd;
-        sightCheck++)
-    {
-      SeenServerRobot* seenRobot = serverrobot.add_seenrobot();
-      seenRobot->set_viewlostid(false); 
-      seenRobot->set_seenbyid(sightCheck->first);
-    }
-  } 
-
-  // Send updates to controllers.
-  for (vector<EpollConnection*>::const_iterator it = controllers.begin();
-       it != controllers.end(); it++) {
-    (*it)->queue.push(MSG_SERVERROBOT, serverrobot);
-    (*it)->set_writing(true); 
-  }
-
-  // Broadcast velocity change to other servers - BroadcastRobot checks if robot is in border cell
-  BroadcastRobot(robots[robotId], Index(regionBounds/2, regionBounds/2), robots[robotId]->arrayLocation, appliedStep);
   
   return true;
 }
