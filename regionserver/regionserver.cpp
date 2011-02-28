@@ -418,8 +418,8 @@ void run() {
 							  regionarea->AddPuck((2 * robotDiameter)+minElementSize+304, (2 * robotDiameter)+minElementSize+150);
 							  //j is the y, i is the x
 
-							  for (int j = (2 * robotDiameter)+(2 * minElementSize); j < (regionSideLen+(2 * minElementSize)) - (2 * (robotDiameter)) && numRobots	< wantRobots; j += 5 * (robotDiameter)) {
-								  for (int i = (2 * robotDiameter)+(2 * minElementSize); i < (regionSideLen+(2 * minElementSize)) - (2 * (robotDiameter)) && numRobots	< wantRobots; i += 5 * (robotDiameter)){
+							  for (int j = (2 * robotDiameter)+(4 * minElementSize); j < (regionSideLen+(1 * minElementSize)) - (2 * (robotDiameter)+(4 * minElementSize)) && numRobots	< wantRobots; j += 5 * (robotDiameter)) {
+								  for (int i = (2 * robotDiameter)+(4 * minElementSize); i < (regionSideLen+(1 * minElementSize)) - (2 * (robotDiameter)+(4 * minElementSize)) && numRobots	< wantRobots; i += 5 * (robotDiameter)){
 									  if(rowCounter == 0)
 									    regionarea->AddRobot(myRobotIds[numRobots], i, j, 0, 0, -.5, 0, myRobotTeams[numRobots], true);
 									  else if(rowCounter == 1)
@@ -594,7 +594,7 @@ void run() {
 						case MSG_SERVERROBOT: {
 							ServerRobot serverrobot;
 							serverrobot.ParseFromArray(buffer, len);
-							regionarea->GotServerRobot(serverrobot);
+							regionarea->GotServerRobot(serverrobot, 3);
 							break;
 						}
 						case MSG_REGIONINFO: {
@@ -620,6 +620,12 @@ void run() {
                    << std::setw(2) << std::setfill('0') << serverByPosition[5] 
                    << " | " << std::setw(2) << std::setfill('0') 
                    << serverByPosition[4] << endl;
+                   
+              //disable epoll for the neighbour now that we'd initialized with it, so that
+              //the engine can handle writing / reading
+              c->set_reading(false);
+              c->set_writing(false);
+                   
 							break;
 						}
 						default:
