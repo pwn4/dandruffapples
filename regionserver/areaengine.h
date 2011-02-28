@@ -86,8 +86,8 @@ class ComparePuckStackObject {
 
 struct Command {
   int robotId;
-  int velocityx, velocityy;
-  int angle;
+  double velocityx, velocityy;
+  double angle;
   int step;
   
   Command() : robotId(-1), velocityx(INT_MAX), velocityy(INT_MAX), angle(INT_MAX), step(-1) {}
