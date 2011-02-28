@@ -118,7 +118,7 @@ bool AreaEngine::Sees(double x1, double y1, double x2, double y2){
 //this method checks if two robots at (x1,y1) and (x2,y2) are in collision
 bool AreaEngine::Collides(double x1, double y1, double x2, double y2){
   if(sqrt((x1-x2)*(x1-x2) + (y1-y2)*(y1-y2)) <= robotRatio)
-    return true;
+    return false;
   return false;
 }
 
