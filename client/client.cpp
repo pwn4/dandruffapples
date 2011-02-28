@@ -301,6 +301,12 @@ void *artificialIntelligence(void *threadid) {
           theController->set_writing(true);
           ownRobots[i]->whenLastSent = currentTimestep;
           sentMessages++;
+
+          // Force message to be sent now!
+          while (theController->queue.remaining() != 0) {
+            theController->queue.doWrite();
+          }
+          theController->set_writing(false);
         }
         pthread_mutex_unlock(&connectionMutex);
       } else {
@@ -374,8 +380,9 @@ void run() {
         cout << "Sent " << sentMessages << " per second." << endl;
         cout << "Pending " << pendingMessages << " per second." << endl;
         cout << "Received " << receivedMessages << " per second." << endl;
-        cout << "Timeout " << timeoutMessages << " per second.\n" << endl;
-        cout << "ControllerQueue " << theController->queue.remaining() << endl;
+        cout << "Timeout " << timeoutMessages << " per second." << endl;
+        cout << "ControllerQueue " << theController->queue.remaining() << endl
+             << endl;
         lastSecond = time(NULL);
         sentMessages = 0;
         pendingMessages = 0;
