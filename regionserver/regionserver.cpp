@@ -249,11 +249,6 @@ void run() {
 
 #define MAX_EVENTS 128
 	struct epoll_event events[MAX_EVENTS];
-	//send the timestepdone packet to tell the clock server we're ready
-	writer.init(MSG_TIMESTEPDONE, tsdone);
-	for (bool complete = false; !complete;) {
-		complete = writer.doWrite();
-	}
 
 	//enter the main loop
 	while (true) {
@@ -383,6 +378,12 @@ void run() {
 									newconn->set_writing(true);
 								}
 							}
+							
+							//send the timestepdone packet to tell the clock server we're ready
+	            writer.init(MSG_TIMESTEPDONE, tsdone);
+	            for (bool complete = false; !complete;) {
+		            complete = writer.doWrite();
+	            }
 
 							break;
 						}
@@ -397,6 +398,7 @@ void run() {
 							//do our initializations here in the init step
 							if(!initialized)
 							{
+							
 								// Find our robots, and add to the simulation
 							  vector<int> myRobotIds;
 							  vector<int> myRobotTeams;
@@ -407,7 +409,7 @@ void run() {
 									  myRobotTeams.push_back(i->team());
 								  }
 							  }
-							
+
 							  wantRobots = myRobotIds.size();
 							  numRobots = 0;
 							  int rowCounter = 0;
@@ -599,8 +601,7 @@ void run() {
 							regioninfo.ParseFromArray(buffer, len);
 							cout << "Found new neighbour, server #" << regioninfo.id() << endl;
 							for (int i = 0; i < regioninfo.position_size(); i++) {
-                serverByPosition[(int)(regioninfo.position(i))] = 
-                    regioninfo.id();
+                serverByPosition[(int)(regioninfo.position(i))] = regioninfo.id();
 
 								// Inform AreaEngine of our new neighbour.
 								regionarea->SetNeighbour((int) regioninfo.position(i), c);
