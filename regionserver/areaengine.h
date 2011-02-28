@@ -150,7 +150,7 @@ public:
 
   void SetNeighbour(int placement, EpollConnection* socketHandle);
 
-  void GotServerRobot(ServerRobot message);
+  void GotServerRobot(ServerRobot message, int marker);
 
   void AddController(EpollConnection* socketHandle);
   
