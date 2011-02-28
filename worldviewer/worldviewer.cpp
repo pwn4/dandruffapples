@@ -275,10 +275,6 @@ gboolean io_regionmessage(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 		initializeToolbarButtons();
 	}
 
-	//if the server is not viewed then tell it to stop sending to us
-	if (regions.at(regionNum) != pivotRegion && regions.at(regionNum) != pivotRegionBuddy) {
-		sendWorldViews(regions.at(regionNum)->fd, false);
-	} else {
 		switch (type) {
 		case MSG_REGIONVIEW: {
 			RegionRender render;
@@ -302,7 +298,6 @@ gboolean io_regionmessage(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 #endif
 		}
 		}
-	}
 
 	return TRUE;
 }
@@ -336,10 +331,12 @@ gboolean io_clockmessage(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 			gtk_widget_set_size_request(GTK_WIDGET(worldDrawingArea.at(TOP_LEFT)), IMAGEWIDTH, IMAGEHEIGHT);
 			regions.push_back(new regionConnection(regionFd, regioninfo));
 			pivotRegion = regions.at(regions.size() - 1);
+			sendWorldViews(pivotRegion->fd, true);
 		} else if (regioninfo.draw_x() == 1 && regioninfo.draw_y() == 0) {
 			gtk_widget_set_size_request(GTK_WIDGET(worldDrawingArea.at(TOP_RIGHT)), IMAGEWIDTH, IMAGEHEIGHT);
 			regions.push_back(new regionConnection(regionFd, regioninfo));
 			pivotRegionBuddy = regions.at(regions.size() - 1);
+			sendWorldViews(pivotRegionBuddy->fd, true);
 		} else {
 			regions.push_back(new regionConnection(regionFd, regioninfo));
 #ifdef DEBUG
@@ -442,6 +439,13 @@ void on_downButton_clicked(GtkWidget *widget, gpointer window) {
 	uint32 newPivotRegion[2] = { pivotRegion->info.draw_x(), tmp1 };
 	uint32 newPivotRegionBuddy[2] = { pivotRegionBuddy->info.draw_x(), tmp2 };
 
+	//disable the sending of world views from regions that we are moving away from
+	if (horizontalView) {
+		sendWorldViews(pivotRegion->fd, false);
+		sendWorldViews(pivotRegionBuddy->fd, false);
+	} else {
+		sendWorldViews(pivotRegion->fd, false);
+	}
 	//set the new pivotRegion and pivotRegionBuddy
 	setNewRegionPivotAndBuddy(newPivotRegion, newPivotRegionBuddy);
 
@@ -477,6 +481,13 @@ void on_upButton_clicked(GtkWidget *widget, gpointer window) {
 	uint32 newPivotRegion[2] = { pivotRegion->info.draw_x(), tmp1 };
 	uint32 newPivotRegionBuddy[2] = { pivotRegionBuddy->info.draw_x(), tmp2 };
 
+	if (horizontalView) {
+		sendWorldViews(pivotRegion->fd, false);
+		sendWorldViews(pivotRegionBuddy->fd, false);
+	} else {
+		sendWorldViews(pivotRegionBuddy->fd, false);
+	}
+
 	setNewRegionPivotAndBuddy(newPivotRegion, newPivotRegionBuddy);
 
 	if (horizontalView) {
@@ -509,6 +520,13 @@ void on_backButton_clicked(GtkWidget *widget, gpointer window) {
 	uint32 newPivotRegion[2] = { tmp1, pivotRegion->info.draw_y() };
 	uint32 newPivotRegionBuddy[2] = { tmp2, pivotRegionBuddy->info.draw_y() };
 
+	if (horizontalView) {
+		sendWorldViews(pivotRegionBuddy->fd, false);
+	} else {
+		sendWorldViews(pivotRegion->fd, false);
+		sendWorldViews(pivotRegionBuddy->fd, false);
+	}
+
 	setNewRegionPivotAndBuddy(newPivotRegion, newPivotRegionBuddy);
 
 	if (horizontalView) {
@@ -540,6 +558,13 @@ void on_forwardButton_clicked(GtkWidget *widget, gpointer window) {
 
 	uint32 newPivotRegion[2] = { tmp1, pivotRegion->info.draw_y() };
 	uint32 newPivotRegionBuddy[2] = { tmp2, pivotRegionBuddy->info.draw_y() };
+
+	if (horizontalView) {
+		sendWorldViews(pivotRegion->fd, false);
+	} else {
+		sendWorldViews(pivotRegion->fd, false);
+		sendWorldViews(pivotRegionBuddy->fd, false);
+	}
 
 	setNewRegionPivotAndBuddy(newPivotRegion, newPivotRegionBuddy);
 
@@ -586,6 +611,9 @@ void on_rotateButton_clicked(GtkWidget *widget, gpointer window) {
 #ifdef DEBUG
 	debug << "Changing pivotRegionBuddy to (" << newPivotRegionBuddy[0] << "," << newPivotRegionBuddy[1] << ")" << endl;
 #endif
+
+	if (pivotRegionBuddy != pivotRegion)
+		sendWorldViews(pivotRegionBuddy->fd, false);
 
 	for (int i = 0; i < (int) regions.size(); i++) {
 		if (regions.at(i)->info.draw_x() == newPivotRegionBuddy[0] && regions.at(i)->info.draw_y()

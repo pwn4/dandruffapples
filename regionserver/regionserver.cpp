@@ -723,7 +723,7 @@ void run() {
 						net::EpollConnection *newconnOut = new net::EpollConnection(epoll, EPOLLIN, fd,
 								net::connection::WORLDVIEWER);
 						worldviewers.push_back(newconnOut);
-						sendMoreWorldViews[fd].value = true;
+						sendMoreWorldViews[fd].value = false;
 						sendMoreWorldViews[fd].initialized = true;
 						cout << "set " << fd << " to true" << endl;
 					} catch (SystemError e) {
