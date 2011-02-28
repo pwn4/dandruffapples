@@ -364,6 +364,7 @@ void run() {
         cout << "Pending " << pendingMessages << " per second." << endl;
         cout << "Received " << receivedMessages << " per second." << endl;
         cout << "Timeout " << timeoutMessages << " per second.\n" << endl;
+        cout << "ControllerQueue " << theController->queue.remaining() << endl;
         lastSecond = time(NULL);
         sentMessages = 0;
         pendingMessages = 0;
