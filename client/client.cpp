@@ -63,6 +63,13 @@ int sentMessages = 0;
 int receivedMessages = 0;
 int pendingMessages = 0;
 int timeoutMessages = 0;
+int moveUp = 0;
+int moveDown = 0;
+int moveRight = 0;
+int moveLeft = 0;
+int moveRandom = 0;
+
+const int COOLDOWN = 10;
 
 class SeenPuck {
   float relx;
@@ -236,27 +243,33 @@ void executeAiVersion(int type, OwnRobot* ownRobot, ClientRobot* clientRobot) {
           // Move right!
           ownRobot->pendingCommand = true;
           clientRobot->set_velocityx(velocity);
+          moveRight++;
         } else if ((*closest)->relx > 0.0 && 
             ownRobot->vx != velocity * -1.0) {
           ownRobot->pendingCommand = true;
           clientRobot->set_velocityx(velocity * -1.0);
+          moveLeft++;
         }
         if ((*closest)->rely <= 0.0 && ownRobot->vy != velocity) {
           // Move down!
           ownRobot->pendingCommand = true;
           clientRobot->set_velocityy(velocity);
+          moveDown++;
         } else if ((*closest)->rely > 0.0 && 
             ownRobot->vy != velocity * -1.0) {
           ownRobot->pendingCommand = true;
           clientRobot->set_velocityy(velocity * -1.0);
+          moveUp++;
         }
       } 
     } else {
       // No seen robots. Make sure we're moving.
-      if (ownRobot->vx == 0.0 || ownRobot->vy == 0.0) {
+      if (ownRobot->vx == 0.0 || ownRobot->vy == 0.0 
+          || currentTimestep - ownRobot->whenLastSent > 100) {
         ownRobot->pendingCommand = true;
         clientRobot->set_velocityx(((rand() % 11) / 10.0) - 0.5);
         clientRobot->set_velocityy(((rand() % 11) / 10.0) - 0.5);
+        moveRandom++;
       }
     }
   }
@@ -293,7 +306,8 @@ void *artificialIntelligence(void *threadid) {
     }  
     for ( ; i < robotsPerTeam && !simulationEnded 
          && lastTimestep == currentTimestep; i++) {
-      if (!ownRobots[i]->pendingCommand) {
+      if (!ownRobots[i]->pendingCommand 
+          && currentTimestep - ownRobots[i]->whenLastSent > COOLDOWN) {
         pthread_mutex_lock(&connectionMutex);
         // Run different AIs depending on i.
         //executeAiVersion(i % 1, ownRobots[i], &clientRobot); 
@@ -381,13 +395,22 @@ void run() {
         cout << "Pending " << pendingMessages << " per second." << endl;
         cout << "Received " << receivedMessages << " per second." << endl;
         cout << "Timeout " << timeoutMessages << " per second." << endl;
-        cout << "ControllerQueue " << theController->queue.remaining() << endl
-             << endl;
+        cout << "ControllerQueue " << theController->queue.remaining() << endl;
+        cout << "Move up " << moveUp << " per second." << endl;
+        cout << "Move down " << moveDown << " per second." << endl;
+        cout << "Move right " << moveRight << " per second." << endl;
+        cout << "Move left " << moveLeft << " per second." << endl;
+        cout << "Move random " << moveRandom << " per second." << endl << endl;
         lastSecond = time(NULL);
         sentMessages = 0;
         pendingMessages = 0;
         receivedMessages = 0;
         timeoutMessages = 0;
+        moveUp = 0;
+        moveDown = 0;
+        moveRight = 0;
+        moveLeft = 0;
+        moveRandom = 0;
       }
       pthread_mutex_unlock(&connectionMutex);
 
