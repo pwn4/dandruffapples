@@ -265,7 +265,7 @@ void executeAiVersion(int type, OwnRobot* ownRobot, ClientRobot* clientRobot) {
     } else {
       // No seen robots. Make sure we're moving.
       if (ownRobot->vx == 0.0 || ownRobot->vy == 0.0 
-          || currentTimestep - ownRobot->whenLastSent > 100) {
+          || currentTimestep - ownRobot->whenLastSent > 10000) {
         ownRobot->pendingCommand = true;
         clientRobot->set_velocityx(((rand() % 11) / 10.0) - 0.5);
         clientRobot->set_velocityy(((rand() % 11) / 10.0) - 0.5);
