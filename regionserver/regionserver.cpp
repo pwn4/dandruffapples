@@ -213,7 +213,7 @@ void run() {
 	tsdone.set_done(true);
 	WorldInfo worldinfo;
 	RegionInfo regioninfo;
-	unsigned myId; //region id
+	unsigned myId = 0; //region id
 	//Region Area Variables (should be set by clock server)
 	int regionSideLen = 2500;
 	int robotDiameter = 4;
@@ -232,6 +232,7 @@ void run() {
 	MessageWriter writer(clockfd);
 	MessageReader reader(clockfd);
 	int timeSteps = 0;
+	bool initialized = false;
 	time_t lastSecond = time(NULL);
 	vector<net::EpollConnection*> controllers;
 	vector<net::EpollConnection*> worldviewers;
@@ -385,45 +386,6 @@ void run() {
 								}
 							}
 
-							// Find our robots, and add to the simulation
-							vector<int> myRobotIds;
-							vector<int> myRobotTeams;
-							for (google::protobuf::RepeatedPtrField<const RobotInfo>::const_iterator i =
-									worldinfo.robot().begin(); i != worldinfo.robot().end(); i++) {
-								if (i->region() == myId) {
-									myRobotIds.push_back(i->id());
-									myRobotTeams.push_back(i->team());
-								}
-							}
-							wantRobots = myRobotIds.size();
-							numRobots = 0;
-							int rowCounter = 0;
-							bool firstrow = true;
-							//add some test pucks for now
-							regionarea->AddPuck((2 * robotDiameter)+minElementSize+104, (2 * robotDiameter)+minElementSize+110);
-							regionarea->AddPuck((2 * robotDiameter)+minElementSize+204, (2 * robotDiameter)+minElementSize+130);
-							regionarea->AddPuck((2 * robotDiameter)+minElementSize+304, (2 * robotDiameter)+minElementSize+150);
-							//j is the y, i is the x
-
-							for (int j = (2 * robotDiameter)+(2 * minElementSize); j < (regionSideLen-(2 * minElementSize)) - (2 * (robotDiameter)) && numRobots	< wantRobots; j += 5 * (robotDiameter)) {
-								for (int i = (2 * robotDiameter)+(2 * minElementSize); i < (regionSideLen-(2 * minElementSize)) - (2 * (robotDiameter)) && numRobots	< wantRobots; i += 5 * (robotDiameter)){
-									if(rowCounter == 0)
-									  regionarea->AddRobot(myRobotIds[numRobots], i, j, 0, 0, -.5, 0, myRobotTeams[numRobots], true);
-									else if(rowCounter == 1)
-									  regionarea->AddRobot(myRobotIds[numRobots], i, j, 0, 0, .5, 0, myRobotTeams[numRobots], true);
-									else if(firstrow){
-									  regionarea->AddRobot(myRobotIds[numRobots], i, j, 0, 0, (double)((rand() % 101)-50.0)/100.0, 0, myRobotTeams[numRobots], true);
-									}
-
-									numRobots++;
-									rowCounter = (rowCounter+1) % 3;
-								}
-								firstrow = true;
-								rowCounter = 0;
-							}
-
-							cout << numRobots << " robots created." << endl;
-
 							break;
 						}
 						case MSG_REGIONINFO: {
@@ -433,6 +395,60 @@ void run() {
 						}
 						case MSG_TIMESTEPUPDATE: {
 							timestep.ParseFromArray(buffer, len);
+							
+							//do our initializations here in the init step
+							if(!initialized)
+							{
+								// Find our robots, and add to the simulation
+							  vector<int> myRobotIds;
+							  vector<int> myRobotTeams;
+							  for (google::protobuf::RepeatedPtrField<const RobotInfo>::const_iterator i =
+									  worldinfo.robot().begin(); i != worldinfo.robot().end(); i++) {
+								  if (i->region() == myId) {
+									  myRobotIds.push_back(i->id());
+									  myRobotTeams.push_back(i->team());
+								  }
+							  }
+							
+							  wantRobots = myRobotIds.size();
+							  numRobots = 0;
+							  int rowCounter = 0;
+							  bool firstrow = true;
+							  //add some test pucks for now
+							  regionarea->AddPuck((2 * robotDiameter)+minElementSize+104, (2 * robotDiameter)+minElementSize+110);
+							  regionarea->AddPuck((2 * robotDiameter)+minElementSize+204, (2 * robotDiameter)+minElementSize+130);
+							  regionarea->AddPuck((2 * robotDiameter)+minElementSize+304, (2 * robotDiameter)+minElementSize+150);
+							  //j is the y, i is the x
+
+							  for (int j = (2 * robotDiameter)+(2 * minElementSize); j < (regionSideLen-(2 * minElementSize)) - (2 * (robotDiameter)) && numRobots	< wantRobots; j += 5 * (robotDiameter)) {
+								  for (int i = (2 * robotDiameter)+(2 * minElementSize); i < (regionSideLen-(2 * minElementSize)) - (2 * (robotDiameter)) && numRobots	< wantRobots; i += 5 * (robotDiameter)){
+									  if(rowCounter == 0)
+									    regionarea->AddRobot(myRobotIds[numRobots], i, j, 0, 0, -.5, 0, myRobotTeams[numRobots], true);
+									  else if(rowCounter == 1)
+									    regionarea->AddRobot(myRobotIds[numRobots], i, j, 0, 0, .5, 0, myRobotTeams[numRobots], true);
+									  else if(firstrow){
+									    regionarea->AddRobot(myRobotIds[numRobots], i, j, 0, 0, (double)((rand() % 101)-50.0)/100.0, 0, myRobotTeams[numRobots], true);
+									  }
+
+									  numRobots++;
+									  rowCounter = (rowCounter+1) % 3;
+								  }
+								  firstrow = true;
+								  rowCounter = 0;
+							  }
+
+							  cout << numRobots << " robots created." << endl;
+							  
+							  regionarea->flushNeighbours();
+							  
+							  initialized = true;
+							  
+							  //Respond with done message
+							  c->queue.push(MSG_TIMESTEPDONE, tsdone);
+							  c->set_writing(true);
+							  
+							  break;
+						  }
 
 							generateImage = false;
 							//find out if we even need to generate an image
