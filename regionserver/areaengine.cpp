@@ -143,13 +143,14 @@ void AreaEngine::Step(bool generateImage){
     for(int i = 0; i < 8; i++)
     {
       if(neighbours[i] != NULL){
+        neighbours[i]->set_reading(true);
         while(neighbours[i]->reader.doRead(&type, &len, &buffer))
         {
           switch (type) {
 				    case MSG_SERVERROBOT: {
 				      ServerRobot serverrobot;
 				      serverrobot.ParseFromArray(buffer, len);
-				      GotServerRobot(serverrobot);
+				      GotServerRobot(serverrobot, 1);
 				      break;
 				    }
 
@@ -158,6 +159,8 @@ void AreaEngine::Step(bool generateImage){
 					  break;
 				  }
         }
+        
+        neighbours[i]->set_reading(false);
       }
     }
     
@@ -321,13 +324,14 @@ void AreaEngine::Step(bool generateImage){
     for(int i = 0; i < 8; i++)
     {
       if(neighbours[i] != NULL){
+        neighbours[i]->set_reading(true);
         while(neighbours[i]->reader.doRead(&type, &len, &buffer))
         {
           switch (type) {
 				    case MSG_SERVERROBOT: {
 				      ServerRobot serverrobot;
 				      serverrobot.ParseFromArray(buffer, len);				      
-				      GotServerRobot(serverrobot);
+				      GotServerRobot(serverrobot, 2);
 				      break;
 				    }
 
@@ -336,6 +340,7 @@ void AreaEngine::Step(bool generateImage){
 					  break;
 				  }
         }
+        neighbours[i]->set_reading(false);
       }
     }
     
@@ -617,8 +622,11 @@ void AreaEngine::flushNeighbours(){
   for(int i = 0; i < 8; i++)
   {
     if(neighbours[i] != NULL){
-      while((*neighbours)->queue.remaining() != 0)
-        (*neighbours)->queue.doWrite();
+      neighbours[i]->set_writing(true);
+      while(neighbours[i]->queue.remaining() != 0)
+        neighbours[i]->queue.doWrite();
+      
+      neighbours[i]->set_writing(false);
     }
   }
 }
@@ -887,12 +895,12 @@ void AreaEngine::SetNeighbour(int placement, EpollConnection *socketHandle){
   neighbours[placement] = socketHandle;
 }
 
-void AreaEngine::GotServerRobot(ServerRobot message){
+void AreaEngine::GotServerRobot(ServerRobot message, int marker){
   if(robots.find(message.id()) == robots.end()){
     //new robot
     if(message.laststep() < curStep-1)
     {
-      cout << "Received out of sync serverrobot add (dropping it): msgstep " << message.laststep() << ", curstep " << curStep << ", x " << message.x() << ", y " << message.y() << endl;
+      cout << "Received out of sync serverrobot add (dropping it): msgstep " << message.laststep() << ", curstep " << curStep << ", x " << message.x() << ", y " << message.y() << ", marker " << marker << endl;
       return;
     }
     
@@ -903,7 +911,7 @@ void AreaEngine::GotServerRobot(ServerRobot message){
     //store all changes, and purge during step
     if(message.laststep() < curStep-1)
     {
-      cout << "Received out of sync serverrobot mod (dropping it): msgstep " << message.laststep() << ", curstep " << curStep << ", x " << message.x() << ", y " << message.y() << endl;
+      cout << "Received out of sync serverrobot mod (dropping it): msgstep " << message.laststep() << ", curstep " << curStep << ", x " << message.x() << ", y " << message.y() << ", marker " << marker << endl;
       
       //throw "AreaEngine: ServerRobot received late. Impossible desync occurred.";
       return;
@@ -960,21 +968,21 @@ void AreaEngine::BroadcastRobot(RobotObject *curRobot, Index oldIndices, Index n
       informNeighbour.set_x(transx + regionRatio);
       informNeighbour.set_y(transy);
       neighbours[LEFT]->queue.push(MSG_SERVERROBOT, informNeighbour);
-      neighbours[LEFT]->set_writing(true);
+      //neighbours[LEFT]->set_writing(true);
 	  }
 		if(newIndices.y == 1 && neighbours[TOP_LEFT] != NULL){
 		  if(oldIndices.x > 1 || oldIndices.y > 1){
         informNeighbour.set_x(transx + regionRatio);
         informNeighbour.set_y(transy + regionRatio);
         neighbours[TOP_LEFT]->queue.push(MSG_SERVERROBOT, informNeighbour);
-        neighbours[TOP_LEFT]->set_writing(true);
+        //neighbours[TOP_LEFT]->set_writing(true);
 	    }
     }else if(newIndices.y == regionBounds && neighbours[BOTTOM_LEFT] != NULL){
       if(oldIndices.x > 1 || oldIndices.y < regionBounds){
         informNeighbour.set_x(transx + regionRatio);
         informNeighbour.set_y(transy - regionRatio);
         neighbours[BOTTOM_LEFT]->queue.push(MSG_SERVERROBOT, informNeighbour);
-        neighbours[BOTTOM_LEFT]->set_writing(true);
+        //neighbours[BOTTOM_LEFT]->set_writing(true);
 	    }
     }
   }else if(newIndices.x == regionBounds && neighbours[RIGHT] != NULL){
@@ -982,21 +990,21 @@ void AreaEngine::BroadcastRobot(RobotObject *curRobot, Index oldIndices, Index n
       informNeighbour.set_x(transx - regionRatio);
       informNeighbour.set_y(transy);
       neighbours[RIGHT]->queue.push(MSG_SERVERROBOT, informNeighbour);
-      neighbours[RIGHT]->set_writing(true);
+      //neighbours[RIGHT]->set_writing(true);
 		}
 		if(newIndices.y == 1 && neighbours[TOP_RIGHT] != NULL){
 		  if(oldIndices.x < regionBounds || oldIndices.y > 1){
         informNeighbour.set_x(transx - regionRatio);
         informNeighbour.set_y(transy + regionRatio);
         neighbours[TOP_RIGHT]->queue.push(MSG_SERVERROBOT, informNeighbour);
-        neighbours[TOP_RIGHT]->set_writing(true);
+        //neighbours[TOP_RIGHT]->set_writing(true);
 	    }
     }else if(newIndices.y == regionBounds && neighbours[BOTTOM_RIGHT] != NULL){
       if(oldIndices.x < regionBounds || oldIndices.y < regionBounds){
         informNeighbour.set_x(transx - regionRatio);
         informNeighbour.set_y(transy - regionRatio);
         neighbours[BOTTOM_RIGHT]->queue.push(MSG_SERVERROBOT, informNeighbour);
-        neighbours[BOTTOM_RIGHT]->set_writing(true);
+        //neighbours[BOTTOM_RIGHT]->set_writing(true);
 	    }
     }
   }
@@ -1005,14 +1013,14 @@ void AreaEngine::BroadcastRobot(RobotObject *curRobot, Index oldIndices, Index n
       informNeighbour.set_x(transx);
       informNeighbour.set_y(transy + regionRatio);
       neighbours[TOP]->queue.push(MSG_SERVERROBOT, informNeighbour);
-      neighbours[TOP]->set_writing(true);
+      //neighbours[TOP]->set_writing(true);
 	  }
   }else if(newIndices.y == regionBounds && neighbours[BOTTOM] != NULL){
     if(oldIndices.y < regionBounds){
       informNeighbour.set_x(transx);
       informNeighbour.set_y(transy - regionRatio);
       neighbours[BOTTOM]->queue.push(MSG_SERVERROBOT, informNeighbour);
-      neighbours[BOTTOM]->set_writing(true);
+      //neighbours[BOTTOM]->set_writing(true);
     }
   }
 }
