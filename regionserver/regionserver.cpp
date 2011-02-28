@@ -202,8 +202,6 @@ void run() {
 	puckstack.set_x(1);
 	puckstack.set_y(1);
 
-	cairo_surface_t *surface;
-
 	//server variables
 #ifdef ENABLE_LOGGING
 	MessageWriter logWriter(logfd);
@@ -527,7 +525,7 @@ void run() {
 						switch (type) {
 						case MSG_CLIENTROBOT:
 							clientrobot.ParseFromArray(buffer, len);
-							if (!regionarea->ChangeVelocity(clientrobot.id(), 
+							if (false && !regionarea->ChangeVelocity(clientrobot.id(), 
                     clientrobot.velocityx(), clientrobot.velocityy())) {
                 // Not my robot!
                 BouncedRobot bouncedrobot;
