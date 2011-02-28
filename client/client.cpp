@@ -50,6 +50,7 @@ const char *configFileName;
 bool simulationStarted = false;
 bool simulationEnded = false;
 int currentTimestep = 0;
+int lastTimestep = 0;
 int myTeam;
 int robotsPerTeam; 
 net::EpollConnection* theController;
@@ -284,6 +285,9 @@ void *artificialIntelligence(void *threadid) {
   }
 
   while (!simulationEnded) {
+    if(lastTimestep < currentTimestep)
+      continue;
+      
     for (int i = 0; i < robotsPerTeam && !simulationEnded; i++) {
       if (!ownRobots[i]->pendingCommand) {
         pthread_mutex_lock(&connectionMutex);
@@ -305,6 +309,13 @@ void *artificialIntelligence(void *threadid) {
         sched_yield();
       }
     }
+    
+    //force updates
+    while(theController->queue.remaining() > 0)
+      theController->queue.doWrite();
+      
+    lastTimestep = currentTimestep;
+    
     //sleep(5); // delay this thread for 5 seconds
   }
 
