@@ -418,8 +418,8 @@ void run() {
 							  regionarea->AddPuck((2 * robotDiameter)+minElementSize+304, (2 * robotDiameter)+minElementSize+150);
 							  //j is the y, i is the x
 
-							  for (int j = (2 * robotDiameter)+(1 * minElementSize); j < (regionSideLen+(1 * minElementSize)) - (2 * (robotDiameter)) && numRobots	< wantRobots; j += 5 * (robotDiameter)) {
-								  for (int i = (2 * robotDiameter)+(1 * minElementSize); i < (regionSideLen+(1 * minElementSize)) - (2 * (robotDiameter)) && numRobots	< wantRobots; i += 5 * (robotDiameter)){
+							  for (int j = (2 * robotDiameter)+(2 * minElementSize); j < (regionSideLen+(2 * minElementSize)) - (2 * (robotDiameter)) && numRobots	< wantRobots; j += 5 * (robotDiameter)) {
+								  for (int i = (2 * robotDiameter)+(2 * minElementSize); i < (regionSideLen+(2 * minElementSize)) - (2 * (robotDiameter)) && numRobots	< wantRobots; i += 5 * (robotDiameter)){
 									  if(rowCounter == 0)
 									    regionarea->AddRobot(myRobotIds[numRobots], i, j, 0, 0, -.5, 0, myRobotTeams[numRobots], true);
 									  else if(rowCounter == 1)
@@ -451,7 +451,7 @@ void run() {
 							generateImage = false;
 							//find out if we even need to generate an image
 							//generate an image every ( 50 milliseconds ) if we can
-							if ((timeCache.tv_sec*1000000 + timeCache.tv_usec) > (microTimeCache.tv_sec*1000000 + microTimeCache.tv_usec)+20000) {
+							if ((timeCache.tv_sec*1000000 + timeCache.tv_usec) > (microTimeCache.tv_sec*1000000 + microTimeCache.tv_usec)+50000) {
 								for (vector<net::EpollConnection*>::const_iterator it = worldviewers.begin(); it
 										!= worldviewers.end(); ++it) {
 									if (sendMoreWorldViews[(*it)->fd].initialized == true
