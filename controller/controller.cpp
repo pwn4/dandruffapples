@@ -31,8 +31,6 @@
 #include "../common/except.h"
 #include "../common/helper.h"
 
-#define ROBOT_LOOKUP_SIZE 250000
-
 using namespace std;
 
 
@@ -50,13 +48,17 @@ public:
 	ServerConnection(int id_, int epoll, int flags, int fd, Type type) : net::EpollConnection(epoll, flags, fd, type), id(id_) {}
 };
 
-//When looking up a robot id, you can figure out which server and client it belongs to
-struct lookup_pair {
-  net::EpollConnection *server;
-  net::EpollConnection *client;
+struct RobotConnection{
+  vector<ClientRobot> bouncedMessages;
+  net::EpollConnection* client;
+  net::EpollConnection* server;
+  
+  RobotConnection(net::EpollConnection* c, net::EpollConnection* s) : client(c), server(s) {}
 };
 
-lookup_pair robots[ROBOT_LOOKUP_SIZE];
+//When looking up a robot id, you can figure out which server and client it belongs to
+map<int, RobotConnection> robots;
+
 
 struct NoTeamRobot {
   int robotId;
@@ -128,6 +130,7 @@ int main(int argc, char** argv)
   vector<ServerConnection*> servers;
 	set<net::EpollConnection*> seenbyidset;		//to determine who to forward serverrobot msg to
 	pair<set<net::EpollConnection*>::iterator,bool> ret; //return value of insertion
+	
 
   #define MAX_EVENTS 128
   struct epoll_event events[MAX_EVENTS];
@@ -199,8 +202,7 @@ int main(int argc, char** argv)
                 for(vector<NoTeamRobot>::iterator j = unassignedRobots.begin();
                     j != unassignedRobots.end(); ++j) {
                   if (j->regionId == (int)newServer->id) {
-                    robots[j->robotId].server = newServer;
-                    robots[j->robotId].client = NULL;
+                    robots.insert ( pair<int,RobotConnection>(j->robotId, RobotConnection(NULL, newServer)) );
                   }
                 }
               }
@@ -234,7 +236,7 @@ int main(int argc, char** argv)
               for(vector<NoTeamRobot>::iterator i = unassignedRobots.begin();
                   i != unassignedRobots.end(); ++i) {
                 if (i->regionId == (int)newServer->id) {
-                  robots[i->robotId].server = newServer;
+                  robots.insert ( pair<int,RobotConnection>(i->robotId, RobotConnection(NULL, newServer)) );
                 }
               }
               break;
@@ -263,7 +265,11 @@ int main(int argc, char** argv)
                 for(vector<NoTeamRobot>::iterator i = unassignedRobots.begin();
                     i != unassignedRobots.end(); ++i) {
                   if (i->teamId == (int)claimteam.id()) {
-                    robots[i->robotId].client = clients[client];
+                  
+                    if(robots.find(i->robotId) == robots.end())
+                      throw SystemError("No server known for robot.");
+                      
+                    (robots.find(i->robotId))->second.client = clients[client];
                     // TODO: Erase unassignedRobot entries when done.
                   }
                 }
@@ -298,7 +304,8 @@ int main(int argc, char** argv)
               receivedClientRobot++;
               // Forward to the correct server
               clientrobot.ParseFromArray(buffer, len);
-              net::EpollConnection *server = robots[clientrobot.id()].server;
+                
+              net::EpollConnection *server = (robots.find(clientrobot.id()))->second.server;
 							if(server == NULL){//this should not happen...
 								cout << "Ugh, robot#" << clientrobot.id() << "does not belong to a server?"
 										 << endl;
@@ -342,7 +349,7 @@ int main(int argc, char** argv)
               receivedServerRobot++;
               serverrobot.ParseFromArray(buffer, len);
 							// Forward to the client, and any clients in the seenbyid
-              net::EpollConnection *client = robots[serverrobot.id()].client;
+              net::EpollConnection *client = (robots.find(serverrobot.id()))->second.client;
               if (client != NULL) {
 								ret = seenbyidset.insert(client);
 								if(ret.second){
@@ -354,7 +361,7 @@ int main(int argc, char** argv)
 							//lookup clients using seenbyid and store into set then send to all clients
 							//this resolves sending multiple msgs to same client.
 							for(int i=0; i<serverrobot.seenrobot_size(); i++){
-								client = robots[serverrobot.seenrobot(i).seenbyid()].client;
+							  client = (robots.find(serverrobot.seenrobot(i).seenbyid()))->second.client;
                 if (client != NULL) {
                   ret = seenbyidset.insert(client);
 									if(ret.second){
@@ -371,7 +378,21 @@ int main(int argc, char** argv)
             case MSG_CLAIM:
               // Update lookup table
               claimrobot.ParseFromArray(buffer, len);
-              robots[claimrobot.id()].server = c;
+              (robots.find(claimrobot.id()))->second.server = c;
+
+              //we check to see if the robot has backed up bounced messages
+              if((robots.find(clientrobot.id()))->second.bouncedMessages.size() > 0)
+              {
+                net::EpollConnection* robotServer = (robots.find(claimrobot.id()))->second.server;
+                vector<ClientRobot> * robotBacklog = &((robots.find(clientrobot.id()))->second.bouncedMessages);
+                for(unsigned int i = 0; i < robotBacklog->size(); i++)
+                {
+                  robotServer->queue.push(MSG_CLIENTROBOT, (*robotBacklog)[i]);
+		              robotServer->set_writing(true);
+                }
+                robotBacklog->clear();
+              }
+
               break;
 
             case MSG_BOUNCEDROBOT:
@@ -380,14 +401,10 @@ int main(int argc, char** argv)
               BouncedRobot bouncedrobot;
               bouncedrobot.ParseFromArray(buffer, len);
               if (bouncedrobot.bounces() == 1) {
-                cout << "Retrying bounced robot for ID #" 
-                     << bouncedrobot.clientrobot().id() << endl;
-                // Retry on one server.
-                net::EpollConnection* server = 
-                    robots[bouncedrobot.clientrobot().id()].server;
-                server->queue.push(MSG_BOUNCEDROBOT, bouncedrobot);
-                server->set_writing(true);
-                sentClientRobot++;
+                
+                // Store it
+                (robots.find(clientrobot.id()))->second.bouncedMessages.push_back(bouncedrobot.clientrobot());
+                //sentClientRobot++;
               } 
               /*
               else if (bouncedrobot.bounces() == 2) {
