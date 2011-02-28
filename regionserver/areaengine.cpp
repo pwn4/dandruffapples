@@ -162,11 +162,12 @@ void AreaEngine::Step(bool generateImage){
     }
     
     //apply all changes for this step before we simulate (clients)
+    //we can allow 2 step old client messages, but not server ones
     while(clientChangeQueue.size() > 0)
     {
       Command *newCommand = clientChangeQueue.top();
       
-      if(newCommand->step == curStep){
+      if(newCommand->step == curStep-1 || newCommand->step == curStep-2){
         
         RobotObject* curRobot = robots[newCommand->robotId];
         
@@ -181,8 +182,8 @@ void AreaEngine::Step(bool generateImage){
         
         delete newCommand;
         clientChangeQueue.pop();
-      }else if(newCommand->step < curStep && false)
-        throw "AreaEngine: Old client robot change leftover.";
+      }else if(newCommand->step < curStep-2)
+        throw "AreaEngine: Old client robot change leftover in collision.";
       else
         break;
     }
@@ -192,7 +193,7 @@ void AreaEngine::Step(bool generateImage){
     {
       Command *newCommand = serverChangeQueue.top();
       
-      if(newCommand->step == curStep){
+      if(newCommand->step == curStep-1){
         
         RobotObject* curRobot = robots[newCommand->robotId];
         
@@ -207,8 +208,8 @@ void AreaEngine::Step(bool generateImage){
           
         delete newCommand;
         serverChangeQueue.pop();
-      }else if(newCommand->step < curStep && false)
-        throw "AreaEngine: Old server robot change leftover.";
+      }else if(newCommand->step < curStep-1)
+        throw "AreaEngine: Old server robot change leftover in collision.";
       else
         break;
     }
@@ -221,7 +222,7 @@ void AreaEngine::Step(bool generateImage){
       RobotObject * curRobot = (*robotIt).second;
       
       //if the robot is from the future, we should now throw an error because we are now super synchronized
-      if(curRobot->lastStep == curStep)
+      if(curRobot->lastStep >= curStep)
         throw "AreaEngine: Robot time travel occurred during collision.";
         
       //bring it into the present
@@ -256,8 +257,8 @@ void AreaEngine::Step(bool generateImage){
                 otherRobot->lastCollision = curRobot->lastCollision;
                 
                 //inform
-                BroadcastRobot(curRobot, Index(regionBounds/2, regionBounds/2), curRobot->arrayLocation, curStep+1);
-                BroadcastRobot(otherRobot, Index(regionBounds/2, regionBounds/2), otherRobot->arrayLocation, curStep+1);
+                BroadcastRobot(curRobot, Index(regionBounds/2, regionBounds/2), curRobot->arrayLocation, curStep);
+                BroadcastRobot(otherRobot, Index(regionBounds/2, regionBounds/2), otherRobot->arrayLocation, curStep);
               }
             }
             otherRobot = otherRobot->nextRobot;
@@ -331,7 +332,7 @@ void AreaEngine::Step(bool generateImage){
     {
       Command *newCommand = serverChangeQueue.top();
       
-      if(newCommand->step == curStep){
+      if(newCommand->step == curStep-1){
         
         RobotObject* curRobot = robots[newCommand->robotId];
         
@@ -346,8 +347,8 @@ void AreaEngine::Step(bool generateImage){
           
         delete newCommand;
         serverChangeQueue.pop();
-      }else if(newCommand->step < curStep && false)
-        throw "AreaEngine: Old server robot change leftover.";
+      }else if(newCommand->step < curStep-1)
+        throw "AreaEngine: Old server robot change leftover in sim.";
       else
         break;
     }
@@ -365,6 +366,8 @@ void AreaEngine::Step(bool generateImage){
         robotIt++;
         continue;
       }
+      if(curRobot->lastStep > curStep)
+        throw "AreaEngine: Far future robot in sim.";
         
       curRobot->x += curRobot->vx;
       curRobot->y += curRobot->vy;
@@ -404,7 +407,7 @@ void AreaEngine::Step(bool generateImage){
           curRobot->arrayLocation = newIndices;
           AreaEngine::AddRobot(curRobot);
           //check if we need to inform a neighbor that its entered an overlap - but ONLY if we just entered an OVERLAP!
-          BroadcastRobot(curRobot, oldIndices, newIndices, curStep+1);
+          BroadcastRobot(curRobot, oldIndices, newIndices, curStep);
         }
       }
 
@@ -426,7 +429,9 @@ void AreaEngine::Step(bool generateImage){
       map<PuckStackObject*, bool>::iterator puckIt;
       map<PuckStackObject*, bool>::iterator puckEnd = puckq.end();
       puckIt=puckq.begin();
-      RobotObject* paintRobot = pq.top();
+      RobotObject* paintRobot = NULL;
+      if(!pq.empty())
+        paintRobot = pq.top();
       PuckStackObject* paintPuck = NULL;
       if(puckIt != puckEnd)
         paintPuck = (*puckIt).first;
@@ -587,6 +592,15 @@ void AreaEngine::Step(bool generateImage){
     
   }
   
+  flushNeighbours();
+  
+  flushControllers();
+
+  //ZOMFG we're done
+
+}
+
+void AreaEngine::flushNeighbours(){
   //FORCE all updates to neighbors to occur before we finish the step (necessary for synchronization)
   for(int i = 0; i < 8; i++)
   {
@@ -595,16 +609,15 @@ void AreaEngine::Step(bool generateImage){
         (*neighbours)->queue.doWrite();
     }
   }
+}
     
+void AreaEngine::flushControllers(){
   //Force all Claim messages to controllers in this step!
   for (vector<EpollConnection*>::const_iterator it = 
        controllers.begin(); it != controllers.end(); it++) {
     while((*it)->queue.remaining() != 0)
       (*it)->queue.doWrite(); 
   }
-
-  //ZOMFG we're done
-
 }
 
 //add a puck to the system.
@@ -865,14 +878,20 @@ void AreaEngine::SetNeighbour(int placement, EpollConnection *socketHandle){
 void AreaEngine::GotServerRobot(ServerRobot message){
   if(robots.find(message.id()) == robots.end()){
     //new robot
+    if(message.laststep() < curStep-1)
+    {
+      cout << "Received out of sync serverrobot add (dropping it): msgstep " << message.laststep() << ", curstep " << curStep << ", x " << message.x() << ", y " << message.y() << endl;
+      return;
+    }
+    
     AddRobot(message.id(), message.x(), message.y(), message.angle(), message.velocityx(), message.velocityy(), message.laststep(), message.team(), false);
   }else{
     //modify existing;
 
     //store all changes, and purge during step
-    if(message.laststep() < curStep)
+    if(message.laststep() < curStep-1)
     {
-      cout << "Received out of sync serverrobot (dropping it): msgstep " << message.laststep() << ", curstep " << curStep << ", x " << message.x() << ", y " << message.y() << endl;
+      cout << "Received out of sync serverrobot mod (dropping it): msgstep " << message.laststep() << ", curstep " << curStep << ", x " << message.x() << ", y " << message.y() << endl;
       
       //throw "AreaEngine: ServerRobot received late. Impossible desync occurred.";
       return;
