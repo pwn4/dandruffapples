@@ -14,6 +14,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include <map>
+#include <set>
 #include <queue>
 #include <gtk/gtk.h>
 #include <cairo.h>
