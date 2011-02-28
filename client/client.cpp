@@ -281,18 +281,23 @@ void *artificialIntelligence(void *threadid) {
     theController->queue.push(MSG_CLIENTROBOT, clientRobot);
     theController->set_writing(true);
     ownRobots[i]->whenLastSent = currentTimestep;
+    sentMessages++;
     pthread_mutex_unlock(&connectionMutex);
   }
 
+  int i = 0;
   while (!simulationEnded) {
-    if(lastTimestep < currentTimestep)
-      continue;
-      
-    for (int i = 0; i < robotsPerTeam && !simulationEnded; i++) {
+    lastTimestep = currentTimestep;
+    if (i >= robotsPerTeam) {
+      i = 0;
+    }  
+    for ( ; i < robotsPerTeam && !simulationEnded 
+         && lastTimestep == currentTimestep; i++) {
       if (!ownRobots[i]->pendingCommand) {
         pthread_mutex_lock(&connectionMutex);
         // Run different AIs depending on i.
-        executeAiVersion(i % 1, ownRobots[i], &clientRobot); 
+        //executeAiVersion(i % 1, ownRobots[i], &clientRobot); 
+        executeAiVersion(1, ownRobots[i], &clientRobot); 
         // Did we want to send a command?
         if (ownRobots[i]->pendingCommand) {
           clientRobot.set_id(indexToRobotId(i));
@@ -301,12 +306,6 @@ void *artificialIntelligence(void *threadid) {
           theController->set_writing(true);
           ownRobots[i]->whenLastSent = currentTimestep;
           sentMessages++;
-
-          // Force message to be sent now!
-          while (theController->queue.remaining() != 0) {
-            theController->queue.doWrite();
-          }
-          theController->set_writing(false);
         }
         pthread_mutex_unlock(&connectionMutex);
       } else {
@@ -317,10 +316,11 @@ void *artificialIntelligence(void *threadid) {
     }
     
     //force updates
+    pthread_mutex_lock(&connectionMutex);
     while(theController->queue.remaining() > 0)
       theController->queue.doWrite();
+    pthread_mutex_unlock(&connectionMutex);
       
-    lastTimestep = currentTimestep;
     
     //sleep(5); // delay this thread for 5 seconds
   }
