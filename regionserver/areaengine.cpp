@@ -214,6 +214,8 @@ void AreaEngine::Step(bool generateImage){
         break;
     }
     
+    set<RobotObject*> changedRobots;
+    
     //iterate through our region's robots and simulate them
     for(robotIt=robots.begin() ; robotIt != robots.end(); robotIt++)
     {
@@ -232,7 +234,7 @@ void AreaEngine::Step(bool generateImage){
       //calculate the bounds of the a[][] elements we need to check
       topLeft = getRobotIndices(curRobot->x-(maxSpeed+robotRatio/2), curRobot->y-(maxSpeed+robotRatio/2), true);
       botRight = getRobotIndices(curRobot->x+(maxSpeed+robotRatio/2), curRobot->y+(maxSpeed+robotRatio/2), true);
-      bool collided = false;
+      
       for(int j = topLeft.x; j <= botRight.x; j++)
         for(int k = topLeft.y; k <= botRight.y; k++)
         {
@@ -245,12 +247,17 @@ void AreaEngine::Step(bool generateImage){
             if(curRobot->id != otherRobot->id){
               if(AreaEngine::Collides(curRobot->x+curRobot->vx, curRobot->y+curRobot->vy, otherRobot->x+otherRobot->vx, otherRobot->y+otherRobot->vy))
               {
+                //note velocity changes
+                if(curRobot->vx != 0 || curRobot->vy != 0)
+                  changedRobots.insert(curRobot); // send update over the network
+                if(otherRobot->vx != 0 || otherRobot->vy != 0)
+                  changedRobots.insert(otherRobot); // send update over the network
+                
                 //they would have collided. Set their speeds to zero. Lock their speed by updating the current timestamp
                 curRobot->vx = 0;
                 curRobot->vy = 0;
                 otherRobot->vx = 0;
                 otherRobot->vy = 0;
-                collided = true; // send update over the network
                 
                 //the lastCollision time_t variable is checked by setVelocity when it's called
                 curRobot->lastCollision = time(NULL);
@@ -264,41 +271,46 @@ void AreaEngine::Step(bool generateImage){
             otherRobot = otherRobot->nextRobot;
           }
         }
+    }
+      
+    set<RobotObject*>::iterator changedIt;
+    set<RobotObject*>::iterator endChangedIt = changedRobots.end();
 
-      //here we will send messages to these robots and those watching that 
-      //they've stopped
-      if (collided) {
-        ServerRobot serverrobot;
-        serverrobot.set_id(curRobot->id);
-        serverrobot.set_laststep(-1); //set this to -1 so that we can detect stray messages
-        serverrobot.set_velocityx(curRobot->vx);
-        serverrobot.set_velocityy(curRobot->vy); 
-        serverrobot.set_angle(curRobot->angle);
-        serverrobot.set_hascollided(collided); 
-        serverrobot.set_haspuck(false); 
+    for(changedIt = changedRobots.begin(); changedIt != endChangedIt; changedIt++)
+    { 
+      RobotObject * curRobot = *changedIt;
+    
+      ServerRobot serverrobot;
+      serverrobot.set_id(curRobot->id);
+      serverrobot.set_laststep(-1); //set this to -1 so that we can detect stray messages
+      serverrobot.set_velocityx(curRobot->vx);
+      serverrobot.set_velocityy(curRobot->vy); 
+      serverrobot.set_angle(curRobot->angle);
+      serverrobot.set_hascollided(true); 
+      serverrobot.set_haspuck(false); 
 
-        // Is this robot seen by others?
-        nowSeenBy = &(curRobot->lastSeenBy);
-        if ((*nowSeenBy).size() > 0) {
-          map<int, bool>::iterator sightCheck;
-          map<int, bool>::iterator sightEnd = (*nowSeenBy).end();
-          for(sightCheck = (*nowSeenBy).begin(); sightCheck != sightEnd;
-              sightCheck++)
-          {
-            SeenServerRobot* seenRobot = serverrobot.add_seenrobot();
-            seenRobot->set_viewlostid(false); 
-            seenRobot->set_seenbyid(sightCheck->first);
-            // Omitting relx and rely data. Updates will come in the
-            // sight loop.
-          }
-        } 
-
-        // Send update.
-        for (vector<EpollConnection*>::const_iterator it = 
-             controllers.begin(); it != controllers.end(); it++) {
-          (*it)->queue.push(MSG_SERVERROBOT, serverrobot);
-          (*it)->set_writing(true); 
+      // Is this robot seen by others?
+      nowSeenBy = &(curRobot->lastSeenBy);
+      if ((*nowSeenBy).size() > 0) {
+        map<int, bool>::iterator sightCheck;
+        map<int, bool>::iterator sightEnd = (*nowSeenBy).end();
+        for(sightCheck = (*nowSeenBy).begin(); sightCheck != sightEnd;
+            sightCheck++)
+        {
+          SeenServerRobot* seenRobot = serverrobot.add_seenrobot();
+          seenRobot->set_viewlostid(false); 
+          seenRobot->set_seenbyid(sightCheck->first);
+          // Omitting relx and rely data. Updates will come in the
+          // sight loop.
         }
+      }else //if not, send nothing
+        continue;
+
+      // Send update.
+      for (vector<EpollConnection*>::const_iterator it = 
+           controllers.begin(); it != controllers.end(); it++) {
+        (*it)->queue.push(MSG_SERVERROBOT, serverrobot);
+        (*it)->set_writing(true); 
       }
     }
     
