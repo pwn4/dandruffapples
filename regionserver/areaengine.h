@@ -152,6 +152,10 @@ public:
   void GotServerRobot(ServerRobot message);
 
   void AddController(EpollConnection* socketHandle);
+  
+  void flushNeighbours();
+  
+  void flushControllers();
 
 };
 
