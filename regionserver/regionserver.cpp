@@ -592,9 +592,7 @@ void run() {
 					if (c->reader.doRead(&type, &len, &buffer)) {
 						switch (type) {
 						case MSG_SERVERROBOT: {
-							ServerRobot serverrobot;
-							serverrobot.ParseFromArray(buffer, len);
-							regionarea->GotServerRobot(serverrobot, 3);
+							throw SystemError("Server robot read by Epoll.");
 							break;
 						}
 						case MSG_REGIONINFO: {
