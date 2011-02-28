@@ -527,7 +527,7 @@ void run() {
 						switch (type) {
 						case MSG_CLIENTROBOT:
 							clientrobot.ParseFromArray(buffer, len);
-							if (false && !regionarea->ChangeVelocity(clientrobot.id(), 
+							if (!regionarea->ChangeVelocity(clientrobot.id(), 
                     clientrobot.velocityx(), clientrobot.velocityy())) {
                 // Not my robot!
                 BouncedRobot bouncedrobot;
@@ -540,7 +540,7 @@ void run() {
               }
               // TODO: Combine angle and velocity into ChangeState, or 
               // something to that effect.
-							regionarea->ChangeAngle(clientrobot.id(), clientrobot.angle());
+							//regionarea->ChangeAngle(clientrobot.id(), clientrobot.angle());
 
 							break;
             case MSG_BOUNCEDROBOT:
