@@ -641,7 +641,11 @@ void on_Window_toggled(GtkWidget *widget, gpointer window) {
 	gtk_widget_modify_bg(GTK_WIDGET(window), GTK_STATE_NORMAL, &bgColor);
 
 	if (gtk_toggle_tool_button_get_active(GTK_TOGGLE_TOOL_BUTTON(widget)))
+	{
+		//let's update the info window in case we open it
+		updateInfoWindow();
 		gtk_widget_show_all(GTK_WIDGET(window));
+	}
 	else
 		gtk_widget_hide_all(GTK_WIDGET(window));
 

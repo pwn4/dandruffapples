@@ -17,7 +17,6 @@ This program communications with controllers.
 #include <sys/select.h>
 #include <sys/epoll.h>
 
-#include <pthread.h>
 #include <stdio.h>
 #include <string>
 #include <string.h>
@@ -52,10 +51,10 @@ bool simulationEnded = false;
 int currentTimestep = 0;
 int lastTimestep = 0;
 int myTeam;
+int myRobotId;
 int robotsPerTeam; 
 net::EpollConnection* theController;
 int epoll;
-pthread_mutex_t connectionMutex = PTHREAD_MUTEX_INITIALIZER;
 
 // Stat variables
 time_t lastSecond = time(NULL);
@@ -113,7 +112,7 @@ public:
   OwnRobot() : Robot(), pendingCommand(false), whenLastSent(-1) {}
 };
 
-OwnRobot** ownRobots;
+OwnRobot* ownRobot;
 
 //Config variables
 vector<string> controllerips; //controller IPs 
@@ -168,6 +167,7 @@ float relDistance(float x1, float y1) {
   return (sqrt(x1*x1 + y1*y1));
 }
 
+/*
 void executeAiVersion(int type, OwnRobot* ownRobot, ClientRobot* clientRobot) {
   float velocity = 0.1;
   if (type == 0) {
@@ -265,7 +265,7 @@ void executeAiVersion(int type, OwnRobot* ownRobot, ClientRobot* clientRobot) {
     } else {
       // No seen robots. Make sure we're moving.
       if (ownRobot->vx == 0.0 || ownRobot->vy == 0.0 
-          || currentTimestep - ownRobot->whenLastSent > 10000) {
+          || currentTimestep - ownRobot->whenLastSent > 100) {
         ownRobot->pendingCommand = true;
         clientRobot->set_velocityx(((rand() % 11) / 10.0) - 0.5);
         clientRobot->set_velocityy(((rand() % 11) / 10.0) - 0.5);
@@ -274,7 +274,9 @@ void executeAiVersion(int type, OwnRobot* ownRobot, ClientRobot* clientRobot) {
     }
   }
 }
+*/
 
+/*
 // Destination function for the AI thread.
 void *artificialIntelligence(void *threadid) {
   while (!simulationStarted) {
@@ -342,6 +344,7 @@ void *artificialIntelligence(void *threadid) {
   simulationStarted = false;
   pthread_exit(0);
 }
+*/
 
 void run() {
   int controllerfd = -1;
@@ -379,17 +382,10 @@ void run() {
   #define MAX_EVENTS 128
   struct epoll_event events[MAX_EVENTS];
 
-  // Create thread: client robot calculations
-  // parent thread: continue in while loop, looking for updates
-  pthread_t aiThread;
-
-
-  pthread_create(&aiThread, NULL, artificialIntelligence, NULL);
-
   try {
     while(true) {
-      pthread_mutex_lock(&connectionMutex);
       // Stats: Received messages per second
+      /*
       if (lastSecond < time(NULL)) {
         cout << "Sent " << sentMessages << " per second." << endl;
         cout << "Pending " << pendingMessages << " per second." << endl;
@@ -412,7 +408,7 @@ void run() {
         moveLeft = 0;
         moveRandom = 0;
       }
-      pthread_mutex_unlock(&connectionMutex);
+      */
 
       int eventcount = epoll_wait(epoll, events, MAX_EVENTS, -1);
       for(size_t i = 0; i < (unsigned)eventcount; i++) {
@@ -468,13 +464,10 @@ void run() {
 
                   // Assign teams--can only happen once.
                   if (myTeam > -1) {
-                    ownRobots = new OwnRobot*[robotsPerTeam];
-                    for (int i = 0; i < robotsPerTeam; i++) {
-                      // We don't have any initial robot data, yet.
-                      ownRobots[i] = new OwnRobot();
-                    }
+                    ownRobot = new OwnRobot();
+                    myRobotId = myTeam * robotsPerTeam; // first robot of team 
+                    cout << "I am controlling robotId #" << myRobotId << endl;
 
-                    //enemyRobots = new vector<EnemyRobot*>[numTeams];
                     // Allow AI thread to commence.
                     simulationStarted = true;
                   }
@@ -485,69 +478,80 @@ void run() {
 
                 break;
               case MSG_TIMESTEPUPDATE:
-                pthread_mutex_lock(&connectionMutex);
                 timestep.ParseFromArray(buffer, len);
                 currentTimestep = timestep.timestep();
 
                 if (simulationStarted) {
                   // Update all current positions.
-                  for (int i = 0; i < robotsPerTeam; i++) {
-                    if (ownRobots[i]->pendingCommand && 
-                        currentTimestep - ownRobots[i]->whenLastSent > 100) {
-                      // If we've waited too long for an update, send
-                      // new ClientRobot messages.
-                      // TODO: Lower from 100.
-                      ownRobots[i]->pendingCommand = false;
-                      timeoutMessages++;
-                    }
+                  if (ownRobot->pendingCommand && 
+                      currentTimestep - ownRobot->whenLastSent > 100) {
+                    // If we've waited too long for an update, send
+                    // new ClientRobot messages.
+                    // TODO: Lower from 100.
+                    ownRobot->pendingCommand = false;
+                    timeoutMessages++;
+                  }
+                  for (vector<SeenRobot*>::iterator it
+                      = ownRobot->seenRobots.begin();
+                      it != ownRobot->seenRobots.end();
+                      it++) {
+                    (*it)->relx += (*it)->vx - ownRobot->vx;
+                    (*it)->rely += (*it)->vy - ownRobot->vy;
+                  }
+                  if (currentTimestep % 20 == 0) {
+                    cout << "At timestep " << currentTimestep << endl;
                     for (vector<SeenRobot*>::iterator it
-                        = ownRobots[i]->seenRobots.begin();
-                        it != ownRobots[i]->seenRobots.end();
+                        = ownRobot->seenRobots.begin();
+                        it != ownRobot->seenRobots.end();
                         it++) {
-                      (*it)->relx += (*it)->vx - ownRobots[i]->vx;
-                      (*it)->rely += (*it)->vy - ownRobots[i]->vy;
+                      cout << "Robot #" << (*it)->id << " at rel ["
+                           << (*it)->relx << ", " << (*it)->rely << "]" << endl;
                     }
                   }
                 }
-                pthread_mutex_unlock(&connectionMutex);
 
                 break;
               case MSG_SERVERROBOT:
               { 
-                pthread_mutex_lock(&connectionMutex);
                 serverrobot.ParseFromArray(buffer, len);
                 receivedMessages++;
                 if (simulationStarted) {
                   int robotId = serverrobot.id();
-                  if (weControlRobot(robotId)) {
+                  if (robotId == myRobotId) {
+                    cout << "Got our own ServerRobot!" << endl;
                     // The serverrobot is from our team.
-                    int index = robotIdToIndex(robotId);
-                    ownRobots[index]->pendingCommand = false;
+                    int index = robotId;
+                    ownRobot->pendingCommand = false;
                     if (serverrobot.has_velocityx()) 
-                      ownRobots[index]->vx = serverrobot.velocityx();
+                      ownRobot->vx = serverrobot.velocityx();
                     if (serverrobot.has_velocityy()) 
-                      ownRobots[index]->vy = serverrobot.velocityy();
+                      ownRobot->vy = serverrobot.velocityy();
                     if (serverrobot.has_angle()) 
-                      ownRobots[index]->angle = serverrobot.angle();
+                      ownRobot->angle = serverrobot.angle();
                     if (serverrobot.has_haspuck()) 
-                      ownRobots[index]->hasPuck = serverrobot.haspuck();
+                      ownRobot->hasPuck = serverrobot.haspuck();
                     if (serverrobot.has_hascollided()) 
-                      ownRobots[index]->hasCollided = serverrobot.hascollided();
+                      ownRobot->hasCollided = serverrobot.hascollided();
                   }
 
                   // Traverse seenById list to check if we can see.
                   int index;
                   int listSize = serverrobot.seenrobot_size();
                   for (int i = 0; i < listSize; i++) {
-                    if (weControlRobot(serverrobot.seenrobot(i).seenbyid())) {
+                    if (myRobotId == serverrobot.seenrobot(i).seenbyid()) {
+                      cout << "We see updated data for robotId #" 
+                           << serverrobot.id() << endl;
+                      if (myRobotId == serverrobot.id()) {
+                        cout << "Flying batmans! We see ourself!" << endl;
+                      }
                       // The serverrobot is not on our team. Can we see it?
                       index = robotIdToIndex(serverrobot.seenrobot(i).
                           seenbyid());
                       if (serverrobot.seenrobot(i).viewlostid()) {
                         // Could see before, can't see anymore.
                         for (vector<SeenRobot*>::iterator it
-                            = ownRobots[index]->seenRobots.begin();
-                            it != ownRobots[index]->seenRobots.end();
+                            = ownRobot->seenRobots.begin();
+                            it != ownRobot->seenRobots.end();
                             it++) {
                           if ((*it)->id == serverrobot.id()) {
                             // TODO: we may want to store data about this
@@ -556,7 +560,7 @@ void run() {
                             //cout << "Our #" << index << " lost see "
                             //     << serverrobot.id() << endl;
                             delete *it; 
-                            ownRobots[index]->seenRobots.erase(it);
+                            ownRobot->seenRobots.erase(it);
                             break;
                           }
                         }
@@ -564,8 +568,8 @@ void run() {
                         // Can see. Add, or update?
                         bool foundRobot = false;
                         for (vector<SeenRobot*>::iterator it
-                            = ownRobots[index]->seenRobots.begin();
-                            it != ownRobots[index]->seenRobots.end() &&
+                            = ownRobot->seenRobots.begin();
+                            it != ownRobot->seenRobots.end() &&
                             !foundRobot; it++) {
                           if ((*it)->id == serverrobot.id()) {
                             foundRobot = true;
@@ -605,13 +609,12 @@ void run() {
                           r->relx = serverrobot.seenrobot(i).relx();
                           r->rely = serverrobot.seenrobot(i).rely();
                           r->lastTimestepSeen = currentTimestep;
-                          ownRobots[index]->seenRobots.push_back(r);
+                          ownRobot->seenRobots.push_back(r);
                         }
                       }
                     }
                   }
                 }
-                pthread_mutex_unlock(&connectionMutex);
                 break;
               }
               default:
@@ -627,11 +630,9 @@ void run() {
         } else if(events[i].events & EPOLLOUT) {
           switch(c->type) {
           case net::connection::CONTROLLER:
-            pthread_mutex_lock(&connectionMutex);
             if(c->queue.doWrite()) {
               c->set_writing(false);
             }
-            pthread_mutex_unlock(&connectionMutex);
             break;
           default:
             cerr << "Internal error: Got unexpected readable event of type " << c->type << endl;
@@ -656,10 +657,7 @@ void run() {
   shutdown(controllerfd, SHUT_RDWR);
   close(controllerfd);
 
-  for (int i = 0; i < robotsPerTeam; i++) {
-    delete ownRobots[i];
-  }
-  delete[] ownRobots;
+  delete ownRobot;
 }
 
 //this is the main loop for the client

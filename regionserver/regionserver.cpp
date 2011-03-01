@@ -423,15 +423,15 @@ void run() {
 							  for (int j = (2 * robotDiameter)+(4 * minElementSize); j < (regionSideLen+(1 * minElementSize)) - (2 * (robotDiameter)+(4 * minElementSize)) && numRobots	< wantRobots; j += 5 * (robotDiameter)) {
 								  for (int i = (2 * robotDiameter)+(4 * minElementSize); i < (regionSideLen+(1 * minElementSize)) - (2 * (robotDiameter)+(4 * minElementSize)) && numRobots	< wantRobots; i += 5 * (robotDiameter)){
 								  
-								  regionarea->AddRobot(myRobotIds[numRobots], i, j, 0, 0, 0, 0, myRobotTeams[numRobots], true);
+								  //regionarea->AddRobot(myRobotIds[numRobots], i, j, 0, 0, 0, 0, myRobotTeams[numRobots], true);
 								  
-									  /*if(rowCounter == 0)
+									  if(rowCounter == 0)
 									    regionarea->AddRobot(myRobotIds[numRobots], i, j, 0, 0, -.5, 0, myRobotTeams[numRobots], true);
 									  else if(rowCounter == 1)
 									    regionarea->AddRobot(myRobotIds[numRobots], i, j, 0, 0, .5, 0, myRobotTeams[numRobots], true);
 									  else if(firstrow){
 									    regionarea->AddRobot(myRobotIds[numRobots], i, j, 0, 0, (double)((rand() % 101)-50.0)/100.0, 0, myRobotTeams[numRobots], true);
-									  }*/
+									  }
 
 									  numRobots++;
 									  rowCounter = (rowCounter+1) % 3;

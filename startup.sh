@@ -31,17 +31,34 @@ do
     serverRows="$(echo $inputline | cut -d' ' -f2)"
   elif [ "$field" == "SERVERCOLS" ]; then
     serverColumns="$(echo $inputline | cut -d' ' -f2)"
+  elif [ "$field" == "TEAMS" ]; then
+    teams="$(echo $inputline | cut -d' ' -f2)"
   fi 
 done < $clockConfig
 
-export regionServers=`expr $serverRows \* $serverColumns`
+if [ "$1" == "regionserver" ]; then
+  export regionServers=1
+else
+  export regionServers=`expr $serverRows \* $serverColumns`
+fi
 
+if [ "$1" == "client" ]; then
+  export teams=1
+else
+  export teams
+fi
 
 export gdbCmd
 
 if [ "$1" == "clockserver" ] || [ "$1" == "all" ]; then
   echo -e "Starting the clock server with command: xterm -T \"Clockserver\" -e \"$gdbCmd$directory/clockserver/clockserver -c $directory/clockserver/config\" & \n"
   xterm -T "Clockserver" -e "$gdbCmd$directory/clockserver/clockserver -c $directory/clockserver/config" &
+  sleep $sleepTime
+fi
+
+if [ "$1" == "controller" ] || [ "$1" == "all" ]; then
+  echo -e "Starting the controller with command: xterm -T \"Controller\" -e \"$gdbCmd$directory/controller/controller -c $directory/controller/config\" & \n"
+  xterm -T "Controller" -e "$gdbCmd$directory/controller/controller -c $directory/controller/config" &
   sleep $sleepTime
 fi
 
@@ -53,6 +70,7 @@ fi
 
 if [ "$1" == "regionserver" ] || [ "$1" == "all" ]; then
   config="$directory/regionserver/config"
+
   for((i=1; i<=$regionServers; i++ ));do
     if [ $i -eq 1 ]; then
       echo -e "Starting the region server $i with command: xterm -T \"Region Server: #$i\" -e \"$gdbCmd$directory/regionserver/regionserver -c $config\" & \n"
@@ -64,6 +82,19 @@ if [ "$1" == "regionserver" ] || [ "$1" == "all" ]; then
       sleep $sleepTime
     fi
   done
+fi
+
+#only testing with one client for now
+export teams=1
+
+if [ "$1" == "client" ] || [ "$1" == "all" ]; then
+
+  for((i=0; i<$teams; i++ ));do
+    echo -e "Starting the client with command: xterm -T \"client\" -e \"$gdbCmd$directory/client/client -c $directory/client/config\ -t $i\" & \n"
+    xterm -T "Client" -e "$gdbCmd$directory/client/client -c $directory/client/config -t $i" &
+    sleep $sleepTime
+  done
+
 fi
 
 exit 0
