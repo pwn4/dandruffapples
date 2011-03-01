@@ -19,6 +19,8 @@ struct ColorObject{
   ColorObject(double newr, double newg, double newb) : r(newr), g(newg), b(newb) {}
 };
 
+ColorObject * colorMap;
+bool colorMapInitialized = false;
 ColorObject colorFromTeam(int teamId);
 cairo_surface_t * UnpackImage(RegionRender render);
 unsigned int BytePack(int a, int b);

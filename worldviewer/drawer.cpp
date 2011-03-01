@@ -34,12 +34,21 @@ TwoInt ByteUnpack(unsigned int data) {
 
 //this is the color mapping method: teams->Color components
 ColorObject colorFromTeam(int teamId){
-  //puck color
-  if(teamId == 65534)
-    return ColorObject(0, 0, 0);
+  //initialize the color map for the first time
+  if(colorMapInitialized == false)
+  {
+    colorMap = new ColorObject[65535];
+    
+    for(int i = 0; i < 65534; i++)
+      colorMap[i] = new ColorObject(0.01*(rand() % 60) + 0.2, 0.01*(rand() % 60) + 0.2, 0.01*(rand() % 60) + 0.2);
+      
+    //set puck color
+    colorMap[65534] = new ColorObject(0, 0, 0);
+    
+    colorMapInitialized = true;
+  }
 
-  srand(teamId*123);  //use the same seed for the same team. That way our random numbers are consistent! lol
-  return ColorObject(0.01*(rand() % 60) + 0.2, 0.01*(rand() % 60) + 0.2, 0.01*(rand() % 60) + 0.2);
+  return colorMap[teamId];
 }
 
 cairo_surface_t * UnpackImage(RegionRender render)
