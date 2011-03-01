@@ -68,7 +68,14 @@ int moveRandom = 0;
 
 const int COOLDOWN = 10;
 
+enum EventType {
+  EVENT_CLOSEST_ROBOT_STATE_CHANGE,
+  EVENT_NEW_CLOSEST_ROBOT,
+  EVENT_MAX
+};
+
 class SeenPuck {
+public:
   float relx;
   float rely;
   int size;
@@ -105,10 +112,13 @@ public:
   bool pendingCommand;
   int whenLastSent;
   int closestRobotId;
+  int behaviour;
   vector<SeenRobot*> seenRobots;
   vector<SeenPuck*> seenPucks;
+  vector<EventType> eventQueue;
 
-  OwnRobot() : Robot(), pendingCommand(false), whenLastSent(-1), closestRobotId(-1) {}
+  OwnRobot() : Robot(), pendingCommand(false), whenLastSent(-1), 
+      closestRobotId(-1), behaviour(-1) {}
 };
 
 OwnRobot** ownRobots;
@@ -171,7 +181,10 @@ void forceSend() {
     theController->queue.doWrite();
 }
 
-void executeAiVersion(int type, OwnRobot* ownRobot, int index) {
+void executeAi(OwnRobot* ownRobot, int index) {
+  // TODO give events to AI handler
+  int type = 1; // TEMP, remove after we create AI handler
+
   ClientRobot clientRobot;
   float velocity = 0.1;
   clientRobot.set_velocityx(ownRobot->vx);
@@ -347,11 +360,6 @@ void run() {
   #define MAX_EVENTS 128
   struct epoll_event events[MAX_EVENTS];
 
-  // Create thread: client robot calculations
-  // parent thread: continue in while loop, looking for updates
-
-
-
   try {
     while(true) {
       // Stats: Received messages per second
@@ -483,12 +491,17 @@ void run() {
                     }
 
                     // Check for events
-                    if (!ownRobots[i]->pendingCommand) {
-                      if (newClosestRobotId != ownRobots[i]->closestRobotId) {
-                        executeAiVersion(1, ownRobots[i], i); 
-                      } 
-                    }
-                    ownRobots[i]->closestRobotId = newClosestRobotId;
+                    if (newClosestRobotId != ownRobots[i]->closestRobotId) {
+                      ownRobots[i]->closestRobotId = newClosestRobotId;
+                      ownRobots[i]->eventQueue.push_back(EVENT_NEW_CLOSEST_ROBOT);
+                      // Check if any events exist; if so, call AI.
+                      if (ownRobots[i]->eventQueue.size() > 0 &&
+                          !ownRobots[i]->pendingCommand) {
+                        executeAi(ownRobots[i], i); 
+                        // Clear the queue, wait for new events.
+                        ownRobots[i]->eventQueue.clear();
+                      }
+                    } 
                   }
                 }
 
@@ -552,19 +565,44 @@ void run() {
                             //cout << "Our #" << index << " update see "
                             //     << serverrobot.id() << " at relx: " 
                             //     << serverrobot.seenrobot(i).relx() << endl;
-                            if (serverrobot.has_velocityx()) 
+                            bool stateChange = false;
+                            if (serverrobot.has_velocityx() && 
+                                (*it)->vx != serverrobot.velocityx()) {
                               (*it)->vx = serverrobot.velocityx();
-                            if (serverrobot.has_velocityy()) 
+                              stateChange = true;
+                            }
+                            if (serverrobot.has_velocityy() &&
+                                (*it)->vy != serverrobot.velocityy()) {
                               (*it)->vy = serverrobot.velocityy();
-                            if (serverrobot.has_angle()) 
+                              stateChange = true;
+                            }
+                            if (serverrobot.has_angle() &&
+                                (*it)->angle != serverrobot.angle()) {
                               (*it)->angle = serverrobot.angle();
-                            if (serverrobot.has_haspuck()) 
+                              stateChange = true;
+                            }
+                            if (serverrobot.has_haspuck() &&
+                                (*it)->hasPuck != serverrobot.haspuck()) {
                               (*it)->hasPuck = serverrobot.haspuck();
-                            if (serverrobot.has_hascollided()) 
+                              stateChange = true;
+                            }
+                            if (serverrobot.has_hascollided() && 
+                                (*it)->hasCollided != serverrobot.hascollided()) {
                               (*it)->hasCollided = serverrobot.hascollided();
-                            (*it)->relx = serverrobot.seenrobot(i).relx();
-                            (*it)->rely = serverrobot.seenrobot(i).rely();
+                              stateChange = true;
+                            }
+                            if (serverrobot.seenrobot(i).has_relx())
+                              (*it)->relx = serverrobot.seenrobot(i).relx();
+                            if (serverrobot.seenrobot(i).has_rely())
+                              (*it)->rely = serverrobot.seenrobot(i).rely();
                             (*it)->lastTimestepSeen = currentTimestep;
+
+                            // If we updated the closest robot, tell the AI.
+                            if (stateChange && serverrobot.id() == 
+                                ownRobots[index]->closestRobotId) {
+                              ownRobots[index]->eventQueue.push_back(
+                                  EVENT_CLOSEST_ROBOT_STATE_CHANGE);
+                            } 
                           }
                         }
                         if (!foundRobot) {
