@@ -797,6 +797,10 @@ int main(int argc, char* argv[]) {
 	cout << "Using config file: " << configFileName << endl;
 
 	loadConfigFile();
+  if(config.getArg("-l").length()) {
+    strncpy(clockip, config.getArg("-l").c_str(), 40);
+  }
+  cout << "Using clock IP: " << clockip << endl;
 	////////////////////////////////////////////////////
 
 	printf("Server Running!\n");
