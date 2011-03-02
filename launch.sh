@@ -1,3 +1,7 @@
+#!/bin/sh
+
+# Port remote hosts' sshds are listening on
+SSHPORT=24
 # Path of project dir relative to $HOME
 PROJDIR="dandruffapples"
 # Path to write generated clock config to
@@ -48,7 +52,7 @@ rm /tmp/antix-clockout 2>/dev/null; mkfifo /tmp/antix-clockout
 rm /tmp/antix-clockerr 2>/dev/null; mkfifo /tmp/antix-clockerr
 clockserver/clockserver -c "$CLOCKCONF" > /tmp/antix-clockout 2>/tmp/antix-clockerr &
 CLOCKID=$!
-trap "echo -e '\nCaught signal; shutting down.' && kill $CLOCKID; exit" SIGHUP SIGINT SIGTERM
+trap "echo -e '\nCaught signal; shutting down.' && kill $CLOCKID; exit" HUP INT TERM
 
 sleep 0.1
 if [ ! -e /proc/$CLOCKID ]
@@ -66,9 +70,15 @@ fi
 CONTROLHOSTS=""
 for HOST in `grep -v $CLOCKSERVER "$HOSTFILE"`
 do
+    if ! host $HOST >/dev/null
+    then
+        echo "$HOST not found; skipping"
+        continue
+    fi
+    
     if [ $CONTROLLERS_LEFT -gt 0 ]
     then
-        ssh $HOST "'$PROJDIR/controller/controller'" > /dev/null &
+        ssh -p $SSHPORT $HOST "'$PROJDIR/controller/controller'" > /dev/null &
         CONTROLLERS_LEFT=$[$CONTROLLERS_LEFT - 1]
         CONTROLHOSTS="$CONTROLHOSTS $HOST"
     elif [ $REGIONS_LEFT -gt 0 ]
@@ -79,9 +89,9 @@ do
         do
             if [ $CONFIDX -eq 1 ]
             then
-                ssh $HOST "'cd \'$PROJDIR/regionserver\' && ./regionserver -c config'" > /dev/null &
+                ssh -p $SSHPORT $HOST "'cd \'$PROJDIR/regionserver\' && ./regionserver -c config'" > /dev/null &
             else
-                ssh $HOST "'cd \'$PROJDIR/regionserver\' && ./regionserver -c config${CONFIDX}'" > /dev/null &
+                ssh -p $SSHPORT $HOST "'cd \'$PROJDIR/regionserver\' && ./regionserver -c config${CONFIDX}'" > /dev/null &
             fi
             CONFIDX=$[CONFIDX + 1]
             REGIONS_LEFT=$[$REGIONS_LEFT - 1]
@@ -108,7 +118,7 @@ then
     while [ $CLIENTS_LEFT -gt 0 ]
     do
         HOST=`echo $CONTROLHOSTS |cut -d ' ' -f $[$CLIENTS_LEFT % $HOSTNUM + 1]`
-        ssh $HOST "'$PROJDIR/controller/controller'" > /dev/null &
+        ssh -p $SSHPORT $HOST "'$PROJDIR/controller/controller'" > /dev/null &
         CLIENTS_LEFT=$[CLIENTS_LEFT - 1]
     done
 fi
