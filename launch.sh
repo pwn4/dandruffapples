@@ -66,6 +66,12 @@ fi
 CONTROLHOSTS=""
 for HOST in `grep -v $CLOCKSERVER "$HOSTFILE"`
 do
+    if ! host $HOST >/dev/null
+    then
+        echo "$HOST not found; skipping"
+        continue
+    fi
+    
     if [ $CONTROLLERS_LEFT -gt 0 ]
     then
         ssh $HOST "'$PROJDIR/controller/controller'" > /dev/null &
