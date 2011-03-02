@@ -50,7 +50,7 @@ ColorObject colorFromTeam(int teamId){
   return coloringMap[teamId];
 }
 
-cairo_surface_t * UnpackImage(RegionRender render)
+cairo_surface_t * UnpackImage(RegionRender render, int robotSize, double robotAlpha)
 {
   //double buffer
   cairo_surface_t *stepImage;
@@ -85,13 +85,25 @@ cairo_surface_t * UnpackImage(RegionRender render)
     if(i >= render.image_size())
       break;
 
-    cairo_rectangle (stepImageDrawer, curRobot.one, curY, 1, 1);
     //set the color
     ColorObject robotColor = colorFromTeam(curRobot.two);
 
-    cairo_set_source_rgb(stepImageDrawer, robotColor.r, robotColor.g, robotColor.b);
+    //pixel precision robot drawing
+    if(robotSize == 1){
+      cairo_set_source_rgb(stepImageDrawer, robotColor.r, robotColor.g, robotColor.b);
+      cairo_rectangle (stepImageDrawer, curRobot.one, curY, robotSize, robotSize);
+      cairo_fill (stepImageDrawer);
+    }else{
+    //aliased precision
+      cairo_set_source_rgba(stepImageDrawer, robotColor.r, robotColor.g, robotColor.b, robotAlpha);
+      cairo_set_line_width(stepImageDrawer, robotSize);
+      cairo_set_line_cap(stepImageDrawer, CAIRO_LINE_CAP_ROUND);
 
-    cairo_fill (stepImageDrawer);
+      cairo_move_to(stepImageDrawer, curRobot.one, curY);  
+      cairo_line_to(stepImageDrawer, curRobot.one, curY);
+      cairo_stroke(stepImageDrawer);
+    }
+    
   }
   
   cairo_destroy(stepImageDrawer);
