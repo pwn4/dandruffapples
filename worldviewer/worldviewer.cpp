@@ -1,6 +1,6 @@
 /*////////////////////////////////////////////////////////////////////////////////////////////////
  WorldViewer program
- This program communications with the clock server and region servers
+ This program communicates with the clock server and region servers
  It gets the region server list from the clock server, connects to all the region servers,
  receives all of the robot data every so often and displays them in a GUI for the user to watch.
  //////////////////////////////////////////////////////////////////////////////////////////////////*/
@@ -773,8 +773,6 @@ void initializeDrawers() {
 }
 
 int main(int argc, char* argv[]) {
-	map<int, bool> test;
-
 	gtk_init(&argc, &argv);
 
 	char clockip[40];

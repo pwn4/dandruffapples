@@ -23,7 +23,7 @@
                 <property name="sensitive">False</property>
                 <property name="label" translatable="yes">Navigation</property>
                 <property name="use_underline">True</property>
-                <property name="stock_id">gtk-network</property>
+                <property name="stock_id">gtk-select-color</property>
               </object>
               <packing>
                 <property name="expand">False</property>
