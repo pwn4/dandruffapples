@@ -27,11 +27,12 @@ fi
 SSHPROCS=""
 CLOCKID=""
 function cleanup {
+    echo "Cleaning up."
     if [ $CLOCKID ]
     then
         kill $CLOCKID > /dev/null
     fi
-    for PID in SSHPROCS
+    for PID in $SSHPROCS
     do
         kill $PID > /dev/null
     done
