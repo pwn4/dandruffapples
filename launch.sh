@@ -13,6 +13,10 @@ HOSTFILE="./hosts"
 # Number of regions to launch on a single machine
 REGIONS_PER_HOST=2
 
+#link the shared object library here in case
+LD_LIBRARY_PATH='$PROJDIR/sharedlibs'
+export LD_LIBRARY_PATH
+
 if [ ! -e "$HOSTFILE" ]
 then
     echo "\$HOSTFILE is set to \"$HOSTFILE\", which does not exist!"
@@ -94,7 +98,7 @@ do
     
     if [ $CONTROLLERS_LEFT -gt 0 ]
     then
-        ssh -o StrictHostKeyChecking=no -o PasswordAuthentication=no -p $SSHPORT $HOST "'cd \'$PROJDIR/controller\' && ./controller'" > /dev/null &
+        ssh -o StrictHostKeyChecking=no -o PasswordAuthentication=no -p $SSHPORT $HOST "'LD_LIBRARY_PATH=\'$PROJDIR/sharedlibs\' && export LD_LIBRARY_PATH && cd \'$PROJDIR/controller\' && ./controller'" > /dev/null &
         SSHPROCS="$SSHPROCS $!"
         echo -n .
         CONTROLLERS_LEFT=$[$CONTROLLERS_LEFT - 1]
@@ -107,10 +111,10 @@ do
         do
             if [ $CONFIDX -eq 1 ]
             then
-                ssh -o StrictHostKeyChecking=no -o PasswordAuthentication=no -p $SSHPORT $HOST "'cd \'$PROJDIR/regionserver\' && ./regionserver -l $CLOCKSERVER -c config'" > /dev/null &
+                ssh -o StrictHostKeyChecking=no -o PasswordAuthentication=no -p $SSHPORT $HOST "'LD_LIBRARY_PATH=\'$PROJDIR/sharedlibs\' && export LD_LIBRARY_PATH && cd \'$PROJDIR/regionserver\' && ./regionserver -l $CLOCKSERVER -c config'" > /dev/null &
                 SSHPROCS="$SSHPROCS $!"
             else
-                ssh -o StrictHostKeyChecking=no -o PasswordAuthentication=no -p $SSHPORT $HOST "'cd \'$PROJDIR/regionserver\' && ./regionserver -l $CLOCKSERVER -c config${CONFIDX}'" > /dev/null &
+                ssh -o StrictHostKeyChecking=no -o PasswordAuthentication=no -p $SSHPORT $HOST "'LD_LIBRARY_PATH=\'$PROJDIR/sharedlibs\' && export LD_LIBRARY_PATH && cd \'$PROJDIR/regionserver\' && ./regionserver -l $CLOCKSERVER -c config${CONFIDX}'" > /dev/null &
                 SSHPROCS="$SSHPROCS $!"
             fi
             echo -n .
@@ -139,7 +143,7 @@ then
     while [ $CLIENTS_LEFT -gt 0 ]
     do
         HOST=`echo $CONTROLHOSTS |cut -d ' ' -f $[$CLIENTS_LEFT % $HOSTNUM + 1]`
-        ssh -o StrictHostKeyChecking=no -o PasswordAuthentication=no -p $SSHPORT $HOST "'cd \'$PROJDIR/client\' && ./client -t $CLIENTS_LEFT'" > /dev/null &
+        ssh -o StrictHostKeyChecking=no -o PasswordAuthentication=no -p $SSHPORT $HOST "'LD_LIBRARY_PATH=\'$PROJDIR/sharedlibs\' && export LD_LIBRARY_PATH && cd \'$PROJDIR/client\' && ./client -t $CLIENTS_LEFT'" > /dev/null &
         SSHPROCS="$SSHPROCS $!"
         echo -n .
         CLIENTS_LEFT=$[CLIENTS_LEFT - 1]
