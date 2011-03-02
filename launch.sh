@@ -4,6 +4,8 @@
 SSHPORT=24
 # Path of project dir relative to $HOME
 PROJDIR="dandruffapples"
+# Path to write other files
+OUTPATH="tmp"
 # Path to write generated clock config to
 CLOCKCONF="antix-clock-conf"
 # Path to read CSIL hosts from
@@ -62,9 +64,9 @@ EOF
 
 echo "Starting clock server locally."
 CLOCKSERVER=`hostname`
-rm /tmp/antix-clockout 2>/dev/null; mkfifo /tmp/antix-clockout
-rm /tmp/antix-clockerr 2>/dev/null; mkfifo /tmp/antix-clockerr
-clockserver/clockserver -c "$CLOCKCONF" > /tmp/antix-clockout 2>/tmp/antix-clockerr &
+rm $OUTPATH/antix-clockout 2>/dev/null; mkfifo $OUTPATH/antix-clockout
+rm $OUTPATH/antix-clockerr 2>/dev/null; mkfifo $OUTPATH/antix-clockerr
+clockserver/clockserver -c "$CLOCKCONF" > $OUTPATH/antix-clockout 2>$OUTPATH/antix-clockerr &
 CLOCKID=$!
 trap "echo -e '\nCaught signal; shutting down.' && cleanup; exit 1" HUP INT TERM
 
@@ -146,6 +148,6 @@ then
 fi
 
 echo "All done!  Here's the clock server."
-cat /tmp/antix-clockerr >&2 & cat /tmp/antix-clockout
+cat $OUTPATH/antix-clockerr >&2 & cat $OUTPATH/antix-clockout
 
 cleanup
