@@ -10,14 +10,12 @@ This program communications with controllers.
 #include <math.h>
 
 #include <unistd.h>
-#include <sched.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <sys/select.h>
 #include <sys/epoll.h>
 
-#include <pthread.h>
 #include <stdio.h>
 #include <string>
 #include <string.h>
@@ -55,7 +53,6 @@ int myTeam;
 int robotsPerTeam; 
 net::EpollConnection* theController;
 int epoll;
-pthread_mutex_t connectionMutex = PTHREAD_MUTEX_INITIALIZER;
 
 // Stat variables
 time_t lastSecond = time(NULL);
@@ -71,7 +68,14 @@ int moveRandom = 0;
 
 const int COOLDOWN = 10;
 
+enum EventType {
+  EVENT_CLOSEST_ROBOT_STATE_CHANGE,
+  EVENT_NEW_CLOSEST_ROBOT,
+  EVENT_MAX
+};
+
 class SeenPuck {
+public:
   float relx;
   float rely;
   int size;
@@ -107,10 +111,14 @@ class OwnRobot : public Robot {
 public:
   bool pendingCommand;
   int whenLastSent;
+  int closestRobotId;
+  int behaviour;
   vector<SeenRobot*> seenRobots;
   vector<SeenPuck*> seenPucks;
+  vector<EventType> eventQueue;
 
-  OwnRobot() : Robot(), pendingCommand(false), whenLastSent(-1) {}
+  OwnRobot() : Robot(), pendingCommand(false), whenLastSent(-1), 
+      closestRobotId(-1), behaviour(-1) {}
 };
 
 OwnRobot** ownRobots;
@@ -168,8 +176,19 @@ float relDistance(float x1, float y1) {
   return (sqrt(x1*x1 + y1*y1));
 }
 
-void executeAiVersion(int type, OwnRobot* ownRobot, ClientRobot* clientRobot) {
+void forceSend() {
+  while(theController->queue.remaining() > 0)
+    theController->queue.doWrite();
+}
+
+void executeAi(OwnRobot* ownRobot, int index) {
+  // TODO give events to AI handler
+  int type = 1; // TEMP, remove after we create AI handler
+
+  ClientRobot clientRobot;
   float velocity = 0.1;
+  clientRobot.set_velocityx(ownRobot->vx);
+  clientRobot.set_velocityy(ownRobot->vy);
   if (type == 0) {
     // Aggressive robot!
     if (ownRobot->seenRobots.size() > 0) {
@@ -192,34 +211,34 @@ void executeAiVersion(int type, OwnRobot* ownRobot, ClientRobot* clientRobot) {
         if ((*closest)->relx > 0.0 && ownRobot->vx != velocity) {
           // Move right!
           ownRobot->pendingCommand = true;
-          clientRobot->set_velocityx(velocity);
+          clientRobot.set_velocityx(velocity);
         } else if ((*closest)->relx < 0.0 && 
             ownRobot->vx != velocity * -1.0) {
           ownRobot->pendingCommand = true;
-          clientRobot->set_velocityx(velocity * -1.0);
+          clientRobot.set_velocityx(velocity * -1.0);
         } else if ((*closest)->relx == 0.0 && ownRobot->vx != 0.0) {
           ownRobot->pendingCommand = true;
-          clientRobot->set_velocityx(0.0);
+          clientRobot.set_velocityx(0.0);
         }
         if ((*closest)->rely > 0.0 && ownRobot->vy != velocity) {
           // Move down!
           ownRobot->pendingCommand = true;
-          clientRobot->set_velocityy(velocity);
+          clientRobot.set_velocityy(velocity);
         } else if ((*closest)->rely < 0.0 && 
             ownRobot->vy != velocity * -1.0) {
           ownRobot->pendingCommand = true;
-          clientRobot->set_velocityy(velocity * -1.0);
+          clientRobot.set_velocityy(velocity * -1.0);
         } else if ((*closest)->rely == 0.0 && ownRobot->vy != 0.0) {
           ownRobot->pendingCommand = true;
-          clientRobot->set_velocityy(0.0);
+          clientRobot.set_velocityy(0.0);
         }
       } 
     } else {
       // No seen robots. Make sure we're moving.
       if (ownRobot->vx == 0.0 || ownRobot->vy == 0.0) {
         ownRobot->pendingCommand = true;
-        clientRobot->set_velocityx(((rand() % 11) / 10.0) - 0.5);
-        clientRobot->set_velocityy(((rand() % 11) / 10.0) - 0.5);
+        clientRobot.set_velocityx(((rand() % 11) / 10.0) - 0.5);
+        clientRobot.set_velocityy(((rand() % 11) / 10.0) - 0.5);
       }
     }
   } else if (type == 1) {
@@ -242,23 +261,23 @@ void executeAiVersion(int type, OwnRobot* ownRobot, ClientRobot* clientRobot) {
         if ((*closest)->relx <= 0.0 && ownRobot->vx != velocity) {
           // Move right!
           ownRobot->pendingCommand = true;
-          clientRobot->set_velocityx(velocity);
+          clientRobot.set_velocityx(velocity);
           moveRight++;
         } else if ((*closest)->relx > 0.0 && 
             ownRobot->vx != velocity * -1.0) {
           ownRobot->pendingCommand = true;
-          clientRobot->set_velocityx(velocity * -1.0);
+          clientRobot.set_velocityx(velocity * -1.0);
           moveLeft++;
         }
         if ((*closest)->rely <= 0.0 && ownRobot->vy != velocity) {
           // Move down!
           ownRobot->pendingCommand = true;
-          clientRobot->set_velocityy(velocity);
+          clientRobot.set_velocityy(velocity);
           moveDown++;
         } else if ((*closest)->rely > 0.0 && 
             ownRobot->vy != velocity * -1.0) {
           ownRobot->pendingCommand = true;
-          clientRobot->set_velocityy(velocity * -1.0);
+          clientRobot.set_velocityy(velocity * -1.0);
           moveUp++;
         }
       } 
@@ -267,26 +286,31 @@ void executeAiVersion(int type, OwnRobot* ownRobot, ClientRobot* clientRobot) {
       if (ownRobot->vx == 0.0 || ownRobot->vy == 0.0 
           || currentTimestep - ownRobot->whenLastSent > 10000) {
         ownRobot->pendingCommand = true;
-        clientRobot->set_velocityx(((rand() % 11) / 10.0) - 0.5);
-        clientRobot->set_velocityy(((rand() % 11) / 10.0) - 0.5);
+        clientRobot.set_velocityx(((rand() % 11) / 10.0) - 0.5);
+        clientRobot.set_velocityy(((rand() % 11) / 10.0) - 0.5);
         moveRandom++;
       }
     }
   }
+
+  // Did we want to send a command?
+  if (ownRobot->pendingCommand) { 
+    clientRobot.set_id(indexToRobotId(index));
+    clientRobot.set_angle(0.0); // TODO: implement angle
+    theController->queue.push(MSG_CLIENTROBOT, clientRobot);
+    theController->set_writing(true);
+    ownRobot->whenLastSent = currentTimestep;
+    sentMessages++;
+  }
+  forceSend();
 }
 
-// Destination function for the AI thread.
-void *artificialIntelligence(void *threadid) {
-  while (!simulationStarted) {
-    // do nothing until simulation starts
-    sched_yield();
-  }
 
+void initializeRobots() {
   ClientRobot clientRobot;
 
   // Initialize robots to some random velocity.
   for (int i = 0; i < robotsPerTeam; i++) {
-    pthread_mutex_lock(&connectionMutex);
     clientRobot.set_id(indexToRobotId(i));
     clientRobot.set_velocityx(((rand() % 11) / 10.0) - 0.5);
     clientRobot.set_velocityy(((rand() % 11) / 10.0) - 0.5);
@@ -295,53 +319,10 @@ void *artificialIntelligence(void *threadid) {
     theController->set_writing(true);
     ownRobots[i]->whenLastSent = currentTimestep;
     sentMessages++;
-    pthread_mutex_unlock(&connectionMutex);
   }
-
-  int i = 0;
-  while (!simulationEnded) {
-    lastTimestep = currentTimestep;
-    if (i >= robotsPerTeam) {
-      i = 0;
-    }  
-    for ( ; i < robotsPerTeam && !simulationEnded 
-         && lastTimestep == currentTimestep; i++) {
-      if (!ownRobots[i]->pendingCommand 
-          && currentTimestep - ownRobots[i]->whenLastSent > COOLDOWN) {
-        pthread_mutex_lock(&connectionMutex);
-        // Run different AIs depending on i.
-        //executeAiVersion(i % 1, ownRobots[i], &clientRobot); 
-        executeAiVersion(1, ownRobots[i], &clientRobot); 
-        // Did we want to send a command?
-        if (ownRobots[i]->pendingCommand) {
-          clientRobot.set_id(indexToRobotId(i));
-          clientRobot.set_angle(0.0); // TODO: implement angle
-          theController->queue.push(MSG_CLIENTROBOT, clientRobot);
-          theController->set_writing(true);
-          ownRobots[i]->whenLastSent = currentTimestep;
-          sentMessages++;
-        }
-        pthread_mutex_unlock(&connectionMutex);
-      } else {
-        // We're waiting for a serverrobot update.
-        pendingMessages++; // should have a mutex, but oh well
-        sched_yield();
-      }
-    }
-    
-    //force updates
-    pthread_mutex_lock(&connectionMutex);
-    while(theController->queue.remaining() > 0)
-      theController->queue.doWrite();
-    pthread_mutex_unlock(&connectionMutex);
-      
-    
-    //sleep(5); // delay this thread for 5 seconds
-  }
-
-  simulationStarted = false;
-  pthread_exit(0);
+  forceSend();
 }
+
 
 void run() {
   int controllerfd = -1;
@@ -351,9 +332,9 @@ void run() {
     cout << "Attempting to connect to controller " << controllerips.at(currentController) << "..." << flush;
     controllerfd = net::do_connect(controllerips.at(currentController).c_str(), CLIENTS_PORT);
     if(0 > controllerfd) {
-      throw SystemError("Failed to connect to controller");
+      cout << " failed to connect." << endl;
     } else if(0 == controllerfd) {
-      throw runtime_error("Invalid controller address");
+      cerr << " invalid address: " << controllerfd << endl;
     }
     currentController = rand() % controllerips.size();
   }
@@ -379,16 +360,8 @@ void run() {
   #define MAX_EVENTS 128
   struct epoll_event events[MAX_EVENTS];
 
-  // Create thread: client robot calculations
-  // parent thread: continue in while loop, looking for updates
-  pthread_t aiThread;
-
-
-  pthread_create(&aiThread, NULL, artificialIntelligence, NULL);
-
   try {
     while(true) {
-      pthread_mutex_lock(&connectionMutex);
       // Stats: Received messages per second
       if (lastSecond < time(NULL)) {
         cout << "Sent " << sentMessages << " per second." << endl;
@@ -412,7 +385,6 @@ void run() {
         moveLeft = 0;
         moveRandom = 0;
       }
-      pthread_mutex_unlock(&connectionMutex);
 
       int eventcount = epoll_wait(epoll, events, MAX_EVENTS, -1);
       for(size_t i = 0; i < (unsigned)eventcount; i++) {
@@ -477,6 +449,8 @@ void run() {
                     //enemyRobots = new vector<EnemyRobot*>[numTeams];
                     // Allow AI thread to commence.
                     simulationStarted = true;
+
+                    initializeRobots();
                   }
                 } else {
                   cout << "Got CLAIMTEAM message after simulation started"
@@ -485,7 +459,6 @@ void run() {
 
                 break;
               case MSG_TIMESTEPUPDATE:
-                pthread_mutex_lock(&connectionMutex);
                 timestep.ParseFromArray(buffer, len);
                 currentTimestep = timestep.timestep();
 
@@ -500,21 +473,41 @@ void run() {
                       ownRobots[i]->pendingCommand = false;
                       timeoutMessages++;
                     }
+                     
+                    float minDistance = 9000.01;
+                    float tempDistance;
+                    int newClosestRobotId = -1;
                     for (vector<SeenRobot*>::iterator it
                         = ownRobots[i]->seenRobots.begin();
                         it != ownRobots[i]->seenRobots.end();
                         it++) {
                       (*it)->relx += (*it)->vx - ownRobots[i]->vx;
                       (*it)->rely += (*it)->vy - ownRobots[i]->vy;
+                      tempDistance = relDistance((*it)->relx, (*it)->rely);
+                      if (tempDistance < minDistance) {
+                        minDistance = tempDistance;
+                        newClosestRobotId = (*it)->id;
+                      }
                     }
+
+                    // Check for events
+                    if (newClosestRobotId != ownRobots[i]->closestRobotId) {
+                      ownRobots[i]->closestRobotId = newClosestRobotId;
+                      ownRobots[i]->eventQueue.push_back(EVENT_NEW_CLOSEST_ROBOT);
+                      // Check if any events exist; if so, call AI.
+                      if (ownRobots[i]->eventQueue.size() > 0 &&
+                          !ownRobots[i]->pendingCommand) {
+                        executeAi(ownRobots[i], i); 
+                        // Clear the queue, wait for new events.
+                        ownRobots[i]->eventQueue.clear();
+                      }
+                    } 
                   }
                 }
-                pthread_mutex_unlock(&connectionMutex);
 
                 break;
               case MSG_SERVERROBOT:
               { 
-                pthread_mutex_lock(&connectionMutex);
                 serverrobot.ParseFromArray(buffer, len);
                 receivedMessages++;
                 if (simulationStarted) {
@@ -572,19 +565,44 @@ void run() {
                             //cout << "Our #" << index << " update see "
                             //     << serverrobot.id() << " at relx: " 
                             //     << serverrobot.seenrobot(i).relx() << endl;
-                            if (serverrobot.has_velocityx()) 
+                            bool stateChange = false;
+                            if (serverrobot.has_velocityx() && 
+                                (*it)->vx != serverrobot.velocityx()) {
                               (*it)->vx = serverrobot.velocityx();
-                            if (serverrobot.has_velocityy()) 
+                              stateChange = true;
+                            }
+                            if (serverrobot.has_velocityy() &&
+                                (*it)->vy != serverrobot.velocityy()) {
                               (*it)->vy = serverrobot.velocityy();
-                            if (serverrobot.has_angle()) 
+                              stateChange = true;
+                            }
+                            if (serverrobot.has_angle() &&
+                                (*it)->angle != serverrobot.angle()) {
                               (*it)->angle = serverrobot.angle();
-                            if (serverrobot.has_haspuck()) 
+                              stateChange = true;
+                            }
+                            if (serverrobot.has_haspuck() &&
+                                (*it)->hasPuck != serverrobot.haspuck()) {
                               (*it)->hasPuck = serverrobot.haspuck();
-                            if (serverrobot.has_hascollided()) 
+                              stateChange = true;
+                            }
+                            if (serverrobot.has_hascollided() && 
+                                (*it)->hasCollided != serverrobot.hascollided()) {
                               (*it)->hasCollided = serverrobot.hascollided();
-                            (*it)->relx = serverrobot.seenrobot(i).relx();
-                            (*it)->rely = serverrobot.seenrobot(i).rely();
+                              stateChange = true;
+                            }
+                            if (serverrobot.seenrobot(i).has_relx())
+                              (*it)->relx = serverrobot.seenrobot(i).relx();
+                            if (serverrobot.seenrobot(i).has_rely())
+                              (*it)->rely = serverrobot.seenrobot(i).rely();
                             (*it)->lastTimestepSeen = currentTimestep;
+
+                            // If we updated the closest robot, tell the AI.
+                            if (stateChange && serverrobot.id() == 
+                                ownRobots[index]->closestRobotId) {
+                              ownRobots[index]->eventQueue.push_back(
+                                  EVENT_CLOSEST_ROBOT_STATE_CHANGE);
+                            } 
                           }
                         }
                         if (!foundRobot) {
@@ -611,7 +629,6 @@ void run() {
                     }
                   }
                 }
-                pthread_mutex_unlock(&connectionMutex);
                 break;
               }
               default:
@@ -627,11 +644,9 @@ void run() {
         } else if(events[i].events & EPOLLOUT) {
           switch(c->type) {
           case net::connection::CONTROLLER:
-            pthread_mutex_lock(&connectionMutex);
             if(c->queue.doWrite()) {
               c->set_writing(false);
             }
-            pthread_mutex_unlock(&connectionMutex);
             break;
           default:
             cerr << "Internal error: Got unexpected readable event of type " << c->type << endl;
@@ -645,12 +660,6 @@ void run() {
   } catch(SystemError e) {
     cerr << " error performing network I/O: " << e.what() << endl;
   }
-
-  simulationEnded = true;
-  while (simulationStarted) {
-   // Wait until child thread stops
-   sched_yield();
-  } 
 
   // Clean up
   shutdown(controllerfd, SHUT_RDWR);
