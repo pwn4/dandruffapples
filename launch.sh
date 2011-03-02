@@ -5,7 +5,7 @@ SSHPORT=24
 # Path of project dir relative to $HOME
 PROJDIR="dandruffapples"
 # Path to write generated clock config to
-CLOCKCONF="/tmp/antix-clock-conf"
+CLOCKCONF="~/tmp/antix-clock-conf"
 # Path to read CSIL hosts from
 HOSTFILE="./hosts"
 # Number of regions to launch on a single machine
