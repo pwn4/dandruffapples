@@ -684,15 +684,18 @@ int main(int argc, char* argv[])
 	printf("Client Initializing ...\n");
 	
 	helper::CmdLine cmdline(argc, argv);
-	configFileName=cmdline.getArg("-c", "config").c_str();
-	runClientViewer= cmdline.getArg("-viewer").length() ? true : false;
+	string tmp;
+
+	tmp=cmdline.getArg("-c", "config");
+	configFileName=tmp.c_str();
+	runClientViewer=cmdline.getArg("-viewer").length() ? true : false;
 	cout<<"Started client with the client viewer set to "<<runClientViewer<<endl;
 
 	cout<<"Using config file: "<<configFileName<<endl;
 
-  myTeam = strtol(cmdline.getArg("-t", "0").c_str(), NULL, 0);
+	myTeam = strtol(cmdline.getArg("-t", "0").c_str(), NULL, 0);
 
-  cout << "Trying to control team #" << myTeam << " (use -t <team> to change)"
+	cout << "Trying to control team #" << myTeam << " (use -t <team> to change)"
        << endl;
 	
 	loadConfigFile();
