@@ -1,3 +1,5 @@
+#!/bin/sh
+
 # Port remote hosts' sshds are listening on
 SSHPORT=24
 # Path of project dir relative to $HOME
