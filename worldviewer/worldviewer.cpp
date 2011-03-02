@@ -65,6 +65,8 @@ regionConnection *pivotRegion = NULL, *pivotRegionBuddy = NULL;
 
 //used only for calculating images per second for each server
 int timeCache, lastSecond1 = 0, lastSecond2 = 0, messages1 = 0, messages2 = 0;
+int robotSize = 1;
+double robotAlpha = 1.0;
 
 /* Position in a grid:
  * ____
@@ -93,6 +95,13 @@ void loadConfigFile(const char *configFileName, char* clockip) {
 	}
 
 	strcpy(clockip, configuration["CLOCKIP"].c_str());
+	
+	
+	if (configuration.find("ROBOTSIZE") != configuration.end())
+	  robotSize = atoi(configuration["ROBOTSIZE"].c_str());
+
+	if (configuration.find("ROBOTALPHA") != configuration.end())
+	  robotAlpha = atof(configuration["ROBOTALPHA"].c_str());
 }
 
 //display the worldView that we received from a region server in its worldDrawingArea space
@@ -106,7 +115,7 @@ void displayWorldView(int regionNum, RegionRender render) {
 
   //double buffer the images
 	cairo_t *cr = gdk_cairo_create(worldDrawingArea.at(position)->widget.window);
-	cairo_surface_t *image = UnpackImage(render);
+	cairo_surface_t *image = UnpackImage(render, robotSize, robotAlpha);
  
 	cairo_set_source_surface(cr, image, 0, 0);
 	cairo_paint(cr);
