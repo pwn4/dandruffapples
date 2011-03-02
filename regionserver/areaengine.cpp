@@ -207,9 +207,9 @@ void AreaEngine::Step(bool generateImage){
           for(sightCheck = (*nowSeenBy).begin(); sightCheck != sightEnd;
               sightCheck++)
           {
-            SeenServerRobot* seenRobot = serverrobot.add_seenrobot();
-            seenRobot->set_viewlostid(false); 
-            seenRobot->set_seenbyid(sightCheck->first);
+            SeesServerRobot* seesServerRobot = serverrobot.add_seesserverrobot();
+            seesServerRobot->set_viewlostid(false); 
+            seesServerRobot->set_seenbyid(sightCheck->first);
           }
         } 
 
@@ -340,9 +340,9 @@ void AreaEngine::Step(bool generateImage){
         for(sightCheck = (*nowSeenBy).begin(); sightCheck != sightEnd;
             sightCheck++)
         {
-          SeenServerRobot* seenRobot = serverrobot.add_seenrobot();
-          seenRobot->set_viewlostid(false); 
-          seenRobot->set_seenbyid(sightCheck->first);
+          SeesServerRobot* seesServerRobot = serverrobot.add_seesserverrobot();
+          seesServerRobot->set_viewlostid(false); 
+          seesServerRobot->set_seenbyid(sightCheck->first);
           // Omitting relx and rely data. Updates will come in the
           // sight loop.
         }
@@ -596,11 +596,11 @@ void AreaEngine::Step(bool generateImage){
         
           nowSeenBy->erase(sightCheck++);
           
-          SeenServerRobot* seenRobot = serverrobot.add_seenrobot();
-          seenRobot->set_viewlostid(true);
-          seenRobot->set_seenbyid(otherRobot->id);
-          seenRobot->set_relx(curRobot->x - otherRobot->x);
-          seenRobot->set_rely(curRobot->y - otherRobot->y);
+          SeesServerRobot* seesServerRobot = serverrobot.add_seesserverrobot();
+          seesServerRobot->set_viewlostid(true);
+          seesServerRobot->set_seenbyid(otherRobot->id);
+          seesServerRobot->set_relx(curRobot->x - otherRobot->x);
+          seesServerRobot->set_rely(curRobot->y - otherRobot->y);
           continue;
         }
         
@@ -625,11 +625,11 @@ void AreaEngine::Step(bool generateImage){
                   //first, that which we hadn't been seen by but now are
 
                     nowSeenBy->insert(pair<int, bool>(otherRobot->id, true));
-                    SeenServerRobot* seenRobot = serverrobot.add_seenrobot();
-                    seenRobot->set_viewlostid(false);
-                    seenRobot->set_seenbyid(otherRobot->id);
-                    seenRobot->set_relx(curRobot->x - otherRobot->x);
-                    seenRobot->set_rely(curRobot->y - otherRobot->y);
+                    SeesServerRobot* seesServerRobot = serverrobot.add_seesserverrobot();
+                    seesServerRobot->set_viewlostid(false);
+                    seesServerRobot->set_seenbyid(otherRobot->id);
+                    seesServerRobot->set_relx(curRobot->x - otherRobot->x);
+                    seesServerRobot->set_rely(curRobot->y - otherRobot->y);
                   }
                 }
               }
@@ -639,7 +639,7 @@ void AreaEngine::Step(bool generateImage){
           }
           
       // Send update if at least one seenById exists
-      if (serverrobot.seenrobot_size() > 0) {
+      if (serverrobot.seesserverrobot_size() > 0) {
         for (vector<EpollConnection*>::const_iterator it = 
              controllers.begin(); it != controllers.end(); it++) {
           (*it)->queue.push(MSG_SERVERROBOT, serverrobot);

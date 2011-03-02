@@ -536,18 +536,18 @@ void run() {
 
                   // Traverse seenById list to check if we can see.
                   int index;
-                  int listSize = serverrobot.seenrobot_size();
+                  int listSize = serverrobot.seesserverrobot_size();
                   for (int i = 0; i < listSize; i++) {
-                    if (myRobotId == serverrobot.seenrobot(i).seenbyid()) {
+                    if (myRobotId == serverrobot.seesserverrobot(i).seenbyid()) {
                       cout << "We see updated data for robotId #" 
                            << serverrobot.id() << endl;
                       if (myRobotId == serverrobot.id()) {
                         cout << "Flying batmans! We see ourself!" << endl;
                       }
                       // The serverrobot is not on our team. Can we see it?
-                      index = robotIdToIndex(serverrobot.seenrobot(i).
+                      index = robotIdToIndex(serverrobot.seesserverrobot(i).
                           seenbyid());
-                      if (serverrobot.seenrobot(i).viewlostid()) {
+                      if (serverrobot.seesserverrobot(i).viewlostid()) {
                         // Could see before, can't see anymore.
                         for (vector<SeenRobot*>::iterator it
                             = ownRobot->seenRobots.begin();
@@ -575,7 +575,7 @@ void run() {
                             foundRobot = true;
                             //cout << "Our #" << index << " update see "
                             //     << serverrobot.id() << " at relx: " 
-                            //     << serverrobot.seenrobot(i).relx() << endl;
+                            //     << serverrobot.seesserverrobot(i).relx() << endl;
                             if (serverrobot.has_velocityx()) 
                               (*it)->vx = serverrobot.velocityx();
                             if (serverrobot.has_velocityy()) 
@@ -586,8 +586,8 @@ void run() {
                               (*it)->hasPuck = serverrobot.haspuck();
                             if (serverrobot.has_hascollided()) 
                               (*it)->hasCollided = serverrobot.hascollided();
-                            (*it)->relx = serverrobot.seenrobot(i).relx();
-                            (*it)->rely = serverrobot.seenrobot(i).rely();
+                            (*it)->relx = serverrobot.seesserverrobot(i).relx();
+                            (*it)->rely = serverrobot.seesserverrobot(i).rely();
                             (*it)->lastTimestepSeen = currentTimestep;
                           }
                         }
@@ -606,8 +606,8 @@ void run() {
                           if (serverrobot.has_hascollided()) 
                             r->hasCollided = serverrobot.hascollided();
                           r->id = serverrobot.id();
-                          r->relx = serverrobot.seenrobot(i).relx();
-                          r->rely = serverrobot.seenrobot(i).rely();
+                          r->relx = serverrobot.seesserverrobot(i).relx();
+                          r->rely = serverrobot.seesserverrobot(i).rely();
                           r->lastTimestepSeen = currentTimestep;
                           ownRobot->seenRobots.push_back(r);
                         }

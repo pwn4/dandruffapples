@@ -364,8 +364,8 @@ int main(int argc, char** argv)
               }
 							//lookup clients using seenbyid and store into set then send to all clients
 							//this resolves sending multiple msgs to same client.
-							for(int i=0; i<serverrobot.seenrobot_size(); i++){
-							  client = (robots.find(serverrobot.seenrobot(i).seenbyid()))->second.client;
+							for(int i=0; i<serverrobot.seesserverrobot_size(); i++){
+							  client = (robots.find(serverrobot.seesserverrobot(i).seenbyid()))->second.client;
                 if (client != NULL) {
                   ret = seenbyidset.insert(client);
 									if(ret.second){

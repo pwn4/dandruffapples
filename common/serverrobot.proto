@@ -1,4 +1,4 @@
-message SeenServerRobot {
+message SeesServerRobot {
   required bool viewLostId = 1; // robot specified by seenById can no 
                                 // longer see this robot
   required fixed32 seenById = 2; // list of robots now viewing
@@ -18,5 +18,5 @@ message ServerRobot {
   optional fixed32 controllerIp = 9;
   optional int32 lastStep = 10;
   optional fixed32 team = 11;
-  repeated SeenServerRobot seenrobot = 12;
+  repeated SeesServerRobot seesserverrobot = 12;
 }
