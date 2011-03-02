@@ -52,7 +52,7 @@ rm /tmp/antix-clockout 2>/dev/null; mkfifo /tmp/antix-clockout
 rm /tmp/antix-clockerr 2>/dev/null; mkfifo /tmp/antix-clockerr
 clockserver/clockserver -c "$CLOCKCONF" > /tmp/antix-clockout 2>/tmp/antix-clockerr &
 CLOCKID=$!
-trap "echo -e '\nCaught signal; shutting down.' && kill $CLOCKID; exit" SIGHUP SIGINT SIGTERM
+trap "echo -e '\nCaught signal; shutting down.' && kill $CLOCKID; exit" SIGINT SIGTERM
 
 sleep 0.1
 if [ ! -e /proc/$CLOCKID ]
