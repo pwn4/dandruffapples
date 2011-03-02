@@ -42,6 +42,9 @@ ColorObject colorFromTeam(int teamId){
   //initialize the color map for the first time
   if(colorMapInitialized == false)
   {
+    //use the same seed always so that our colors are the same everywhere
+    srand(1);
+  
     for(int i = 0; i < 65534; i++)
       coloringMap[i] = ColorObject(0.01*(rand() % 60) + 0.2, 0.01*(rand() % 60) + 0.2, 0.01*(rand() % 60) + 0.2);
       
