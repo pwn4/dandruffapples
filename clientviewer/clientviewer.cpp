@@ -30,7 +30,7 @@ void on_About_clicked(GtkWidget *widget, gpointer window) {
 	const gchar
 			*authors[2] =
 					{
-							"Peter Neufeld, Frank Lau, Egor Philippov,\nYouyou Yang, Jianfeng Hu, Roy Chiang,\nWilson Huynh, Gordon Leugn, Kevin Fahy,\nBenjamin Saunders",
+							"Peter Neufeld, Frank Lau, Egor Philippov,\nYouyou Yang, Jianfeng Hu, Roy Chiang,\nWilson Huynh, Gordon Leung, Kevin Fahy,\nBenjamin Saunders",
 							NULL };
 
 	gtk_about_dialog_set_authors(GTK_ABOUT_DIALOG(dialog), authors);
