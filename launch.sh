@@ -82,6 +82,7 @@ then
     CONTROLLERS_LEFT=$CONTROLLERS
 fi
 CONTROLHOSTS=""
+echo "Launching $CONTROLLERS_LEFT controllers and $REGIONS_LEFT regions"
 for HOST in `grep -v $CLOCKSERVER "$HOSTFILE"`
 do
     if ! host $HOST >/dev/null
@@ -94,6 +95,7 @@ do
     then
         ssh -o StrictHostKeyChecking=no -o PasswordAuthentication=no -p $SSHPORT $HOST "'$PROJDIR/controller/controller'" > /dev/null &
         SSHPROCS="$SSHPROCS $!"
+        echo -n '.'
         CONTROLLERS_LEFT=$[$CONTROLLERS_LEFT - 1]
         CONTROLHOSTS="$CONTROLHOSTS $HOST"
     elif [ $REGIONS_LEFT -gt 0 ]
@@ -110,11 +112,12 @@ do
                 ssh -o StrictHostKeyChecking=no -o PasswordAuthentication=no -p $SSHPORT $HOST "'cd \'$PROJDIR/regionserver\' && ./regionserver -c config${CONFIDX}'" > /dev/null &
                 SSHPROCS="$SSHPROCS $!"
             fi
+            echo -n '.'
             CONFIDX=$[CONFIDX + 1]
             REGIONS_LEFT=$[$REGIONS_LEFT - 1]
         done
     else
-        echo "Controllers and regions launched!"
+        echo " done!"
         break
     fi
 done
