@@ -67,7 +67,7 @@ ROBOTS_PER_TEAM ${TEAMSIZE}
 EOF
 
 echo "Starting clock server locally."
-CLOCKSERVER=`host \`hostname\``
+CLOCKSERVER=`host \`hostname\`|cut -d ' ' -f 4`
 rm $OUTPATH/antix-clockout 2>/dev/null; mkfifo $OUTPATH/antix-clockout
 rm $OUTPATH/antix-clockerr 2>/dev/null; mkfifo $OUTPATH/antix-clockerr
 clockserver/clockserver -c "$CLOCKCONF" > $OUTPATH/antix-clockout 2>$OUTPATH/antix-clockerr &
