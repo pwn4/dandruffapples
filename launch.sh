@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # Port remote hosts' sshds are listening on
 SSHPORT=24
@@ -23,6 +23,19 @@ then
     echo "If no controller count is specified, no controllers or clients will be launched."
     exit 1
 fi
+
+SSHPROCS=""
+CLOCKID=""
+function cleanup {
+    if [ $CLOCKID ]
+    then
+        kill $CLOCKID > /dev/null
+    fi
+    for PID in SSHPROCS
+    do
+        kill $PID > /dev/null
+    done
+}
 
 COLS=$1
 ROWS=$2
@@ -52,7 +65,7 @@ rm /tmp/antix-clockout 2>/dev/null; mkfifo /tmp/antix-clockout
 rm /tmp/antix-clockerr 2>/dev/null; mkfifo /tmp/antix-clockerr
 clockserver/clockserver -c "$CLOCKCONF" > /tmp/antix-clockout 2>/tmp/antix-clockerr &
 CLOCKID=$!
-trap "echo -e '\nCaught signal; shutting down.' && kill $CLOCKID; exit" HUP INT TERM
+trap "echo -e '\nCaught signal; shutting down.' && cleanup; exit 1" HUP INT TERM
 
 sleep 0.1
 if [ ! -e /proc/$CLOCKID ]
@@ -72,13 +85,14 @@ for HOST in `grep -v $CLOCKSERVER "$HOSTFILE"`
 do
     if ! host $HOST >/dev/null
     then
-        echo "$HOST not found; skipping"
+        echo "Host $HOST not found; skipping"
         continue
     fi
     
     if [ $CONTROLLERS_LEFT -gt 0 ]
     then
         ssh -o StrictHostKeyChecking=no -o PasswordAuthentication=no -p $SSHPORT $HOST "'$PROJDIR/controller/controller'" > /dev/null &
+        SSHPROCS="$SSHPROCS $!"
         CONTROLLERS_LEFT=$[$CONTROLLERS_LEFT - 1]
         CONTROLHOSTS="$CONTROLHOSTS $HOST"
     elif [ $REGIONS_LEFT -gt 0 ]
@@ -90,8 +104,10 @@ do
             if [ $CONFIDX -eq 1 ]
             then
                 ssh -o StrictHostKeyChecking=no -o PasswordAuthentication=no -p $SSHPORT $HOST "'cd \'$PROJDIR/regionserver\' && ./regionserver -c config'" > /dev/null &
+                SSHPROCS="$SSHPROCS $!"
             else
                 ssh -o StrictHostKeyChecking=no -o PasswordAuthentication=no -p $SSHPORT $HOST "'cd \'$PROJDIR/regionserver\' && ./regionserver -c config${CONFIDX}'" > /dev/null &
+                SSHPROCS="$SSHPROCS $!"
             fi
             CONFIDX=$[CONFIDX + 1]
             REGIONS_LEFT=$[$REGIONS_LEFT - 1]
@@ -105,7 +121,7 @@ done
 if [ $REGIONS_LEFT -ne 0 -o $CONTROLLERS_LEFT -ne 0 ]
 then
     echo "Ran out of hosts before we got all servers running!  Shutting down."
-    kill $CLOCKID
+    cleanup
     exit 1
 fi
 
@@ -119,6 +135,7 @@ then
     do
         HOST=`echo $CONTROLHOSTS |cut -d ' ' -f $[$CLIENTS_LEFT % $HOSTNUM + 1]`
         ssh -o StrictHostKeyChecking=no -o PasswordAuthentication=no -p $SSHPORT $HOST "'$PROJDIR/controller/controller'" > /dev/null &
+        SSHPROCS="$SSHPROCS $!"
         CLIENTS_LEFT=$[CLIENTS_LEFT - 1]
     done
 fi
@@ -126,4 +143,4 @@ fi
 echo "All done!  Here's the clock server."
 cat /tmp/antix-clockerr >&2 & cat /tmp/antix-clockout
 
-kill $CLOCKID 2>/dev/null
+cleanup
