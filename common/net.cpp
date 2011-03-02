@@ -115,7 +115,9 @@ namespace net {
     event.events = flags_;
     event.data.ptr = this;
     if(0 > epoll_ctl(epoll, EPOLL_CTL_ADD, fd, &event)) {
-      throw SystemError("Failed to add connection to epoll");
+      char error[100];
+      snprintf(error, 100, "Failed to add fd %d to epoll %d", fd, epoll);
+      throw SystemError(error);
     }
   }
   EpollConnection::EpollConnection(int epoll_, int flags_, int fd_, Type type_) :
@@ -123,7 +125,9 @@ namespace net {
     event.events = flags_;
     event.data.ptr = this;
     if(0 > epoll_ctl(epoll, EPOLL_CTL_ADD, fd, &event)) {
-      throw SystemError("Failed to add connection to epoll");
+      char error[100];
+      snprintf(error, 100, "Failed to add fd %d to epoll %d", fd, epoll);
+      throw SystemError(error);
     }
   }
 
