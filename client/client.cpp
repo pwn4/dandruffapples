@@ -35,7 +35,6 @@ This program communications with controllers.
 #include "../common/except.h"
 
 #include "../common/helper.h"
-
 #include "clientviewer.h"
 
 using namespace std;
@@ -129,6 +128,16 @@ OwnRobot** ownRobots;
 vector<string> controllerips; //controller IPs 
 
 ////////////////////////////////////////////////////////////
+
+int *clientViewerThread( gpointer *ptr )
+{
+	clientViewerShared shared((int)ptr);
+	ClientViewer *viewer = new ClientViewer(shared);
+
+	viewer->run();
+
+	return 0;
+}
 
 //this function loads the config file so that the server parameters don't need to be added every time
 void loadConfigFile()
@@ -453,6 +462,32 @@ void run() {
                     simulationStarted = true;
 
                     initializeRobots();
+
+                    if(runClientViewer)
+                    {
+                    	//make VERY sure that the client viewer thread gets created once
+                    	runClientViewer=false;
+                    	if( !g_thread_supported() )
+                    	{
+                    		GThread *thread;
+                    		GError *error = NULL;
+
+                    		g_thread_init(NULL);
+                    		thread = g_thread_create((GThreadFunc)clientViewerThread, (gpointer)robotsPerTeam, FALSE, &error);
+
+                    		if( thread == NULL)
+                    		{
+                    			string tmp="Failed to created a thread: " + (string)error->message;
+
+                    			throw SystemError(tmp);
+                    		}
+                    	}
+                    	else
+                    	{
+                    		throw SystemError("gthreads are not supported.");
+                    	}
+                    }
+
                   }
                 } else {
                   cout << "Got CLAIMTEAM message after simulation started"
@@ -676,7 +711,7 @@ void run() {
 //this is the main loop for the client
 int main(int argc, char* argv[])
 {
-  srand(time(NULL));
+	srand(time(NULL));
 	//Print a starting message
 	printf("--== Client Software ==-\n");
 	

@@ -1,6 +1,3 @@
-/*////////////////////////////////////////////////////////////////////////////////////////////////
- ClientViewer program
- //////////////////////////////////////////////////////////////////////////////////////////////////*/
 #include "clientviewer.h"
 
 //"About" toolbar button handler
@@ -47,7 +44,7 @@ void on_Window_toggled(GtkWidget *widget, gpointer window) {
 
 }
 //initializations and simple modifications for the things that will be drawn
-void ClientViewer::run() {
+void ClientViewer::run()  {
 	g_type_init();
 
 	GtkWidget *mainWindow = GTK_WIDGET(gtk_builder_get_object(builder, "window"));
@@ -78,7 +75,7 @@ void ClientViewer::run() {
 	gtk_main();
 }
 
-ClientViewer::ClientViewer(int argc, char* argv[]) {
+ClientViewer::ClientViewer(int argc, char* argv[], clientViewerShared _shared) : shared(_shared) {
 	gtk_init(&argc, &argv);
 
 	//assume that the clientviewer.builder is in the same directory as the executable that we are running
