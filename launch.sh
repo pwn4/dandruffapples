@@ -82,7 +82,7 @@ then
     CONTROLLERS_LEFT=$CONTROLLERS
 fi
 CONTROLHOSTS=""
-echo "Launching $CONTROLLERS_LEFT controllers and $REGIONS_LEFT regions"
+echo -n "Launching $CONTROLLERS_LEFT controllers and $REGIONS_LEFT regions"
 for HOST in `grep -v $CLOCKSERVER "$HOSTFILE"`
 do
     if ! host $HOST >/dev/null
@@ -131,7 +131,7 @@ fi
 
 if [ $CONTROLLERS ]
 then
-    echo "Launching $TEAMS clients across $CONTROLLERS machines"
+    echo -n "Launching $TEAMS clients across $CONTROLLERS machines"
     HOSTNUM=`echo $CONTROLHOSTS |wc -w`
     CLIENTS_LEFT=$TEAMS
     while [ $CLIENTS_LEFT -gt 0 ]
