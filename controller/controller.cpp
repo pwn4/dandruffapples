@@ -191,11 +191,11 @@ int main(int argc, char** argv)
                 int regionfd = net::do_connect(addr,
                     worldinfo.region(i).controllerport());
                 if (regionfd < 0) {
-                  cout << "Failed to connect to a Region Server.\n";
+                  throw SystemError("Failed to connect to a region server");
                 } else if (regionfd == 0) {
-                  cout << "Invalid Region Server address\n";
+                  throw runtime_error("Region Server address");
                 } else {
-                  cout << "Connected to a Region Server" << endl;
+                  cout << "Connected to a region server." << endl;
                 }
                 ServerConnection *newServer = new ServerConnection(
                     worldinfo.region(i).id(), epoll, EPOLLIN, regionfd, 
@@ -225,11 +225,11 @@ int main(int argc, char** argv)
               addr.s_addr = regioninfo.address();
               int regionfd = net::do_connect(addr, regioninfo.controllerport());
               if (regionfd < 0) {
-                cout << "Failed to connect to a Region Server.\n";
+                throw SystemError("Failed to connect to a region server");
               } else if (regionfd == 0) {
-                cout << "Invalid Region Server address\n";
+                throw runtime_error("Region Server address");
               } else {
-                cout << "Connected to a Region Server" << endl;
+                cout << "Connected to a region server." << endl;
               }
               ServerConnection *newServer = new ServerConnection(
                   regioninfo.id(), epoll, EPOLLIN, regionfd, 

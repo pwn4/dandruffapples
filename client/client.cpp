@@ -351,9 +351,9 @@ void run() {
     cout << "Attempting to connect to controller " << controllerips.at(currentController) << "..." << flush;
     controllerfd = net::do_connect(controllerips.at(currentController).c_str(), CLIENTS_PORT);
     if(0 > controllerfd) {
-      cout << " failed to connect." << endl;
+      throw SystemError("Failed to connect to controller");
     } else if(0 == controllerfd) {
-      cerr << " invalid address: " << controllerfd << endl;
+      throw runtime_error("Invalid controller address");
     }
     currentController = rand() % controllerips.size();
   }

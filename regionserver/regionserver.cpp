@@ -322,9 +322,9 @@ void run() {
 									int regionfd = net::do_connect(addr, worldinfo.region(i).regionport());
 									net::set_blocking(regionfd, false);
 									if (regionfd < 0) {
-										cout << "Failed to connect to regionserver.\n";
+                    throw SystemError("Failed to connect to region server");
 									} else if (regionfd == 0) {
-										cout << "Invalid regionserver address.\n";
+										throw runtime_error("Invalid controller address");
 									} else {
 										cout << "Connected to regionserver" << endl;
 									}
