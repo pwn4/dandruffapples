@@ -85,7 +85,7 @@ then
 fi
 CONTROLHOSTS=""
 echo -n "Launching $CONTROLLERS_LEFT controllers and $REGIONS_LEFT regions"
-for HOST in `grep -v $CLOCKSERVER "$HOSTFILE"`
+for HOST in `grep -hv \`hostname\` "$HOSTFILE"`
 do
     if ! host $HOST >/dev/null
     then
