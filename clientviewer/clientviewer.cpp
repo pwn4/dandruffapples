@@ -38,6 +38,30 @@ void on_About_clicked(GtkWidget *widget, gpointer window) {
 	gtk_widget_destroy(dialog);
 }
 
+//window destruction methods for the info and navigation windows
+static void destroy(GtkWidget *window, gpointer widget) {
+	gtk_widget_hide_all(GTK_WIDGET(window));
+	gtk_toggle_tool_button_set_active(GTK_TOGGLE_TOOL_BUTTON(widget), FALSE);
+}
+
+static gboolean delete_event(GtkWidget *window, GdkEvent *event, gpointer widget) {
+	destroy(window, widget);
+
+	return TRUE;
+}
+
+//"Robot" and "Info" toolbar button handler
+void on_Window_toggled(GtkWidget *widget, gpointer window) {
+	GdkColor bgColor;
+	gdk_color_parse("black", &bgColor);
+	gtk_widget_modify_bg(GTK_WIDGET(window), GTK_STATE_NORMAL, &bgColor);
+
+	if (gtk_toggle_tool_button_get_active(GTK_TOGGLE_TOOL_BUTTON(widget)))
+		gtk_widget_show_all(GTK_WIDGET(window));
+	else
+		gtk_widget_hide_all(GTK_WIDGET(window));
+
+}
 //initializations and simple modifications for the things that will be drawn
 void initializeDrawers() {
 	g_type_init();
@@ -46,26 +70,30 @@ void initializeDrawers() {
 	GtkToggleToolButton *robot = GTK_TOGGLE_TOOL_BUTTON(gtk_builder_get_object( builder, "Robot" ));
 	GtkToggleToolButton *info = GTK_TOGGLE_TOOL_BUTTON(gtk_builder_get_object( builder, "Info" ));
 	GtkWidget *about = GTK_WIDGET(gtk_builder_get_object( builder, "About" ));
-	//GtkWidget *infoWindow = GTK_WIDGET(gtk_builder_get_object( builder, "infoWindow" ));
-	//GtkWidget *robotWindow = GTK_WIDGET(gtk_builder_get_object( builder, "robotWindow" ));
+	GtkWidget *infoWindow = GTK_WIDGET(gtk_builder_get_object( builder, "infoWindow" ));
+	GtkWidget *robotWindow = GTK_WIDGET(gtk_builder_get_object( builder, "robotWindow" ));
 
 	GdkColor color;
 
-	//gtk_window_set_keep_above(GTK_WINDOW(infoWindow), true);
-	//gtk_window_set_keep_above(GTK_WINDOW(robotWindow), true);
+	gtk_window_set_keep_above(GTK_WINDOW(infoWindow), true);
+	gtk_window_set_keep_above(GTK_WINDOW(robotWindow), true);
 
 	//change the color of the main window's background to black
 	gdk_color_parse("black", &color);
 	gtk_widget_modify_bg(GTK_WIDGET(mainWindow), GTK_STATE_NORMAL, &color);
 
-	//g_signal_connect(robot, "toggled", G_CALLBACK(on_Window_toggled), (gpointer) navigationWindow);
-	//g_signal_connect(info, "toggled", G_CALLBACK(on_Window_toggled), (gpointer) infoWindow);
+	//change the color of the label's text to white
+	gdk_color_parse("white", &color);
+	gtk_widget_modify_fg(GTK_WIDGET(gtk_builder_get_object(builder,"robotWindowLabel")), GTK_STATE_NORMAL, &color);
+
+	g_signal_connect(robot, "toggled", G_CALLBACK(on_Window_toggled), (gpointer) robotWindow);
+	g_signal_connect(info, "toggled", G_CALLBACK(on_Window_toggled), (gpointer) infoWindow);
 	g_signal_connect(about, "clicked", G_CALLBACK(on_About_clicked), (gpointer) mainWindow);
 
-	//g_signal_connect(robotWindow, "destroy", G_CALLBACK(destroy), (gpointer)robot);
-	//g_signal_connect(infoWindow, "destroy", G_CALLBACK(destroy), (gpointer)info);
-	//g_signal_connect(robotWindow, "delete-event", G_CALLBACK(delete_event), (gpointer)robot);
-	//g_signal_connect(infoWindow, "delete-event", G_CALLBACK(delete_event), (gpointer)info);
+	g_signal_connect(robotWindow, "destroy", G_CALLBACK(destroy), (gpointer)robot);
+	g_signal_connect(infoWindow, "destroy", G_CALLBACK(destroy), (gpointer)info);
+	g_signal_connect(robotWindow, "delete-event", G_CALLBACK(delete_event), (gpointer)robot);
+	g_signal_connect(infoWindow, "delete-event", G_CALLBACK(delete_event), (gpointer)info);
 
 	gtk_widget_show_all(mainWindow);
 

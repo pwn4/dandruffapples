@@ -6,8 +6,8 @@
     <property name="visible">True</property>
     <property name="border_width">10</property>
     <property name="title" translatable="yes">World Viewer</property>
-    <property name="default_width">1000</property>
-    <property name="default_height">1000</property>
+    <property name="default_width">425</property>
+    <property name="default_height">250</property>
     <signal name="destroy" handler="gtk_main_quit"/>
     <signal name="delete_event" handler="gtk_main_quit"/>
     <child>
@@ -20,8 +20,7 @@
             <child>
               <object class="GtkToggleToolButton" id="Robot">
                 <property name="visible">True</property>
-                <property name="sensitive">False</property>
-                <property name="label" translatable="yes">Robot #</property>
+                <property name="label" translatable="yes">Robot ID</property>
                 <property name="use_underline">True</property>
                 <property name="stock_id">gtk-find</property>
               </object>
@@ -42,7 +41,6 @@
             <child>
               <object class="GtkToggleToolButton" id="Info">
                 <property name="visible">True</property>
-                <property name="sensitive">False</property>
                 <property name="label" translatable="yes">Info</property>
                 <property name="use_underline">True</property>
                 <property name="stock_id">gtk-info</property>
@@ -94,6 +92,39 @@
         </child>
         <child>
           <object class="GtkDrawingArea" id="area">
+            <property name="visible">True</property>
+          </object>
+          <packing>
+            <property name="position">1</property>
+          </packing>
+        </child>
+      </object>
+    </child>
+  </object>
+  <object class="GtkWindow" id="infoWindow">
+    <property name="title" translatable="yes">Info</property>
+    <child>
+      <placeholder/>
+    </child>
+  </object>
+  <object class="GtkWindow" id="robotWindow">
+    <property name="title" translatable="yes">Robot Selection</property>
+    <child>
+      <object class="GtkHBox" id="hbox1">
+        <property name="visible">True</property>
+        <child>
+          <object class="GtkLabel" id="robotWindowLabel">
+            <property name="visible">True</property>
+            <property name="label" translatable="yes">Select a robot by ID: </property>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">False</property>
+            <property name="position">0</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkComboBox" id="comboRobot">
             <property name="visible">True</property>
           </object>
           <packing>
