@@ -56,11 +56,11 @@ if [ "$1" == "clockserver" ] || [ "$1" == "all" ]; then
   sleep $sleepTime
 fi
 
-if [ "$1" == "controller" ] || [ "$1" == "all" ]; then
-  echo -e "Starting the controller with command: xterm -T \"Controller\" -e \"$gdbCmd$directory/controller/controller -c $directory/controller/config\" & \n"
-  xterm -T "Controller" -e "$gdbCmd$directory/controller/controller -c $directory/controller/config" &
-  sleep $sleepTime
-fi
+#if [ "$1" == "controller" ] || [ "$1" == "all" ]; then
+ # echo -e "Starting the controller with command: xterm -T \"Controller\" -e \"$gdbCmd$directory/controller/controller -c $directory/controller/config\" & \n"
+  #xterm -T "Controller" -e "$gdbCmd$directory/controller/controller -c $directory/controller/config" &
+  #sleep $sleepTime
+#fi
 
 if [ "$1" == "worldviewer" ] || [ "$1" == "all" ]; then
   echo -e "Starting the world viewer with command: xterm -T \"World Viewer\" -e \"$gdbCmd$directory/worldviewer/worldviewer -c $directory/worldviewer/config\" & \n"
@@ -85,7 +85,7 @@ if [ "$1" == "regionserver" ] || [ "$1" == "all" ]; then
 fi
 
 #only testing with one client for now
-export teams=1
+export teams=0
 
 if [ "$1" == "client" ] || [ "$1" == "all" ]; then
 

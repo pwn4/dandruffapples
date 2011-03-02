@@ -17,6 +17,7 @@ struct ColorObject{
   double r, g, b;
 
   ColorObject(double newr, double newg, double newb) : r(newr), g(newg), b(newb) {}
+  ColorObject() : r(0), g(0), b(0){}
 };
 
 ColorObject colorFromTeam(int teamId);
