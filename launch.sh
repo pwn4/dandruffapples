@@ -139,7 +139,7 @@ then
     while [ $CLIENTS_LEFT -gt 0 ]
     do
         HOST=`echo $CONTROLHOSTS |cut -d ' ' -f $[$CLIENTS_LEFT % $HOSTNUM + 1]`
-        ssh -o StrictHostKeyChecking=no -o PasswordAuthentication=no -p $SSHPORT $HOST "'cd \'$PROJDIR/controller\' && ./controller'" > /dev/null &
+        ssh -o StrictHostKeyChecking=no -o PasswordAuthentication=no -p $SSHPORT $HOST "'cd \'$PROJDIR/client\' && ./client -t $CLIENTS_LEFT'" > /dev/null &
         SSHPROCS="$SSHPROCS $!"
         echo -n '.'
         CLIENTS_LEFT=$[CLIENTS_LEFT - 1]
