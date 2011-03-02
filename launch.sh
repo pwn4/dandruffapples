@@ -111,10 +111,10 @@ do
         do
             if [ $CONFIDX -eq 1 ]
             then
-                ssh -o StrictHostKeyChecking=no -o PasswordAuthentication=no -p $SSHPORT $HOST "\"LD_LIBRARY_PATH='$PROJDIR/sharedlibs' && export LD_LIBRARY_PATH && cd '$PROJDIR/regionserver' && ./regionserver -l $CLOCKSERVER -c config\"" > /dev/null &
+                ssh -o StrictHostKeyChecking=no -o PasswordAuthentication=no -p $SSHPORT $HOST "\"bash -c \\\"cd '$PROJDIR/regionserver' && LD_LIBRARY_PATH='$PROJDIR/sharedlibs' ./regionserver -l $CLOCKSERVER -c config\\\"\"" > /dev/null &
                 SSHPROCS="$SSHPROCS $!"
             else
-                ssh -o StrictHostKeyChecking=no -o PasswordAuthentication=no -p $SSHPORT $HOST "\"LD_LIBRARY_PATH='$PROJDIR/sharedlibs' && export LD_LIBRARY_PATH && cd '$PROJDIR/regionserver' && ./regionserver -l $CLOCKSERVER -c config${CONFIDX}\"" > /dev/null &
+                ssh -o StrictHostKeyChecking=no -o PasswordAuthentication=no -p $SSHPORT $HOST "\"bash -c \\\"cd '$PROJDIR/regionserver' && LD_LIBRARY_PATH='$PROJDIR/sharedlibs' ./regionserver -l $CLOCKSERVER -c config${CONFIDX}\\\"\"" > /dev/null &
                 SSHPROCS="$SSHPROCS $!"
             fi
             echo -n .
