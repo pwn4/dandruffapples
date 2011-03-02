@@ -92,9 +92,10 @@ class CompareRobotObject {
 };
 
 //comparator for puck rendering
+//its weird. > sorts ascending for robots, but descending for pucks... it's very weird.
 bool ComparePuckStackObject::operator()(PuckStackObject* const &r1, PuckStackObject* const &r2) // Returns true if t1 is later than t2
 {
-   if (r1->y > r2->y) return true;
+   if (r1->y < r2->y) return true;
    
    return false;
 }
@@ -118,7 +119,7 @@ bool AreaEngine::Sees(double x1, double y1, double x2, double y2){
 //this method checks if two robots at (x1,y1) and (x2,y2) are in collision
 bool AreaEngine::Collides(double x1, double y1, double x2, double y2){
   if(sqrt((x1-x2)*(x1-x2) + (y1-y2)*(y1-y2)) <= robotRatio)
-    return false;
+    return true;
   return false;
 }
 
@@ -484,6 +485,7 @@ void AreaEngine::Step(bool generateImage){
       
       map<PuckStackObject*, bool>::iterator puckIt;
       map<PuckStackObject*, bool>::iterator puckEnd = puckq.end();
+      
       puckIt=puckq.begin();
       RobotObject* paintRobot = NULL;
       if(!pq.empty())
