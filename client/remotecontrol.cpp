@@ -670,12 +670,11 @@ int main(int argc, char* argv[])
 	////////////////////////////////////////////////////
 	printf("Client Initializing ...\n");
 	
-	helper::Config config(argc, argv);
-	configFileName=(config.getArg("-c").length() == 0 ? "config" : config.getArg("-c").c_str());
+	helper::CmdLine cmdline(argc, argv);
+	configFileName=cmdline.getArg("-c", "config").c_str();
 	cout<<"Using config file: "<<configFileName<<endl;
 
-  myTeam = (config.getArg("-t").length() == 0 ? 0 
-      : strtol(config.getArg("-t").c_str(), NULL, 0));
+	myTeam = strtol(cmdline.getArg("-t", "0").c_str(), NULL, 0);
 
   cout << "Trying to control team #" << myTeam << " (use -t <team> to change)"
        << endl;

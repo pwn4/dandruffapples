@@ -101,8 +101,8 @@ void addPositions(int newServerRow, int newServerCol, int numRows,
 }
 
 int main(int argc, char **argv) {
-	helper::Config config(argc, argv);
-	configFileName=(config.getArg("-c").length() == 0 ? "config" : config.getArg("-c").c_str());
+	helper::CmdLine cmdline(argc, argv);
+	configFileName=cmdline.getArg("-c", "config").c_str();
 	cout<<"Using config file: "<<configFileName<<endl;
 
   //loadConfigFile();

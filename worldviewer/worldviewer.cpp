@@ -785,7 +785,7 @@ int main(int argc, char* argv[]) {
 	gtk_init(&argc, &argv);
 
 	char clockip[40];
-	helper::Config config(argc, argv);
+	helper::CmdLine cmdline(argc, argv);
 
 	//assume that the worldviewer.builder is in the same directory as the executable that we are running
 	string builderPath(argv[0]);
@@ -794,7 +794,7 @@ int main(int argc, char* argv[]) {
 	gtk_builder_add_from_file(builder, builderPath.c_str(), NULL);
 	gtk_builder_connect_signals(builder, NULL);
 
-	const char *configFileName = (config.getArg("-c").length() == 0 ? "config" : config.getArg("-c").c_str());
+	const char *configFileName = cmdline.getArg("-c", "config").c_str();
 #ifdef DEBUG
 	debug.open(helper::worldViewerDebugLogName.c_str(), ios::out);
 #endif

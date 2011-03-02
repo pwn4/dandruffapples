@@ -26,23 +26,41 @@ string getNewName(string base) {
 	return name;
 }
 
-Config::Config(int argc, char* argv[]) {
+CmdLine::CmdLine(int argc, char* argv[]) {
 	//loop through the arguments and parse them into a map
 	for (int i = 1; i < argc; i++) {
-		//assume that all arguments are provide in "-argType arg" type of way
-		if (i % 2) {
-			Config::parsedConfig[argv[i]] = "";
-			//cout<<"put " << argv[i] <<" into key"<<endl;
-		} else {
-			Config::parsedConfig[argv[i - 1]] = argv[i];
-			//cout<<"put " << argv[i] <<" into key of "<<argv[i-1]<<endl;
+		//assuming the input is either of the type: "-variable value" or just "-variable"
+		if(argv[i][0] == '-')
+		{
+			if( i+1 < argc && argv[i+1][0] != '-')
+			{
+				cout<<"setting "<<argv[i]<<" to "<<argv[i+1]<<endl;
+				parsedCmdLine[argv[i]] = argv[i+1];
+				i++;
+			}
+			else
+			{
+				parsedCmdLine[argv[i]] = "true";
+				cout<<"setting "<<argv[i]<<" to true"<<endl;
+			}
 		}
 	}
 }
 
-//return the value of the argument with the type "arg"
-string Config::getArg(string arg) {
-	return Config::parsedConfig[arg];
+string CmdLine::getArg(string arg, string defaultVal, int maxLength) {
+	string retValue;
+
+	if( parsedCmdLine[arg].empty() )
+		retValue=defaultVal;
+	else
+		retValue=parsedCmdLine[arg];
+
+	if( maxLength != -1 )
+		retValue = retValue.substr(0, maxLength);
+
+	cout<<"got "<<arg<<" and returned "<<retValue<<endl;
+
+	return retValue;
 }
 
 }

@@ -36,13 +36,15 @@ This program communications with controllers.
 
 #include "../common/helper.h"
 
+#include "clientviewer.h"
+
 using namespace std;
 using namespace google;
 using namespace protobuf;
 
 /////////////////Variables and Declarations/////////////////
 const char *configFileName;
-
+bool runClientViewer = false;
 //Game world variables
 // TODO: organize/move variables out of client.cpp 
 bool simulationStarted = false;
@@ -332,9 +334,9 @@ void run() {
     cout << "Attempting to connect to controller " << controllerips.at(currentController) << "..." << flush;
     controllerfd = net::do_connect(controllerips.at(currentController).c_str(), CLIENTS_PORT);
     if(0 > controllerfd) {
-      cout << " failed to connect." << endl;
+    	throw SystemError("Failed to connect to controller");
     } else if(0 == controllerfd) {
-      cerr << " invalid address: " << controllerfd << endl;
+    	throw runtime_error("Invalid controller address");
     }
     currentController = rand() % controllerips.size();
   }
@@ -681,12 +683,14 @@ int main(int argc, char* argv[])
 	////////////////////////////////////////////////////
 	printf("Client Initializing ...\n");
 	
-	helper::Config config(argc, argv);
-	configFileName=(config.getArg("-c").length() == 0 ? "config" : config.getArg("-c").c_str());
+	helper::CmdLine cmdline(argc, argv);
+	configFileName=cmdline.getArg("-c", "config").c_str();
+	runClientViewer= cmdline.getArg("-viewer").length() ? true : false;
+	cout<<"Started client with the client viewer set to "<<runClientViewer<<endl;
+
 	cout<<"Using config file: "<<configFileName<<endl;
 
-  myTeam = (config.getArg("-t").length() == 0 ? 0 
-      : strtol(config.getArg("-t").c_str(), NULL, 0));
+  myTeam = strtol(cmdline.getArg("-t", "0").c_str(), NULL, 0);
 
   cout << "Trying to control team #" << myTeam << " (use -t <team> to change)"
        << endl;

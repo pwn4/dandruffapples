@@ -983,7 +983,8 @@ void AreaEngine::GotServerRobot(ServerRobot message, int marker){
     //new robot
     if(message.laststep() < curStep-1)
     {
-      cout << "Received out of sync serverrobot add (dropping it): msgstep " << message.laststep() << ", curstep " << curStep << ", x " << message.x() << ", y " << message.y() << ", marker " << marker << endl;
+      //please comment spammy debugs before commiting
+      //cout << "Received out of sync serverrobot add (dropping it): msgstep " << message.laststep() << ", curstep " << curStep << ", x " << message.x() << ", y " << message.y() << ", marker " << marker << endl;
       return;
     }
     
@@ -994,7 +995,8 @@ void AreaEngine::GotServerRobot(ServerRobot message, int marker){
     //store all changes, and purge during step
     if(message.laststep() < curStep-1)
     {
-      cout << "Received out of sync serverrobot mod (dropping it): msgstep " << message.laststep() << ", curstep " << curStep << ", x " << message.x() << ", y " << message.y() << ", marker " << marker << endl;
+      //please comment spammy debugs before commiting
+      //cout << "Received out of sync serverrobot mod (dropping it): msgstep " << message.laststep() << ", curstep " << curStep << ", x " << message.x() << ", y " << message.y() << ", marker " << marker << endl;
       
       //throw "AreaEngine: ServerRobot received late. Impossible desync occurred.";
       return;

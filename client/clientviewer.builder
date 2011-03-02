@@ -18,11 +18,13 @@
             <property name="visible">True</property>
             <property name="toolbar_style">both</property>
             <child>
-              <object class="GtkToggleToolButton" id="Robot">
+              <object class="GtkToolItem" id="toolbarCombo">
                 <property name="visible">True</property>
-                <property name="label" translatable="yes">Robot ID</property>
-                <property name="use_underline">True</property>
-                <property name="stock_id">gtk-find</property>
+                <child>
+                  <object class="GtkComboBox" id="comboRobotId">
+                    <property name="visible">True</property>
+                  </object>
+                </child>
               </object>
               <packing>
                 <property name="expand">False</property>
@@ -105,33 +107,6 @@
     <property name="title" translatable="yes">Info</property>
     <child>
       <placeholder/>
-    </child>
-  </object>
-  <object class="GtkWindow" id="robotWindow">
-    <property name="title" translatable="yes">Robot Selection</property>
-    <child>
-      <object class="GtkHBox" id="hbox1">
-        <property name="visible">True</property>
-        <child>
-          <object class="GtkLabel" id="robotWindowLabel">
-            <property name="visible">True</property>
-            <property name="label" translatable="yes">Select a robot by ID: </property>
-          </object>
-          <packing>
-            <property name="expand">False</property>
-            <property name="fill">False</property>
-            <property name="position">0</property>
-          </packing>
-        </child>
-        <child>
-          <object class="GtkComboBox" id="comboRobot">
-            <property name="visible">True</property>
-          </object>
-          <packing>
-            <property name="position">1</property>
-          </packing>
-        </child>
-      </object>
     </child>
   </object>
 </interface>

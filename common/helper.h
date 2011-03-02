@@ -18,12 +18,14 @@ namespace helper {
 string toString(int);
 string getNewName(string);
 
-class Config {
+class CmdLine {
 public:
-	Config(int, char**);
-	string getArg(string);
+	CmdLine(int, char**);
+
+	//get the value of an argument from the command line
+	string getArg(string arg, string defaultVal="", int maxLength=-1);
 private:
-	map<string, string> parsedConfig;
+	map<string, string> parsedCmdLine;
 
 };
 

@@ -799,13 +799,13 @@ int main(int argc, char* argv[]) {
 	////////////////////////////////////////////////////
 	printf("Server Initializing ...\n");
 
-	helper::Config config(argc, argv);
-	configFileName = (config.getArg("-c").length() == 0 ? "config" : config.getArg("-c").c_str());
+	helper::CmdLine cmdline(argc, argv);
+	configFileName = cmdline.getArg("-c", "config").c_str();
 	cout << "Using config file: " << configFileName << endl;
 
 	loadConfigFile();
-  if(config.getArg("-l").length()) {
-    strncpy(clockip, config.getArg("-l").c_str(), 40);
+  if(cmdline.getArg("-l").length()) {
+    strncpy(clockip, cmdline.getArg("-l").c_str(), 40);
   }
   cout << "Using clock IP: " << clockip << endl;
 	////////////////////////////////////////////////////

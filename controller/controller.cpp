@@ -93,12 +93,12 @@ void loadConfigFile()
 int main(int argc, char** argv)
 {
   size_t clientcount = 0;
-  helper::Config config(argc, argv);
-  configFileName=(config.getArg("-c").length() == 0 ? "config" : config.getArg("-c").c_str());
+  helper::CmdLine cmdline(argc, argv);
+  configFileName=cmdline.getArg("-c", "config" ).c_str();
   loadConfigFile();
-  if(config.getArg("-l").length()) {
-    strncpy(clockip, config.getArg("-l").c_str(), 40);
-  }
+
+  strcpy(clockip, cmdline.getArg("-l", (string)clockip, 40).c_str());
+
   cout << "Using clock IP: " << clockip << endl;
   
   // Stat variables
