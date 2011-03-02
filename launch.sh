@@ -98,7 +98,7 @@ do
     
     if [ $CONTROLLERS_LEFT -gt 0 ]
     then
-        ssh -o StrictHostKeyChecking=no -o PasswordAuthentication=no -p $SSHPORT $HOST "bash -c \"cd '$PROJDIR/controller' && LD_LIBRARY_PATH='$PROJDIR/sharedlibs' ./controller\"" > /dev/null &
+        ssh -o StrictHostKeyChecking=no -o PasswordAuthentication=no -p $SSHPORT $HOST "bash -c \"cd '$PROJDIR/controller' && LD_LIBRARY_PATH='$PROJDIR/sharedlibs' ./controller -l $CLOCKSERVER\"" > /dev/null &
         SSHPROCS="$SSHPROCS $!"
         echo -n .
         CONTROLLERS_LEFT=$[$CONTROLLERS_LEFT - 1]

@@ -96,6 +96,10 @@ int main(int argc, char** argv)
   helper::Config config(argc, argv);
   configFileName=(config.getArg("-c").length() == 0 ? "config" : config.getArg("-c").c_str());
   loadConfigFile();
+  if(config.getArg("-l").length()) {
+    strncpy(clockip, config.getArg("-l").c_str(), 40);
+  }
+  cout << "Using clock IP: " << clockip << endl;
   
   // Stat variables
   time_t lastSecond = time(NULL);
