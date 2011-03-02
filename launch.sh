@@ -87,7 +87,6 @@ for HOST in `grep -v $CLOCKSERVER "$HOSTFILE"`
 do
     if ! host $HOST >/dev/null
     then
-        echo "Host $HOST not found; skipping"
         continue
     fi
     
@@ -132,7 +131,7 @@ fi
 
 if [ $CONTROLLERS ]
 then
-    echo "Launching $TEAMS clients across $CONTROLLERS machines..."
+    echo "Launching $TEAMS clients across $CONTROLLERS machines"
     HOSTNUM=`echo $CONTROLHOSTS |wc -w`
     CLIENTS_LEFT=$TEAMS
     while [ $CLIENTS_LEFT -gt 0 ]
@@ -140,8 +139,10 @@ then
         HOST=`echo $CONTROLHOSTS |cut -d ' ' -f $[$CLIENTS_LEFT % $HOSTNUM + 1]`
         ssh -o StrictHostKeyChecking=no -o PasswordAuthentication=no -p $SSHPORT $HOST "'$PROJDIR/controller/controller'" > /dev/null &
         SSHPROCS="$SSHPROCS $!"
+        echo -n '.'
         CLIENTS_LEFT=$[CLIENTS_LEFT - 1]
     done
+    echo " done!"
 fi
 
 echo "All done!  Here's the clock server."
