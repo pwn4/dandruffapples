@@ -34,15 +34,12 @@ CmdLine::CmdLine(int argc, char* argv[]) {
 		{
 			if( i+1 < argc && argv[i+1][0] != '-')
 			{
-				cout<<"setting "<<argv[i]<<" to "<<argv[i+1]<<endl;
 				parsedCmdLine[argv[i]] = argv[i+1];
 				i++;
 			}
 			else
-			{
 				parsedCmdLine[argv[i]] = "true";
-				cout<<"setting "<<argv[i]<<" to true"<<endl;
-			}
+
 		}
 	}
 }
@@ -57,8 +54,6 @@ string CmdLine::getArg(string arg, string defaultVal, int maxLength) {
 
 	if( maxLength != -1 )
 		retValue = retValue.substr(0, maxLength);
-
-	cout<<"got "<<arg<<" and returned "<<retValue<<endl;
 
 	return retValue;
 }
