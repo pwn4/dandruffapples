@@ -7,7 +7,7 @@ PROJDIR="dandruffapples"
 # Path to write other files
 OUTPATH="tmp"
 # Path to write generated clock config to
-CLOCKCONF="antix-clock-conf"
+CLOCKCONF="$OUTPATH/antix-clock-conf"
 # Path to read CSIL hosts from
 HOSTFILE="./hosts"
 # Number of regions to launch on a single machine
@@ -63,7 +63,7 @@ ROBOTS_PER_TEAM ${TEAMSIZE}
 EOF
 
 echo "Starting clock server locally."
-CLOCKSERVER=`hostname`
+CLOCKSERVER=`host \`hostname\``
 rm $OUTPATH/antix-clockout 2>/dev/null; mkfifo $OUTPATH/antix-clockout
 rm $OUTPATH/antix-clockerr 2>/dev/null; mkfifo $OUTPATH/antix-clockerr
 clockserver/clockserver -c "$CLOCKCONF" > $OUTPATH/antix-clockout 2>$OUTPATH/antix-clockerr &
@@ -107,10 +107,10 @@ do
         do
             if [ $CONFIDX -eq 1 ]
             then
-                ssh -o StrictHostKeyChecking=no -o PasswordAuthentication=no -p $SSHPORT $HOST "'cd \'$PROJDIR/regionserver\' && ./regionserver -c config'" > /dev/null &
+                ssh -o StrictHostKeyChecking=no -o PasswordAuthentication=no -p $SSHPORT $HOST "'cd \'$PROJDIR/regionserver\' && ./regionserver -l $CLOCKSERVER -c config'" > /dev/null &
                 SSHPROCS="$SSHPROCS $!"
             else
-                ssh -o StrictHostKeyChecking=no -o PasswordAuthentication=no -p $SSHPORT $HOST "'cd \'$PROJDIR/regionserver\' && ./regionserver -c config${CONFIDX}'" > /dev/null &
+                ssh -o StrictHostKeyChecking=no -o PasswordAuthentication=no -p $SSHPORT $HOST "'cd \'$PROJDIR/regionserver\' && ./regionserver -l $CLOCKSERVER -c config${CONFIDX}'" > /dev/null &
                 SSHPROCS="$SSHPROCS $!"
             fi
             echo -n '.'
