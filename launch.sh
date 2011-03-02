@@ -96,7 +96,7 @@ do
     then
         ssh -o StrictHostKeyChecking=no -o PasswordAuthentication=no -p $SSHPORT $HOST "'cd \'$PROJDIR/controller\' && ./controller'" > /dev/null &
         SSHPROCS="$SSHPROCS $!"
-        echo -n '.'
+        echo -n .
         CONTROLLERS_LEFT=$[$CONTROLLERS_LEFT - 1]
         CONTROLHOSTS="$CONTROLHOSTS $HOST"
     elif [ $REGIONS_LEFT -gt 0 ]
@@ -113,7 +113,7 @@ do
                 ssh -o StrictHostKeyChecking=no -o PasswordAuthentication=no -p $SSHPORT $HOST "'cd \'$PROJDIR/regionserver\' && ./regionserver -l $CLOCKSERVER -c config${CONFIDX}'" > /dev/null &
                 SSHPROCS="$SSHPROCS $!"
             fi
-            echo -n '.'
+            echo -n .
             CONFIDX=$[CONFIDX + 1]
             REGIONS_LEFT=$[$REGIONS_LEFT - 1]
         done
@@ -141,7 +141,7 @@ then
         HOST=`echo $CONTROLHOSTS |cut -d ' ' -f $[$CLIENTS_LEFT % $HOSTNUM + 1]`
         ssh -o StrictHostKeyChecking=no -o PasswordAuthentication=no -p $SSHPORT $HOST "'cd \'$PROJDIR/controller\' && ./controller'" > /dev/null &
         SSHPROCS="$SSHPROCS $!"
-        echo -n '.'
+        echo -n .
         CLIENTS_LEFT=$[CLIENTS_LEFT - 1]
     done
     echo " done!"
