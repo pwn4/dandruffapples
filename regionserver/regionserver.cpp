@@ -285,6 +285,14 @@ void run() {
 						case MSG_WORLDINFO: {
 							worldinfo.ParseFromArray(buffer, len);
 							cout << "Got world info." << endl;
+							//added pucks to the world 							
+								int pucks = 0;								
+								while(pucks < worldinfo.numpucks() ){// populate the world with numpucks which are randomly distributed over the region 
+								int a = (2 * robotDiameter)+minElementSize + rand() % (regionSideLen-2*((2 * robotDiameter)+minElementSize));
+								int b = (2 * robotDiameter)+minElementSize + rand() % (regionSideLen-2*((2 * robotDiameter)+minElementSize));
+							  regionarea->AddPuck(a, b);
+								pucks++;
+								}
 							int lastRegionIndex = worldinfo.region_size() - 1;
 							myId = worldinfo.region(lastRegionIndex).id();
 							cout << "My id: " << myId << endl;
@@ -414,10 +422,11 @@ void run() {
 							  numRobots = 0;
 							  int rowCounter = 0;
 							  bool firstrow = true;
+	
 							  //add some test pucks for now
-							  regionarea->AddPuck((2 * robotDiameter)+minElementSize+104, (2 * robotDiameter)+minElementSize+110);
-							  regionarea->AddPuck((2 * robotDiameter)+minElementSize+204, (2 * robotDiameter)+minElementSize+130);
-							  regionarea->AddPuck((2 * robotDiameter)+minElementSize+304, (2 * robotDiameter)+minElementSize+150);
+							//  regionarea->AddPuck((2 * robotDiameter)+minElementSize+104, (2 * robotDiameter)+minElementSize+110);
+							//  regionarea->AddPuck((2 * robotDiameter)+minElementSize+204, (2 * robotDiameter)+minElementSize+130);
+							//  regionarea->AddPuck((2 * robotDiameter)+minElementSize+304, (2 * robotDiameter)+minElementSize+150);
 							  //j is the y, i is the x
 
 							  for (int j = (2 * robotDiameter)+(4 * minElementSize); j < (regionSideLen+(1 * minElementSize)) - (2 * (robotDiameter)+(4 * minElementSize)) && numRobots	< wantRobots; j += 5 * (robotDiameter)) {

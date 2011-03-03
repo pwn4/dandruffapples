@@ -28,4 +28,5 @@ message RobotInfo {
 message WorldInfo {
   repeated RegionInfo region = 1;
   repeated RobotInfo robot = 2;
+	required uint32 numPucks = 3;
 }
