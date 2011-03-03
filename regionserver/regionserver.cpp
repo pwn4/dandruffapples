@@ -199,8 +199,6 @@ void run() {
 	PuckStack puckstack;
 	ServerRobot serverrobot;
 	ClientRobot clientrobot;
-	puckstack.set_x(1);
-	puckstack.set_y(1);
 
 	//server variables
 #ifdef ENABLE_LOGGING
