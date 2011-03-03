@@ -22,6 +22,7 @@
 
 #include "../common/claim.pb.h"
 #include "../common/serverrobot.pb.h"
+#include "../common/puckstack.pb.h"
 #include "../common/net.h"
 #include "../common/helper.h"
 #include "../worldviewer/drawer.h"
@@ -63,6 +64,7 @@ struct RobotObject{
   Index arrayLocation;
   time_t lastCollision;
   map<int, bool> lastSeenBy;
+  map<PuckStackObject*, bool> pucksSeen;
   RobotObject * nextRobot;
   int controllerfd;
   int team;
