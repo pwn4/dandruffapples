@@ -135,6 +135,7 @@ void AreaEngine::Step(bool generateImage){
 	const void *buffer;
   map<int, RobotObject*>::iterator robotIt;
   map<int, bool> *nowSeenBy;
+  map<PuckStackObject*, bool> *pucksNowSeen;
   
   if(curStep % 2 == 1)
   {
@@ -563,12 +564,16 @@ void AreaEngine::Step(bool generateImage){
       }
     }
     
-    //check for sight.
+    //this map gets populated as we iterate through the robots - NICE! Multitasking!
+    map<PuckStackObject*, PuckStack*> puckUpdates;
+    
+    //check for robot sight and puck sight at the same time.
     for(robotIt=robots.begin() ; robotIt != robots.end(); robotIt++)
     {
     
       RobotObject * curRobot = (*robotIt).second;
-      nowSeenBy = &(curRobot->lastSeenBy);
+      nowSeenBy = &(curRobot->lastSeenBy);  //for robot sight
+      pucksNowSeen = &(curRobot->pucksSeen);  //for puck sight
       
       //may make this better. don't need to check full 360 degrees if we only see a cone
       topLeft = getRobotIndices(curRobot->x-viewDist, curRobot->y-viewDist, true);
@@ -580,10 +585,16 @@ void AreaEngine::Step(bool generateImage){
       serverrobot.set_laststep(-1);   //allow stray msg detection
       
       //first check sight losses
+      //NOTICE: We should not need to send sight losses. We still need to CALCULATE them, but we don't need to send them.
+      //I am leaving the network code for it here for a little while until the client code to drop far robots it written
       map<int, bool>::iterator sightCheck;
       map<int, bool>::iterator sightEnd = (*nowSeenBy).end();
+      map<PuckStackObject*, bool>::iterator pSightCheck;
+      map<PuckStackObject*, bool>::iterator pSightEnd = (*pucksNowSeen).end();
       RobotObject *otherRobot;
+      PuckStackObject *puckStack;
       
+      //robot sight losses
       for(sightCheck = (*nowSeenBy).begin(); sightCheck != sightEnd; )
       {
         if(robots.find((*sightCheck).first) == robots.end())
@@ -596,24 +607,45 @@ void AreaEngine::Step(bool generateImage){
         
           nowSeenBy->erase(sightCheck++);
           
+          //BEGIN DEPRICATED SECTION
           SeesServerRobot* seesServerRobot = serverrobot.add_seesserverrobot();
           seesServerRobot->set_viewlostid(true);
           seesServerRobot->set_seenbyid(otherRobot->id);
           seesServerRobot->set_relx(curRobot->x - otherRobot->x);
           seesServerRobot->set_rely(curRobot->y - otherRobot->y);
+          //END OF DEPRICATED SECTION
           continue;
         }
         
         sightCheck++;
       }
+      
+      //puck sight losses
+      for(pSightCheck = (*pucksNowSeen).begin(); pSightCheck != pSightEnd; )
+      {
+        if(puckq.find((*pSightCheck).first) == puckq.end())
+        {
+          pucksNowSeen->erase(pSightCheck++);
+          continue;
+        }
+        puckStack = (*pSightCheck).first;
+        if(!AreaEngine::Sees(curRobot->x, curRobot->y, puckStack->x, puckStack->y)){
+        
+          pucksNowSeen->erase(pSightCheck++);
+          continue;
+        }
+        
+        pSightCheck++;
+      }
 
-      //then sight acquires
+      //do puck and robot sight acquires
       for(int j = topLeft.x; j <= botRight.x; j++)
         for(int k = topLeft.y; k <= botRight.y; k++)
           {
-            //we have an a[][] element again. Iterate through the robots in it
+            //we have an a[][] element again.
             ArrayObject * element = &robotArray[j][k];
 
+            //do robots
             otherRobot = element->robots;
 
             while(otherRobot != NULL) {    
@@ -636,6 +668,37 @@ void AreaEngine::Step(bool generateImage){
 
               otherRobot = otherRobot->nextRobot;
             }
+            
+            //do pucks
+            puckStack = element->pucks;
+            PuckStack * puckStackAccess;
+
+            while(puckStack != NULL) {    
+              if(pucksNowSeen->find(puckStack) == pucksNowSeen->end())
+              {
+                if(AreaEngine::Sees(curRobot->x, curRobot->y, puckStack->x, puckStack->y)){
+                  //we now see it
+                  
+                  //check if this is the first seen by for the stack
+                  if(puckUpdates.find(puckStack) == puckUpdates.end()){
+                    PuckStack *newStack = new PuckStack;
+                    newStack->set_stacksize(puckStack->count);
+                    puckUpdates.insert(pair<PuckStackObject*, PuckStack*>(puckStack, newStack));
+                  }
+                  
+                  //note the info
+                  pucksNowSeen->insert(pair<PuckStackObject*, bool>(puckStack, true));
+                  puckStackAccess = puckUpdates[puckStack];
+                  SeesPuckStack* seesPuckStack = puckStackAccess->add_seespuckstack();
+                  seesPuckStack->set_viewlostid(false);
+                  seesPuckStack->set_seenbyid(curRobot->id);
+                  seesPuckStack->set_relx(curRobot->x - puckStack->x);
+                  seesPuckStack->set_rely(curRobot->y - puckStack->y);
+                }
+              }
+
+              puckStack = puckStack->nextStack;
+            }
           }
           
       // Send update if at least one seenById exists
@@ -646,6 +709,18 @@ void AreaEngine::Step(bool generateImage){
           (*it)->set_writing(true); 
         }
       }
+    }
+    
+    //send all the puck updates
+    map<PuckStackObject*, PuckStack*>::iterator puckIt;
+    for(puckIt=puckUpdates.begin() ; puckIt != puckUpdates.end(); puckIt++)
+    {
+      for (vector<EpollConnection*>::const_iterator it = 
+           controllers.begin(); it != controllers.end(); it++) {
+        (*it)->queue.push(MSG_SERVERROBOT, *((*puckIt).second));
+        (*it)->set_writing(true); 
+      }
+      delete puckIt->second;
     }
     
   }
