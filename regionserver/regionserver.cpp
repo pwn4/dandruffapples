@@ -607,6 +607,10 @@ void run() {
 							throw SystemError("Server robot read by Epoll.");
 							break;
 						}
+						case MSG_PUCKSTACK: {
+						  throw SystemError("Puck stack read by Epoll.");
+							break;
+						}
 						case MSG_REGIONINFO: {
 							regioninfo.ParseFromArray(buffer, len);
 							cout << "Found new neighbour, server #" << regioninfo.id() << endl;
