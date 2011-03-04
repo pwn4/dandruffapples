@@ -190,10 +190,11 @@ void run() {
 	}
 
 	// Add clock and client sockets to epoll
-	net::EpollConnection clockconn(epoll, EPOLLIN, clockfd, net::connection::CLOCK), controllerconn(epoll, EPOLLIN,
-			controllerfd, net::connection::CONTROLLER_LISTEN), regionconn(epoll, EPOLLIN, regionfd,
-			net::connection::REGION_LISTEN), worldviewerconn(epoll, EPOLLIN, worldviewerfd,
-			net::connection::WORLDVIEWER_LISTEN);
+	net::EpollConnection
+    clockconn(epoll, EPOLLIN, clockfd, net::connection::CLOCK),
+    controllerconn(epoll, EPOLLIN, controllerfd, net::connection::CONTROLLER_LISTEN),
+    regionconn(epoll, EPOLLIN, regionfd, net::connection::REGION_LISTEN),
+    worldviewerconn(epoll, EPOLLIN, worldviewerfd, net::connection::WORLDVIEWER_LISTEN);
 
 	//handle logging to file initializations
 	PuckStack puckstack;
