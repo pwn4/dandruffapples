@@ -118,8 +118,11 @@ priority_queue<Command*, vector<Command*>, CompareCommand> serverChangeQueue;
 priority_queue<Command*, vector<Command*>, CompareCommand> clientChangeQueue;
 //for rendering
 map<PuckStackObject*, bool, ComparePuckStackObject> puckq;
+//for collision
+double sightSquare, collisionSquare;
 
   void BroadcastRobot(RobotObject *curRobot, Index oldIndices, Index newIndices, int step);
+  void BroadcastPuckStack(PuckStackObject *curStack);
   
 public:
   RegionRender render;
@@ -132,8 +135,11 @@ public:
   
   bool Collides(double x1, double y1, double x2, double y2);
   
+  void PickUpPuck(int robotId);
+  void DropPuck(int robotId);
   void AddPuck(double newx, double newy);
   bool RemovePuck(double x, double y);
+  void SetPuckStack(double newx, double newy, int newc);
   
   void AddRobot(RobotObject * oldRobot);
   RobotObject* AddRobot(int robotId, double newx, double newy, double newa, double newvx, double newvy, int atStep, int teamId, bool broadcast);
@@ -152,13 +158,17 @@ public:
 
   void SetNeighbour(int placement, EpollConnection* socketHandle);
 
-  void GotServerRobot(ServerRobot message, int marker);
+  void GotServerRobot(ServerRobot message);
+  
+  void GotPuckStack(PuckStack message);
 
   void AddController(EpollConnection* socketHandle);
   
   void flushNeighbours();
   
   void flushControllers();
+  
+  void forceUpdates();
 
 };
 
