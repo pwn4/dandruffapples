@@ -68,6 +68,7 @@ EOF
 
 echo "Starting clock server locally."
 CLOCKSERVER=`host \`hostname\`|cut -d ' ' -f 4`
+mkdir -p "$OUTPATH"
 rm "$OUTPATH/antix-clockout" 2>/dev/null; mkfifo "$OUTPATH/antix-clockout"
 rm "$OUTPATH/antix-clockerr" 2>/dev/null; mkfifo "$OUTPATH/antix-clockerr"
 rm "$OUTPATH/antix-clockin" 2>/dev/null; mkfifo "$OUTPATH/antix-clockin"
@@ -112,9 +113,11 @@ do
         do
             if [ $CONFIDX -eq 1 ]
             then
+		sleep 0.5
                 ssh -o StrictHostKeyChecking=no -o PasswordAuthentication=no -p $SSHPORT $HOST "bash -c \"cd '$PROJDIR/regionserver' && LD_LIBRARY_PATH='$PROJDIR/sharedlibs' ./regionserver -l $CLOCKSERVER -c config\"" > /dev/null &
                 SSHPROCS="$SSHPROCS $!"
             else
+		sleep 0.5
                 ssh -o StrictHostKeyChecking=no -o PasswordAuthentication=no -p $SSHPORT $HOST "bash -c \"cd '$PROJDIR/regionserver' && LD_LIBRARY_PATH='$PROJDIR/sharedlibs' ./regionserver -l $CLOCKSERVER -c config${CONFIDX}\"" > /dev/null &
                 SSHPROCS="$SSHPROCS $!"
             fi
