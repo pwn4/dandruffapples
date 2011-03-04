@@ -166,6 +166,7 @@ int main(int argc, char **argv) {
   RegionConnection listenconn(epoll, EPOLLIN, sock, RegionConnection::REGION_LISTEN),
     controllerlistenconn(epoll, EPOLLIN, controllerSock, RegionConnection::CONTROLLER_LISTEN),
     worldlistenconn(epoll, EPOLLIN, worldviewSock, RegionConnection::WORLDVIEWER_LISTEN);
+  net::EpollConnection standardinput(epoll, 0, STDIN_FILENO, net::connection::STDIN);
   
   vector<RegionConnection*> regions, controllers, worldviewers;
   size_t maxevents = 1 + server_count;
@@ -185,6 +186,7 @@ int main(int argc, char **argv) {
   long values[1000];
   long freeval = 0;
   int second = 0;
+  bool running = false;
 
   cout << "Listening for connections." << endl;
   while(true) {    
@@ -210,6 +212,47 @@ int main(int argc, char **argv) {
             {
               tsdone.ParseFromArray(buffer, len);
               ++ready;
+
+              if(ready == server_count && running) {
+                //check if its time to output
+                if(time(NULL) > lastSecond)
+                {
+                  cout << timeSteps/2 << " timesteps/second. second: " << second++ << endl;
+                  //do some stats calculations
+                  totalpersecond += timeSteps/2;
+                  number++;
+                  values[freeval++] = (long)timeSteps/2;
+                  long avg = (totalpersecond / number);
+                  cout << avg << " timesteps/second on average" <<endl;
+                  //calc std dev
+                  long stddev =0;
+                  for(int k = 0; k < freeval; k++)
+                    stddev += (values[k] - avg)*(values[k] - avg);
+                  stddev /= freeval;
+                  stddev = sqrt(stddev);
+                  cout << "Standard Deviation: " << stddev << endl << endl;
+                  ////////////////////////////
+                  timeSteps = 0;
+                  lastSecond = time(NULL);
+                }
+                timeSteps++;
+            
+                // All servers are ready, prepare to send next step
+                ready = 0;
+                timestep.set_timestep(step++);
+                // Send to regions
+                for(vector<RegionConnection*>::const_iterator i = regions.begin();
+                    i != regions.end(); ++i) {
+                  (*i)->queue.push(MSG_TIMESTEPUPDATE, timestep);
+                  (*i)->set_writing(true);
+                }
+                // Send to controllers
+                for(vector<RegionConnection*>::const_iterator i = controllers.begin();
+                    i != controllers.end(); ++i) {
+                  (*i)->queue.push(MSG_TIMESTEPUPDATE, timestep);
+                  (*i)->set_writing(true);
+                }
+              }
               break;
             }
             case MSG_REGIONINFO:
@@ -275,7 +318,6 @@ int main(int argc, char **argv) {
             default:
               cerr << "Unexpected message from region!" << endl;
             }
-              
             }
           } catch(EOFError e) {
         	  //added the last "seconds>0" check to test whether we started running the simulation
@@ -300,47 +342,6 @@ int main(int argc, char **argv) {
             cerr << "Error reading from region server: "
                  << e.what() << ".  Shutting down." << endl;
             return 1;
-          }
-        
-          if(ready == connected && connected == server_count) {
-            //check if its time to output
-            if(time(NULL) > lastSecond)
-            {
-              cout << timeSteps/2 << " timesteps/second. second: " << second++ << endl;
-              //do some stats calculations
-              totalpersecond += timeSteps/2;
-              number++;
-              values[freeval++] = (long)timeSteps/2;
-              long avg = (totalpersecond / number);
-              cout << avg << " timesteps/second on average" <<endl;
-              //calc std dev
-              long stddev =0;
-              for(int k = 0; k < freeval; k++)
-                stddev += (values[k] - avg)*(values[k] - avg);
-              stddev /= freeval;
-              stddev = sqrt(stddev);
-              cout << "Standard Deviation: " << stddev << endl << endl;
-              ////////////////////////////
-              timeSteps = 0;
-              lastSecond = time(NULL);
-            }
-            timeSteps++;
-            
-            // All servers are ready, prepare to send next step
-            ready = 0;
-            timestep.set_timestep(step++);
-            // Send to regions
-            for(vector<RegionConnection*>::const_iterator i = regions.begin();
-                i != regions.end(); ++i) {
-              (*i)->queue.push(MSG_TIMESTEPUPDATE, timestep);
-              (*i)->set_writing(true);
-            }
-            // Send to controllers
-            for(vector<RegionConnection*>::const_iterator i = controllers.begin();
-                i != controllers.end(); ++i) {
-              (*i)->queue.push(MSG_TIMESTEPUPDATE, timestep);
-              (*i)->set_writing(true);
-            }
           }
           break;
         }
@@ -404,11 +405,47 @@ int main(int argc, char **argv) {
           newconn->addr = addr.sin_addr.s_addr;
           regions.push_back(newconn);
 
-          cout << "Got region server connection." << endl;
-
           ++connected;
+          cout << "Region server " << connected << "/" << server_count << " connected." << endl;
+
+          if(connected == server_count) {
+            listenconn.set_reading(false);
+            // Send initialization timestep.
+            ready = 0;
+            timestep.set_timestep(0);
+            for(vector<RegionConnection*>::const_iterator i = regions.begin();
+                i != regions.end(); ++i) {
+              (*i)->queue.push(MSG_TIMESTEPUPDATE, timestep);
+              (*i)->set_writing(true);
+            }
+            cout << "All region servers connected!  Press return to begin simulation: " << flush;
+            standardinput.set_reading(true);
+          }
           break;
         }
+
+        case net::connection::STDIN:
+          cout << "Running!" << endl;
+          // We don't care about stdin anymore.
+          standardinput.set_reading(false);
+          // Step continuously
+          running = true;
+          // Send first timestep
+          ready = 0;
+          timestep.set_timestep(step++);
+          // Send to regions
+          for(vector<RegionConnection*>::const_iterator i = regions.begin();
+              i != regions.end(); ++i) {
+            (*i)->queue.push(MSG_TIMESTEPUPDATE, timestep);
+            (*i)->set_writing(true);
+          }
+          // Send to controllers
+          for(vector<RegionConnection*>::const_iterator i = controllers.begin();
+              i != controllers.end(); ++i) {
+            (*i)->queue.push(MSG_TIMESTEPUPDATE, timestep);
+            (*i)->set_writing(true);
+          }          
+          break;
 
         case RegionConnection::CONTROLLER_LISTEN:
         {

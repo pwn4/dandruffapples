@@ -68,9 +68,10 @@ EOF
 
 echo "Starting clock server locally."
 CLOCKSERVER=`host \`hostname\`|cut -d ' ' -f 4`
-rm $OUTPATH/antix-clockout 2>/dev/null; mkfifo $OUTPATH/antix-clockout
-rm $OUTPATH/antix-clockerr 2>/dev/null; mkfifo $OUTPATH/antix-clockerr
-clockserver/clockserver -c "$CLOCKCONF" > $OUTPATH/antix-clockout 2>$OUTPATH/antix-clockerr &
+rm "$OUTPATH/antix-clockout" 2>/dev/null; mkfifo "$OUTPATH/antix-clockout"
+rm "$OUTPATH/antix-clockerr" 2>/dev/null; mkfifo "$OUTPATH/antix-clockerr"
+rm "$OUTPATH/antix-clockin" 2>/dev/null; mkfifo "$OUTPATH/antix-clockin"
+clockserver/clockserver -c "$CLOCKCONF" > "$OUTPATH/antix-clockout" 2> "$OUTPATH/antix-clockerr" < "$OUTPATH/antix-clockin" &
 CLOCKID=$!
 trap "echo -e '\nCaught signal; shutting down.' && cleanup; exit 1" HUP INT TERM
 
@@ -152,6 +153,6 @@ then
 fi
 
 echo "All done!  Here's the clock server."
-cat $OUTPATH/antix-clockerr >&2 & cat $OUTPATH/antix-clockout
+cat "$OUTPATH/antix-clockerr" >&2 & cat "$OUTPATH/antix-clockout" & cat > "$OUTPATH/antix-clockin"
 
 cleanup
