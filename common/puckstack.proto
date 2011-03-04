@@ -7,8 +7,8 @@ message SeesPuckStack {
 }
 
 message PuckStack {
-  //required fixed64 x = 1; //we don't use absolute positions anymore, so these should be obsolete.
-  //required fixed64 y = 2; //Delete them when we're sure.
-  required fixed32 stackSize = 1;
-  repeated SeesPuckStack seespuckstack = 2;
+  optional fixed64 x = 1; //we don't use absolute positions anymore, so these should be obsolete.
+  optional fixed64 y = 2; //Delete them when we're sure.
+  required fixed32 stackSize = 3;
+  repeated SeesPuckStack seespuckstack = 4;
 }
