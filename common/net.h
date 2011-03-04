@@ -25,7 +25,8 @@ namespace net {
       CONTROLLER,
       REGION,
       CLIENT,
-      WORLDVIEWER
+      WORLDVIEWER,
+      STDIN
     } type;
 
     int fd;

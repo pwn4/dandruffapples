@@ -13,7 +13,7 @@ SET(CMAKE_CXX_FLAGS_PROFILE "-g -pg")
 
 find_package(PkgConfig)
 
-add_definitions(-Wall -Wextra)
+add_definitions(-Wall -Wextra -Wno-unused-parameter)
 
 add_subdirectory(common)
 

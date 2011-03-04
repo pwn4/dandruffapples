@@ -190,10 +190,11 @@ void run() {
 	}
 
 	// Add clock and client sockets to epoll
-	net::EpollConnection clockconn(epoll, EPOLLIN, clockfd, net::connection::CLOCK), controllerconn(epoll, EPOLLIN,
-			controllerfd, net::connection::CONTROLLER_LISTEN), regionconn(epoll, EPOLLIN, regionfd,
-			net::connection::REGION_LISTEN), worldviewerconn(epoll, EPOLLIN, worldviewerfd,
-			net::connection::WORLDVIEWER_LISTEN);
+	net::EpollConnection
+    clockconn(epoll, EPOLLIN, clockfd, net::connection::CLOCK),
+    controllerconn(epoll, EPOLLIN, controllerfd, net::connection::CONTROLLER_LISTEN),
+    regionconn(epoll, EPOLLIN, regionfd, net::connection::REGION_LISTEN),
+    worldviewerconn(epoll, EPOLLIN, worldviewerfd, net::connection::WORLDVIEWER_LISTEN);
 
 	//handle logging to file initializations
 	PuckStack puckstack;
@@ -284,13 +285,13 @@ void run() {
 							worldinfo.ParseFromArray(buffer, len);
 							cout << "Got world info." << endl;
 							//added pucks to the world 							
-								int pucks = 0;								
-								while(pucks < worldinfo.numpucks() ){// populate the world with numpucks which are randomly distributed over the region 
+              unsigned pucks = 0;								
+              while(pucks < worldinfo.numpucks() ){// populate the world with numpucks which are randomly distributed over the region 
 								int a = (2 * robotDiameter)+minElementSize + rand() % (regionSideLen-2*((2 * robotDiameter)+minElementSize));
 								int b = (2 * robotDiameter)+minElementSize + rand() % (regionSideLen-2*((2 * robotDiameter)+minElementSize));
 							  regionarea->AddPuck(a, b);
 								pucks++;
-								}
+              }
 							int lastRegionIndex = worldinfo.region_size() - 1;
 							myId = worldinfo.region(lastRegionIndex).id();
 							cout << "My id: " << myId << endl;
