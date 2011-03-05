@@ -133,7 +133,8 @@ ClientViewer* viewer;
 int clientViewerThread( gpointer *ptr )
 {
 	passToThread *pass = (passToThread*)ptr;
-	viewer = new ClientViewer(pass->argc, pass->argv, &currentRobot);
+	g_async_queue_ref(pass->asyncQueue);
+	viewer = new ClientViewer(pass->argc, pass->argv, pass->asyncQueue, &currentRobot);
 
 	viewer->initClientViewer(pass->numberOfRobots);
 
@@ -342,6 +343,7 @@ void initializeRobots() {
 void run(int argc, char** argv) {
   int controllerfd = -1;
   int currentController = rand() % controllerips.size();
+  GAsyncQueue *asyncQueue;
 
   while(controllerfd < 0)
   {
@@ -468,17 +470,18 @@ void run(int argc, char** argv) {
 
                     initializeRobots();
 
+                    //TODO: work in progress. Don't bother testing it.
                     //start a new client viewer thread
                     if(runClientViewer)
                     {
-
                     	if( !g_thread_supported() )
                     	{
+                    		asyncQueue=g_async_queue_new();
                     		GThread *thread;
                     		GError *error = NULL;
 
                     		g_thread_init(NULL);
-                    		passToThread pass(argc, argv, robotsPerTeam);
+                    		passToThread pass(argc, argv, robotsPerTeam, asyncQueue );
                     		thread = g_thread_create((GThreadFunc)clientViewerThread, (gpointer)&pass, FALSE, &error);
 
                     		if( thread == NULL)
@@ -721,11 +724,12 @@ void tmpTestViewer(int argc, char** argv)
 		runClientViewer=false;
 		if( !g_thread_supported() )
 		{
-			GThread *thread=NULL;
-			GError *error = NULL;
+    		GThread *thread;
+    		GError *error = NULL;
 
-			g_thread_init(NULL);
-			passToThread pass(argc, argv, 1000);
+    		g_thread_init(NULL);
+			GAsyncQueue* asyncQueue=g_async_queue_new();
+    		passToThread pass(argc, argv, 1000, asyncQueue );
 			thread = g_thread_create((GThreadFunc)clientViewerThread, (gpointer)&pass, TRUE, &error);
 			g_thread_join(thread);
 		}
@@ -758,7 +762,6 @@ int main(int argc, char* argv[])
 	////////////////////////////////////////////////////
 	
 	printf("Client Running!\n");
-	
 	run(argc, argv);
 	
 	printf("Client Shutting Down ...\n");

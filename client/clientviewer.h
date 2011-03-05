@@ -20,8 +20,9 @@ struct passToThread{
 	int argc;
 	char** argv;
 	int numberOfRobots;
+	GAsyncQueue *asyncQueue;
 
-	passToThread(int _argc, char** _argv, int _numberOfRobots) : argc(_argc), argv(_argv), numberOfRobots(_numberOfRobots){};
+	passToThread(int _argc, char** _argv, int _numberOfRobots, GAsyncQueue *_asyncQueue) : argc(_argc), argv(_argv), numberOfRobots(_numberOfRobots), asyncQueue(_asyncQueue){};
 };
 
 struct dataToHandler{
@@ -38,14 +39,14 @@ private:
 #endif
 
 	int* currentRobot;
+	GAsyncQueue *asyncQueue;
 	GtkBuilder *builder;
 
 public:
 	void initClientViewer(int);
 	void updateViewer();
 
-	ClientViewer(){};
-	ClientViewer(int, char**, int*);
+	ClientViewer(int, char**, GAsyncQueue *, int*);
 	~ClientViewer();
 };
 

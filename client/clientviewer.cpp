@@ -57,6 +57,12 @@ void on_RobotId_changed(GtkWidget *widget, gpointer _passedData) {
 		*((int*) currentRobot) = changedRobotId;
 	}
 }
+
+void ClientViewer::updateViewer()
+{
+
+}
+
 //ClientViewer::
 //initializations and simple modifications for the things that will be drawn
 void ClientViewer::initClientViewer(int numberOfRobots) {
@@ -100,8 +106,8 @@ void ClientViewer::initClientViewer(int numberOfRobots) {
 	gtk_main();
 }
 
-ClientViewer::ClientViewer(int argc, char* argv[], int* _currentRobot) :
-	currentRobot(_currentRobot) {
+ClientViewer::ClientViewer(int argc, char* argv[],  GAsyncQueue* _asyncQueue, int* _currentRobot) :
+	currentRobot(_currentRobot), asyncQueue(_asyncQueue) {
 	gtk_init(&argc, &argv);
 
 	//assume that the clientviewer.builder is in the same directory as the executable that we are running
