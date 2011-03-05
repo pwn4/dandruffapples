@@ -43,17 +43,44 @@ void on_Window_toggled(GtkWidget *widget, gpointer window) {
 		gtk_widget_hide_all(GTK_WIDGET(window));
 
 }
+
+void on_RobotId_changed(GtkWidget *widget, gpointer _passedData) {
+	dataToHandler* passedData = (dataToHandler*) _passedData;
+	int *currentRobot = (int*) passedData->data;
+	int changedRobotId = gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(widget));
+
+	if (*((int*) currentRobot) != changedRobotId) {
+#ifdef DEBUG
+		*(passedData->debug)<<"currentRobot changed from "<<*((int*)currentRobot)<<" to "<<changedRobotId<<endl;
+#endif
+		cout << "currentRobot changed from " << *((int*) currentRobot) << " to " << changedRobotId << endl;
+		*((int*) currentRobot) = changedRobotId;
+	}
+}
+
+void ClientViewer::updateViewer()
+{
+
+}
+
+//ClientViewer::
 //initializations and simple modifications for the things that will be drawn
-void ClientViewer::run()  {
+void ClientViewer::initClientViewer(int numberOfRobots) {
+#ifdef DEBUG
+	debug<<"Starting the Client Viewer!"<<endl;
+#endif
 	g_type_init();
 
 	GtkWidget *mainWindow = GTK_WIDGET(gtk_builder_get_object(builder, "window"));
 	GtkToggleToolButton *info = GTK_TOGGLE_TOOL_BUTTON(gtk_builder_get_object(builder, "Info"));
 	GtkWidget *about = GTK_WIDGET(gtk_builder_get_object(builder, "About"));
 	GtkWidget *infoWindow = GTK_WIDGET(gtk_builder_get_object(builder, "infoWindow"));
-
+	GtkSpinButton *robotId = GTK_SPIN_BUTTON(gtk_builder_get_object(builder, "robotId"));
 	GdkColor color;
 
+	gtk_adjustment_set_upper(GTK_ADJUSTMENT(gtk_builder_get_object(builder, "robotIdAdjustment")), numberOfRobots);
+
+	//keep the info window floating on top of the main window
 	gtk_window_set_keep_above(GTK_WINDOW(infoWindow), true);
 
 	//change the color of the main window's background to black
@@ -62,7 +89,11 @@ void ClientViewer::run()  {
 
 	//change the color of the label's text to white
 	gdk_color_parse("white", &color);
-	gtk_widget_modify_fg(GTK_WIDGET(gtk_builder_get_object(builder, "robotWindowLabel")), GTK_STATE_NORMAL, &color);
+	//gtk_widget_modify_fg(GTK_WIDGET(gtk_builder_get_object(builder, "robotWindowLabel")), GTK_STATE_NORMAL, &color);
+
+
+	dataToHandler data(&debug, currentRobot);
+	g_signal_connect(robotId, "value-changed", G_CALLBACK(on_RobotId_changed), (gpointer) & data);
 
 	g_signal_connect(info, "toggled", G_CALLBACK(on_Window_toggled), (gpointer) infoWindow);
 	g_signal_connect(about, "clicked", G_CALLBACK(on_About_clicked), (gpointer) mainWindow);
@@ -75,12 +106,13 @@ void ClientViewer::run()  {
 	gtk_main();
 }
 
-ClientViewer::ClientViewer(int argc, char* argv[], clientViewerShared _shared) : shared(_shared) {
+ClientViewer::ClientViewer(int argc, char* argv[],  GAsyncQueue* _asyncQueue, int* _currentRobot) :
+	currentRobot(_currentRobot), asyncQueue(_asyncQueue) {
 	gtk_init(&argc, &argv);
 
 	//assume that the clientviewer.builder is in the same directory as the executable that we are running
 	string builderPath(argv[0]);
-	builderPath = builderPath.substr(0, builderPath.find_last_of("//") + 1) + "clientviewer.builder";
+	builderPath = builderPath.substr(0, builderPath.find_last_of("//") + 1) + "clientviewer.glade";
 	builder = gtk_builder_new();
 	gtk_builder_add_from_file(builder, builderPath.c_str(), NULL);
 	gtk_builder_connect_signals(builder, NULL);
@@ -88,7 +120,6 @@ ClientViewer::ClientViewer(int argc, char* argv[], clientViewerShared _shared) :
 #ifdef DEBUG
 	debug.open(helper::clientViewerDebugLogName.c_str(), ios::out);
 #endif
-
 }
 
 ClientViewer::~ClientViewer() {

@@ -5,7 +5,7 @@
   <object class="GtkWindow" id="window">
     <property name="visible">True</property>
     <property name="border_width">10</property>
-    <property name="title" translatable="yes">World Viewer</property>
+    <property name="title" translatable="yes">Client Viewer</property>
     <property name="default_width">425</property>
     <property name="default_height">250</property>
     <signal name="destroy" handler="gtk_main_quit"/>
@@ -18,17 +18,23 @@
             <property name="visible">True</property>
             <property name="toolbar_style">both</property>
             <child>
-              <object class="GtkToolItem" id="toolbarCombo">
+              <object class="GtkToolItem" id="Other">
                 <property name="visible">True</property>
                 <child>
-                  <object class="GtkComboBox" id="comboRobotId">
+                  <object class="GtkSpinButton" id="robotId">
                     <property name="visible">True</property>
+                    <property name="can_focus">True</property>
+                    <property name="invisible_char">•</property>
+                    <property name="width_chars">7</property>
+                    <property name="adjustment">robotIdAdjustment</property>
+                    <property name="snap_to_ticks">True</property>
+                    <property name="numeric">True</property>
+                    <property name="update_policy">if-valid</property>
                   </object>
                 </child>
               </object>
               <packing>
                 <property name="expand">False</property>
-                <property name="homogeneous">True</property>
               </packing>
             </child>
             <child>
@@ -108,5 +114,9 @@
     <child>
       <placeholder/>
     </child>
+  </object>
+  <object class="GtkAdjustment" id="robotIdAdjustment">
+    <property name="step_increment">1</property>
+    <property name="page_increment">1</property>
   </object>
 </interface>

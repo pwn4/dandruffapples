@@ -710,7 +710,7 @@ void on_Fullscreen_toggled(GtkWidget *widget, gpointer window) {
 }
 
 //initializations and simple modifications for the things that will be drawn
-void initializeDrawers() {
+void initWorldViewer() {
 	g_type_init();
 
 	GtkWidget *mainWindow = GTK_WIDGET(gtk_builder_get_object( builder, "window" ));
@@ -789,7 +789,7 @@ int main(int argc, char* argv[]) {
 
 	//assume that the worldviewer.builder is in the same directory as the executable that we are running
 	string builderPath(argv[0]);
-	builderPath = builderPath.substr(0, builderPath.find_last_of("//") + 1) + "worldviewer.builder";
+	builderPath = builderPath.substr(0, builderPath.find_last_of("//") + 1) + "worldviewer.glade";
 	builder = gtk_builder_new();
 	gtk_builder_add_from_file(builder, builderPath.c_str(), NULL);
 	gtk_builder_connect_signals(builder, NULL);
@@ -817,7 +817,7 @@ int main(int argc, char* argv[]) {
 	debug << "Connected to Clock Server " << clockip << endl;
 #endif
 
-	initializeDrawers();
+	initWorldViewer();
 
 #ifdef DEBUG
 	debug.close();
