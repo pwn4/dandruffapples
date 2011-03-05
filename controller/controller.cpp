@@ -352,6 +352,7 @@ int main(int argc, char** argv)
             {
               receivedServerRobot++;
               serverrobot.ParseFromArray(buffer, len);
+
 							// Forward to the client, and any clients in the seenbyid
               net::EpollConnection *client = (robots.find(serverrobot.id()))->second.client;
               if (client != NULL) {
@@ -432,7 +433,7 @@ int main(int argc, char** argv)
               break;
             }
             default:
-              cerr << "Unexpected readable socket from client!" << endl;
+              cerr << "Unexpected readable socket from region!" << endl;
               break;
             }
           }

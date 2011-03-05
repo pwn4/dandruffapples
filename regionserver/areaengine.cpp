@@ -671,7 +671,7 @@ void AreaEngine::Step(bool generateImage){
     {
       for (vector<EpollConnection*>::const_iterator it = 
            controllers.begin(); it != controllers.end(); it++) {
-        (*it)->queue.push(MSG_SERVERROBOT, *((*puckIt).second));
+        (*it)->queue.push(MSG_PUCKSTACK, *((*puckIt).second));
         (*it)->set_writing(true); 
       }
       delete puckIt->second;
