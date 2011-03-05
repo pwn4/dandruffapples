@@ -22,6 +22,7 @@
 #include "../common/worldinfo.pb.h"
 #include "../common/claimteam.pb.h"
 #include "../common/claim.pb.h"
+#include "../common/puckstack.pb.h"
 
 #include "../common/ports.h"
 #include "../common/messagereader.h"
@@ -383,6 +384,27 @@ int main(int argc, char** argv)
                 }
 							}
 							seenbyidset.clear();	//clear for next serverrobot msg
+              break;
+            }
+
+            case MSG_PUCKSTACK:
+            {
+              PuckStack puckstack;
+              puckstack.ParseFromArray(buffer, len);
+
+              net::EpollConnection *client;
+              for(int i=0; i<puckstack.seespuckstack_size(); i++){
+                client = (robots.find(puckstack.seespuckstack(i).seenbyid()))->
+                    second.client;
+                if (client != NULL) {
+                  ret = seenbyidset.insert(client);
+                  if(ret.second){
+                    client->queue.push(MSG_PUCKSTACK, puckstack);
+                    client->set_writing(true);
+                  }
+                }
+              }
+              seenbyidset.clear();	
               break;
             }
 
