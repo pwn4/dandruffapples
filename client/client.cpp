@@ -8,6 +8,7 @@ This program communications with controllers.
 #include <cstring>
 #include <cerrno>
 #include <math.h>
+#include <cmath>
 
 #include <unistd.h>
 #include <sys/socket.h>
@@ -205,6 +206,21 @@ bool weControlRobot(int robotId) {
 
 float relDistance(float x1, float y1) {
   return (sqrt(x1*x1 + y1*y1));
+}
+
+// Check if the two coordinates are the same, compensating for
+// floating-point errors.
+bool sameCoordinates(float x1, float y1, float x2, float y2) {
+  // From testing, it looks like floating point errors either add or subtract
+  // 0.0001.
+  float maxError = 0.001;
+  if (abs(x1 - x2) > maxError) {
+    return false;
+  }
+  if (abs(y1 - y2) > maxError) {
+    return false;
+  }
+  return true; 
 }
 
 void forceSend() {
@@ -551,7 +567,6 @@ void run(int argc, char** argv) {
                         delete *it; 
                         it = ownRobots[i]->seenRobots.erase(it);
                         it--; // Compensates for it++ in for loop.
-                        cout << "We deleted a robot!" << endl;
                       }
                       else if (tempDistance < minDistance) {
                         // Keep trying to find the closest robot!
@@ -568,11 +583,13 @@ void run(int argc, char** argv) {
                       (*it)->relx -= ownRobots[i]->vx;
                       (*it)->rely -= ownRobots[i]->vy;
                       tempDistance = relDistance((*it)->relx, (*it)->rely);
+                      //cout << "#" << i << " puckRelX = " << (*it)->relx
+                      //     << ", puckRelY = " << (*it)->rely << endl;
                       if (tempDistance > sightDistance) {
                         // We can't see the puck anymore. Delete.
                         delete *it; 
                         it = ownRobots[i]->seenPucks.erase(it);
-                        cout << "We deleted a puck!" << endl;
+                        it--; // Compensates for it++ in for loop.
                       }
                     }
 
@@ -731,11 +748,32 @@ void run(int argc, char** argv) {
                     if (weControlRobot(puckstack.seespuckstack(i).seenbyid())) {
                       index = robotIdToIndex(puckstack.seespuckstack(i).
                           seenbyid()); // Our robot that can see.
-                      SeenPuck *p = new SeenPuck();
-                      p->stackSize = puckstack.stacksize();
-                      p->relx = puckstack.seespuckstack(i).relx();
-                      p->rely = puckstack.seespuckstack(i).rely();
-                      ownRobots[index]->seenPucks.push_back(p);
+
+                      // Look through seenPuck list, check if the new puck's
+                      // position is the same as one we already see. If so,
+                      // update our stacksize. 
+                      bool foundPuck = false;
+                      for (vector<SeenPuck*>::iterator it
+                          = ownRobots[index]->seenPucks.begin();
+                          it != ownRobots[index]->seenPucks.end() 
+                          && !foundPuck; it++) {
+                        if (sameCoordinates((*it)->relx, (*it)->rely, 
+                            puckstack.seespuckstack(i).relx(),
+                            puckstack.seespuckstack(i).rely())) {
+                          (*it)->stackSize = puckstack.stacksize();
+                          foundPuck = true;
+                          cout << "Updating puck stacksize!" << endl;
+                        }
+                      }
+
+                      // If we didn't find a match in seenPucks, add new puck.
+                      if (!foundPuck) {
+                        SeenPuck *p = new SeenPuck();
+                        p->stackSize = puckstack.stacksize();
+                        p->relx = puckstack.seespuckstack(i).relx();
+                        p->rely = puckstack.seespuckstack(i).rely();
+                        ownRobots[index]->seenPucks.push_back(p);
+                      }
                       // TODO: Add "I-see-a-new-puck" event
                     }
                   }
