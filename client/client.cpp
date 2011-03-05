@@ -776,10 +776,14 @@ void run(int argc, char** argv) {
   shutdown(controllerfd, SHUT_RDWR);
   close(controllerfd);
 
-  for (int i = 0; i < robotsPerTeam; i++) {
-    delete ownRobots[i];
+  // Free memory allocated for ownRobots. Only do this if we actually
+  // started the simulation and allocated space.
+  if (simulationStarted) {
+    for (int i = 0; i < robotsPerTeam; i++) {
+      delete ownRobots[i];
+    }
+    delete[] ownRobots;
   }
-  delete[] ownRobots;
 }
 void tmpTestViewer(int argc, char** argv)
 {
