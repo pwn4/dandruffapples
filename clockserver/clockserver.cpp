@@ -171,7 +171,8 @@ int main(int argc, char **argv) {
   vector<RegionConnection*> regions, controllers, worldviewers;
   size_t maxevents = 1 + server_count;
   struct epoll_event *events = new struct epoll_event[maxevents];
-  size_t connected = 0, ready = 0;
+  size_t connected = 0, ready = 0, worldinfoSent = 0;
+  bool initialized = false;
   RegionInfo regioninfo;
   TimestepDone tsdone;
   TimestepUpdate timestep;
@@ -299,6 +300,7 @@ int main(int argc, char **argv) {
               // Send WorldInfo to the new RegionServer
               c->queue.push(MSG_WORLDINFO, worldinfo);
               c->set_writing(true);
+              worldinfoSent++;
 
               for(vector<RegionConnection*>::const_iterator i = controllers.begin();
                   i != controllers.end(); ++i) {
@@ -343,6 +345,25 @@ int main(int argc, char **argv) {
                  << e.what() << ".  Shutting down." << endl;
             return 1;
           }
+
+          // Initialization: If all servers connected, and we sent out
+          // WorldInfo packets to all, then send the first timestep out!
+          if(connected == server_count && worldinfoSent == server_count &&
+             !initialized) {
+            initialized = true; 
+            listenconn.set_reading(false);
+            // Send initialization timestep.
+            ready = 0;
+            timestep.set_timestep(0);
+            for(vector<RegionConnection*>::const_iterator i = regions.begin();
+                i != regions.end(); ++i) {
+              (*i)->queue.push(MSG_TIMESTEPUPDATE, timestep);
+              (*i)->set_writing(true);
+            }
+            cout << "All region servers connected!  Press return to begin simulation: " << flush;
+            standardinput.set_reading(true);
+          }
+
           break;
         }
 
@@ -408,19 +429,6 @@ int main(int argc, char **argv) {
           ++connected;
           cout << "Region server " << connected << "/" << server_count << " connected." << endl;
 
-          if(connected == server_count) {
-            listenconn.set_reading(false);
-            // Send initialization timestep.
-            ready = 0;
-            timestep.set_timestep(0);
-            for(vector<RegionConnection*>::const_iterator i = regions.begin();
-                i != regions.end(); ++i) {
-              (*i)->queue.push(MSG_TIMESTEPUPDATE, timestep);
-              (*i)->set_writing(true);
-            }
-            cout << "All region servers connected!  Press return to begin simulation: " << flush;
-            standardinput.set_reading(true);
-          }
           break;
         }
 
