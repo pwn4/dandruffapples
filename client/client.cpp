@@ -75,6 +75,8 @@ const int COOLDOWN = 10;
 enum EventType {
   EVENT_CLOSEST_ROBOT_STATE_CHANGE,
   EVENT_NEW_CLOSEST_ROBOT,
+  EVENT_START_SEEING_PUCKS,
+  EVENT_END_SEEING_PUCKS,
   EVENT_MAX
 };
 
@@ -125,7 +127,6 @@ public:
   bool pendingCommand;
   int whenLastSent;
   int closestRobotId;
-  bool canSeeAPuck;
   int behaviour;
   vector<SeenRobot*> seenRobots;
   vector<SeenPuck*> seenPucks;
@@ -134,7 +135,7 @@ public:
   vector<EventType> eventQueue;
 
   OwnRobot() : Robot(), pendingCommand(false), whenLastSent(-1), 
-      closestRobotId(-1), canSeeAPuck(false), behaviour(-1), myHome(NULL) {}
+      closestRobotId(-1), behaviour(-1), myHome(NULL) {}
 };
 
 OwnRobot** ownRobots;
@@ -748,6 +749,7 @@ void run(int argc, char** argv) {
                     if (weControlRobot(puckstack.seespuckstack(i).seenbyid())) {
                       index = robotIdToIndex(puckstack.seespuckstack(i).
                           seenbyid()); // Our robot that can see.
+                      int oldSeenPuckSize = ownRobots[index]->seenPucks.size();
 
                       // Look through seenPuck list, check if the new puck's
                       // position is the same as one we already see. If so,
@@ -763,6 +765,11 @@ void run(int argc, char** argv) {
                           (*it)->stackSize = puckstack.stacksize();
                           foundPuck = true;
                           cout << "Updating puck stacksize!" << endl;
+                          if ((*it)->stackSize <= 0) {
+                            cout << "But stacksize is 0, so delete!" << endl;
+                            delete *it; 
+                            it = ownRobots[index]->seenPucks.erase(it);
+                          }
                         }
                       }
 
@@ -774,7 +781,16 @@ void run(int argc, char** argv) {
                         p->rely = puckstack.seespuckstack(i).rely();
                         ownRobots[index]->seenPucks.push_back(p);
                       }
-                      // TODO: Add "I-see-a-new-puck" event
+
+                      int newSeenPuckSize = ownRobots[index]->seenPucks.size();
+                      // Check for seenPuck size changes to create events.
+                      if (oldSeenPuckSize == 0 && newSeenPuckSize > 0) {
+                        ownRobots[index]->eventQueue.push_back(
+                            EVENT_START_SEEING_PUCKS);
+                      } else if (oldSeenPuckSize > 0 && newSeenPuckSize == 0) {
+                        ownRobots[index]->eventQueue.push_back(
+                            EVENT_END_SEEING_PUCKS);
+                      }
                     }
                   }
                 }
