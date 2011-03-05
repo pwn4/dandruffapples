@@ -54,6 +54,9 @@ int robotsPerTeam;
 net::EpollConnection* theController;
 int epoll;
 
+// World variables
+float sightDistance = 100.0; // TODO: get this from worldinfo packet?
+
 // Stat variables
 time_t lastSecond = time(NULL);
 int sentMessages = 0;
@@ -74,13 +77,22 @@ enum EventType {
   EVENT_MAX
 };
 
+class SeenHome {
+public:
+  float relx;
+  float rely;
+  int teamId;
+
+  SeenHome() : relx(0.0), rely(0.0), teamId(-1) {}
+};
+
 class SeenPuck {
 public:
   float relx;
   float rely;
-  int size;
+  int stackSize;
 
-  SeenPuck() : relx(0.0), rely(0.0), size(1) {}
+  SeenPuck() : relx(0.0), rely(0.0), stackSize(1) {}
 };
 
 class Robot {
@@ -112,13 +124,16 @@ public:
   bool pendingCommand;
   int whenLastSent;
   int closestRobotId;
+  bool canSeeAPuck;
   int behaviour;
   vector<SeenRobot*> seenRobots;
   vector<SeenPuck*> seenPucks;
+  SeenHome* myHome;
+  vector<SeenHome*> seenHomes;
   vector<EventType> eventQueue;
 
   OwnRobot() : Robot(), pendingCommand(false), whenLastSent(-1), 
-      closestRobotId(-1), behaviour(-1) {}
+      closestRobotId(-1), canSeeAPuck(false), behaviour(-1), myHome(NULL) {}
 };
 
 OwnRobot** ownRobots;
@@ -520,6 +535,7 @@ void run(int argc, char** argv) {
                       timeoutMessages++;
                     }
                      
+                    // Update rel distance of seenRobots.
                     float minDistance = 9000.01;
                     float tempDistance;
                     int newClosestRobotId = -1;
@@ -530,9 +546,32 @@ void run(int argc, char** argv) {
                       (*it)->relx += (*it)->vx - ownRobots[i]->vx;
                       (*it)->rely += (*it)->vy - ownRobots[i]->vy;
                       tempDistance = relDistance((*it)->relx, (*it)->rely);
-                      if (tempDistance < minDistance) {
+                      if (tempDistance > sightDistance) {
+                        // We can't see the robot anymore. Delete.
+                        delete *it; 
+                        it = ownRobots[i]->seenRobots.erase(it);
+                        cout << "We deleted a robot!" << endl;
+                      }
+                      else if (tempDistance < minDistance) {
+                        // Keep trying to find the closest robot!
                         minDistance = tempDistance;
                         newClosestRobotId = (*it)->id;
+                      }
+                    }
+
+                    // Update rel distance of seenPucks.
+                    for (vector<SeenPuck*>::iterator it
+                        = ownRobots[i]->seenPucks.begin();
+                        it != ownRobots[i]->seenPucks.end();
+                        it++) {
+                      (*it)->relx -= ownRobots[i]->vx;
+                      (*it)->rely -= ownRobots[i]->vy;
+                      tempDistance = relDistance((*it)->relx, (*it)->rely);
+                      if (tempDistance > sightDistance) {
+                        // We can't see the puck anymore. Delete.
+                        delete *it; 
+                        it = ownRobots[i]->seenPucks.erase(it);
+                        cout << "We deleted a puck!" << endl;
                       }
                     }
 
@@ -672,6 +711,31 @@ void run(int argc, char** argv) {
                           ownRobots[index]->seenRobots.push_back(r);
                         }
                       }
+                    }
+                  }
+                }
+                break;
+              }
+              case MSG_PUCKSTACK:
+              { 
+                PuckStack puckstack;
+                puckstack.ParseFromArray(buffer, len);
+                if (simulationStarted) {
+                  int index;
+                  int listSize = puckstack.seespuckstack_size();
+                  for (int i = 0; i < listSize; i++) {
+                    // Check if one of our robots is in the list. If it is,
+                    // add the puck to its seenPuck list. Pretend that every
+                    // puck is a new, previously-unseen puck.
+                    if (weControlRobot(puckstack.seespuckstack(i).seenbyid())) {
+                      index = robotIdToIndex(puckstack.seespuckstack(i).
+                          seenbyid()); // Our robot that can see.
+                      SeenPuck *p = new SeenPuck();
+                      p->stackSize = puckstack.stacksize();
+                      p->relx = puckstack.seespuckstack(i).relx();
+                      p->rely = puckstack.seespuckstack(i).rely();
+                      ownRobots[index]->seenPucks.push_back(p);
+                      // TODO: Add "I-see-a-new-puck" event
                     }
                   }
                 }
