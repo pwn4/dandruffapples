@@ -129,7 +129,8 @@ int main(int argc, char **argv) {
 		worldinfo.set_numpucks(1000);//send the number of pucks in the region
     unsigned teams = atoi(configuration["TEAMS"].c_str());
     unsigned robots_per_team = atoi(configuration["ROBOTS_PER_TEAM"].c_str());
-    unsigned id = 0, region = 0;
+    // Note that robot ID 0 is invalid.
+    unsigned id = 1, region = 0;
     teamclaimed = new bool[teams];
     for(unsigned team = 0; team < teams; ++team) {
       teamclaimed[team] = false;
