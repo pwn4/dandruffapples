@@ -116,7 +116,7 @@ int main(int argc, char** argv)
   
   if (clockfd < 0) {
     throw SystemError("Failed to connect to clock server");
-	} else if (regionfd == 0) {
+	} else if (clockfd == 0) {
 		throw runtime_error("Invalid clock address");
 	}
   
