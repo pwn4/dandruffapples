@@ -34,7 +34,6 @@ This program communications with controllers.
 #include "../common/messagereader.h"
 #include "../common/except.h"
 
-#include "../common/helper.h"
 #include "clientviewer.h"
 
 using namespace std;
@@ -126,15 +125,17 @@ OwnRobot** ownRobots;
 
 //Config variables
 vector<string> controllerips; //controller IPs 
-
+//Variables for the client viewer only
+int currentRobot=-1;
+ClientViewer* viewer;
 ////////////////////////////////////////////////////////////
 
-int *clientViewerThread( gpointer *ptr )
+int clientViewerThread( gpointer *ptr )
 {
-	clientViewerShared shared((int)ptr);
-	ClientViewer *viewer = new ClientViewer(shared);
+	passToThread *pass = (passToThread*)ptr;
+	viewer = new ClientViewer(pass->argc, pass->argv, &currentRobot);
 
-	viewer->run();
+	viewer->initClientViewer(pass->numberOfRobots);
 
 	return 0;
 }
@@ -167,7 +168,10 @@ void loadConfigFile()
 		
 		fclose (fileHandle);
 	}else
-		printf("Error: Cannot open config file %s\n", configFileName);
+	{
+		string error="Error: Cannot open config file: "+(string)configFileName;
+		throw SystemError(error);
+	}
 }
 
 int indexToRobotId(int index) {
@@ -335,9 +339,10 @@ void initializeRobots() {
 }
 
 
-void run() {
+void run(int argc, char** argv) {
   int controllerfd = -1;
   int currentController = rand() % controllerips.size();
+
   while(controllerfd < 0)
   {
     cout << "Attempting to connect to controller " << controllerips.at(currentController) << "..." << flush;
@@ -463,17 +468,18 @@ void run() {
 
                     initializeRobots();
 
+                    //start a new client viewer thread
                     if(runClientViewer)
                     {
-                    	//make VERY sure that the client viewer thread gets created once
-                    	runClientViewer=false;
+
                     	if( !g_thread_supported() )
                     	{
                     		GThread *thread;
                     		GError *error = NULL;
 
                     		g_thread_init(NULL);
-                    		thread = g_thread_create((GThreadFunc)clientViewerThread, (gpointer)robotsPerTeam, FALSE, &error);
+                    		passToThread pass(argc, argv, robotsPerTeam);
+                    		thread = g_thread_create((GThreadFunc)clientViewerThread, (gpointer)&pass, FALSE, &error);
 
                     		if( thread == NULL)
                     		{
@@ -707,6 +713,24 @@ void run() {
   }
   delete[] ownRobots;
 }
+void tmpTestViewer(int argc, char** argv)
+{
+	if(runClientViewer)
+	{
+		//make VERY sure that the client viewer thread gets created once
+		runClientViewer=false;
+		if( !g_thread_supported() )
+		{
+			GThread *thread=NULL;
+			GError *error = NULL;
+
+			g_thread_init(NULL);
+			passToThread pass(argc, argv, 1000);
+			thread = g_thread_create((GThreadFunc)clientViewerThread, (gpointer)&pass, TRUE, &error);
+			g_thread_join(thread);
+		}
+	}
+}
 
 //this is the main loop for the client
 int main(int argc, char* argv[])
@@ -726,6 +750,7 @@ int main(int argc, char* argv[])
 
 	runClientViewer=cmdline.getArg("-viewer").length() ? true : false;
 	cout<<"Started client with the client viewer set to "<<runClientViewer<<endl;
+	//tmpTestViewer(argc, argv);
 
 	myTeam = strtol(cmdline.getArg("-t", "0").c_str(), NULL, 0);
 	cout << "Trying to control team #" << myTeam << " (use -t <team> to change)"
@@ -734,7 +759,7 @@ int main(int argc, char* argv[])
 	
 	printf("Client Running!\n");
 	
-	run();
+	run(argc, argv);
 	
 	printf("Client Shutting Down ...\n");
 	

@@ -8,36 +8,44 @@
 #include <iostream>
 #include <fstream>
 #include <string>
-
+#include <stdlib.h>
 #include <gtk/gtk.h>
 
 #include "../common/helper.h"
 
 using namespace std;
 
-struct clientViewerShared{
-	int trackRobot;
-	int robotsPerClient;
 
-	clientViewerShared(int _robotsPerClient) : trackRobot(-1), robotsPerClient(_robotsPerClient) {};
-	clientViewerShared() : trackRobot(-1), robotsPerClient(0) {};
+struct passToThread{
+	int argc;
+	char** argv;
+	int numberOfRobots;
+
+	passToThread(int _argc, char** _argv, int _numberOfRobots) : argc(_argc), argv(_argv), numberOfRobots(_numberOfRobots){};
+};
+
+struct dataToHandler{
+	ostream *debug;
+	void* data;
+
+	dataToHandler(ostream *_debug, void* _data) : debug(_debug), data(_data){};
 };
 
 class ClientViewer {
 private:
-	GtkBuilder *builder;
 #ifdef DEBUG
 	ofstream debug;
 #endif
-	clientViewerShared shared;
+
+	int* currentRobot;
+	GtkBuilder *builder;
 
 public:
-	void run();
+	void initClientViewer(int);
+	void updateViewer();
 
-	ClientViewer(int, char**, clientViewerShared);
-	ClientViewer(clientViewerShared _shared) {
-		ClientViewer(0, NULL, _shared);
-	};
+	ClientViewer(){};
+	ClientViewer(int, char**, int*);
 	~ClientViewer();
 };
 
