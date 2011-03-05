@@ -113,7 +113,13 @@ int main(int argc, char** argv)
 
   clockfd = net::do_connect(clockip, CONTROLLERS_PORT);
   cout << "Connected to Clock Server" << endl;
-    
+  
+  if (clockfd < 0) {
+    throw SystemError("Failed to connect to clock server");
+	} else if (regionfd == 0) {
+		throw runtime_error("Invalid clock address");
+	}
+  
   listenfd = net::do_listen(CLIENTS_PORT);
   net::set_blocking(listenfd, false);
 
