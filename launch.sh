@@ -69,8 +69,8 @@ EOF
 echo "Starting clock server locally."
 CLOCKSERVER=`host \`hostname\`|cut -d ' ' -f 4`
 mkdir -p "$OUTPATH"
-rm "$OUTPATH/antix-clockin" 2>/dev/null; mkfifo "$OUTPATH/antix-clockin"
-clockserver/clockserver -c "$CLOCKCONF" < "$OUTPATH/antix-clockin" &
+set -m
+clockserver/clockserver -c "$CLOCKCONF" &
 CLOCKID=$!
 trap "echo -e '\nCaught signal; shutting down.' && cleanup; exit 1" HUP INT TERM
 
@@ -136,7 +136,7 @@ then
     exit 1
 fi
 
-
+sleep 3
 if [ $CONTROLLERS ]
 then
     echo -n "Launching $TEAMS clients across $CONTROLLERS machines"
@@ -154,6 +154,6 @@ then
 fi
 
 echo "All done!  Here's the clock server."
-cat > "$OUTPATH/antix-clockin"
+fg 1
 
 cleanup
