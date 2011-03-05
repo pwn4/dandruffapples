@@ -173,7 +173,6 @@ int main(int argc, char **argv) {
   size_t maxevents = 1 + server_count;
   struct epoll_event *events = new struct epoll_event[maxevents];
   size_t connected = 0, ready = 0, worldinfoSent = 0;
-  bool initialized = false;
   RegionInfo regioninfo;
   TimestepDone tsdone;
   TimestepUpdate timestep;
@@ -259,6 +258,11 @@ int main(int argc, char **argv) {
             }
             case MSG_REGIONINFO:
             {
+              if(worldinfoSent == server_count) {
+                cerr << "Unexpected RegionInfo message!" << endl;
+                break;
+              }
+
               RegionInfo *region = worldinfo.add_region();
               region->ParseFromArray(buffer, len);
               region->set_address(c->addr);
@@ -314,6 +318,21 @@ int main(int argc, char **argv) {
                 (*i)->queue.push(MSG_REGIONINFO, *region);
                 (*i)->set_writing(true);            
               }
+
+              // Initialization: If all servers connected, and we sent out
+              // WorldInfo packets to all, then send the first timestep out!
+              if(connected == server_count && worldinfoSent == server_count) {
+                // Send initialization timestep.
+                ready = 0;
+                timestep.set_timestep(0);
+                for(vector<RegionConnection*>::const_iterator i = regions.begin();
+                    i != regions.end(); ++i) {
+                  (*i)->queue.push(MSG_TIMESTEPUPDATE, timestep);
+                  (*i)->set_writing(true);
+                }
+                cout << "All region servers connected!  Press return to begin simulation: " << flush;
+                standardinput.set_reading(true);
+              }
               
               break;
             }
@@ -346,25 +365,7 @@ int main(int argc, char **argv) {
                  << e.what() << ".  Shutting down." << endl;
             return 1;
           }
-
-          // Initialization: If all servers connected, and we sent out
-          // WorldInfo packets to all, then send the first timestep out!
-          if(connected == server_count && worldinfoSent == server_count &&
-             !initialized) {
-            initialized = true; 
-            listenconn.set_reading(false);
-            // Send initialization timestep.
-            ready = 0;
-            timestep.set_timestep(0);
-            for(vector<RegionConnection*>::const_iterator i = regions.begin();
-                i != regions.end(); ++i) {
-              (*i)->queue.push(MSG_TIMESTEPUPDATE, timestep);
-              (*i)->set_writing(true);
-            }
-            cout << "All region servers connected!  Press return to begin simulation: " << flush;
-            standardinput.set_reading(true);
-          }
-
+          // DON'T PUT ANY CODE HERE, IT'S THE WRONG PLACE.
           break;
         }
 
@@ -410,9 +411,10 @@ int main(int argc, char **argv) {
 
         case RegionConnection::REGION_LISTEN:
         {
-          //if we have all the region servers we need, 'ignore' any more
-          if(connected == server_count)
+          if(connected == server_count) {
+            cerr << "Unexpected region connection!" << endl;
             break;
+          }
         
           // Accept a new region server
           struct sockaddr_in addr;
@@ -429,6 +431,11 @@ int main(int argc, char **argv) {
 
           ++connected;
           cout << "Region server " << connected << "/" << server_count << " connected." << endl;
+
+          if(connected == server_count) {
+            // Look for no further connections.
+            listenconn.set_reading(false);
+          }
 
           break;
         }
