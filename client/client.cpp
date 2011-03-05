@@ -550,6 +550,7 @@ void run(int argc, char** argv) {
                         // We can't see the robot anymore. Delete.
                         delete *it; 
                         it = ownRobots[i]->seenRobots.erase(it);
+                        it--; // Compensates for it++ in for loop.
                         cout << "We deleted a robot!" << endl;
                       }
                       else if (tempDistance < minDistance) {
