@@ -34,10 +34,7 @@ struct dataToHandler{
 
 class ClientViewer {
 private:
-#ifdef DEBUG
 	ofstream debug;
-#endif
-
 	int* currentRobot;
 	GAsyncQueue *asyncQueue;
 	GtkBuilder *builder;
