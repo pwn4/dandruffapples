@@ -106,10 +106,10 @@ bool sameCoordinates(float x1, float y1, float x2, float y2) {
   // From testing, it looks like floating point errors either add or subtract
   // 0.0001.
   float maxError = 0.1;
-  if (abs(x1 - x2) > maxError) {
+  if (abs(abs(x1) - abs(x2)) > maxError) {
     return false;
   }
-  if (abs(y1 - y2) > maxError) {
+  if (abs(abs(y1) - abs(y2)) > maxError) {
     return false;
   }
   return true; 
@@ -211,15 +211,19 @@ ClientRobotCommand userAiCode(OwnRobot* ownRobot) {
     // Make robot move in direction of the nearest puck.
     SeenPuck* closest = findClosestPuck(ownRobot);
     if (closest != NULL) {
-      float ratio = closest->relx / closest->rely;
+      float ratio = abs(closest->relx / closest->rely);
       float modx = 1.0;
       float mody = 1.0;
       if (ratio > 1.0) {
-        mody = abs(1.0/ratio);
+        mody = 1.0/ratio;
       } else {
-        modx = abs(ratio);
+        modx = ratio;
       } 
+
       float velocity = 0.1;
+      if (relDistance(closest->relx, closest->rely) < 1.0) {
+        velocity = 0.01;
+      } 
       command.sendCommand = true;
       if (closest->relx <= 0.0) {
         // Move left!
@@ -560,6 +564,10 @@ void run(int argc, char** argv, bool runClientViewer) {
                         newClosestRobotId = (*it)->id;
                       }
                     }
+                    if (newClosestRobotId != ownRobots[i]->closestRobotId) {
+                      ownRobots[i]->closestRobotId = newClosestRobotId;
+                      ownRobots[i]->eventQueue.push_back(EVENT_NEW_CLOSEST_ROBOT);
+                    }
 
                     // Update rel distance of seenPucks.
                     for (vector<SeenPuck*>::iterator it
@@ -569,6 +577,7 @@ void run(int argc, char** argv, bool runClientViewer) {
                       (*it)->relx -= ownRobots[i]->vx;
                       (*it)->rely -= ownRobots[i]->vy;
                       tempDistance = relDistance((*it)->relx, (*it)->rely);
+
                       if (tempDistance > sightDistance) {
                         // We can't see the puck anymore. Delete.
                         delete *it; 
@@ -577,7 +586,12 @@ void run(int argc, char** argv, bool runClientViewer) {
                       } else if (sameCoordinates(
                             (*it)->relx, (*it)->rely, 0.0, 0.0)) {
                         // If we can pickup this puck, throw event.
+                        //cout << "#" << i << " sees puck at relx="
+                        //     << (*it)->relx << ", rely=" <<(*it)->rely << endl;
                         ownRobots[i]->eventQueue.push_back(EVENT_CAN_PICKUP_PUCK);
+                      } else if (tempDistance < 1.0) {
+                        // Close to puck, let AI refine velocities continuously.
+                        ownRobots[i]->eventQueue.push_back(EVENT_NEAR_PUCK);
                       }
                     }
 
@@ -586,18 +600,14 @@ void run(int argc, char** argv, bool runClientViewer) {
                       ownRobots[i]->eventQueue.push_back(EVENT_NOT_MOVING);
                     }
 
-                    // Check for events
-                    if (newClosestRobotId != ownRobots[i]->closestRobotId) {
-                      ownRobots[i]->closestRobotId = newClosestRobotId;
-                      ownRobots[i]->eventQueue.push_back(EVENT_NEW_CLOSEST_ROBOT);
-                      // Check if any events exist; if so, call AI.
-                      if (ownRobots[i]->eventQueue.size() > 0 &&
+                    // Check if any events exist; if so, call AI.
+                    if (ownRobots[i]->eventQueue.size() > 0 &&
                           !ownRobots[i]->pendingCommand) {
-                        executeAi(ownRobots[i], i); 
-                        // Clear the queue, wait for new events.
-                        ownRobots[i]->eventQueue.clear();
-                      }
-                    } 
+                      executeAi(ownRobots[i], i); 
+                    }
+
+                    // Clear the queue, wait for new events.
+                    ownRobots[i]->eventQueue.clear();
                   }
                 }
                 //TODO: Egor - client viewer work in progress

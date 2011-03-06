@@ -646,8 +646,8 @@ void AreaEngine::Step(bool generateImage){
                   SeesPuckStack* seesPuckStack = puckStackAccess->add_seespuckstack();
                   seesPuckStack->set_viewlostid(false);
                   seesPuckStack->set_seenbyid(curRobot->id);
-                  seesPuckStack->set_relx(curRobot->x - puckStack->x);
-                  seesPuckStack->set_rely(curRobot->y - puckStack->y);
+                  seesPuckStack->set_relx(puckStack->x - curRobot->x);
+                  seesPuckStack->set_rely(puckStack->x - curRobot->y);
                 }
               }
 
