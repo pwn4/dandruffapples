@@ -1,49 +1,7 @@
-/*/////////////////////////////////////////////////////////////////////////////////////////////////
-Client program
-This program communications with controllers.
-//////////////////////////////////////////////////////////////////////////////////////////////////*/
-#include <sstream>
-#include <iostream>
-#include <cstdio>
-#include <cstring>
-#include <cerrno>
-#include <math.h>
-#include <cmath>
-
-#include <unistd.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <sys/select.h>
-#include <sys/epoll.h>
-
-#include <stdio.h>
-#include <string>
-#include <string.h>
-#include <stdlib.h>
-
-#include "../common/claimteam.pb.h"
-#include "../common/clientrobot.pb.h"
-#include "../common/puckstack.pb.h"
-#include "../common/serverrobot.pb.h"
-#include "../common/timestep.pb.h"
-#include "../common/worldinfo.pb.h"
-
-#include "../common/ports.h"
-#include "../common/net.h"
-#include "../common/messagequeue.h"
-#include "../common/messagereader.h"
-#include "../common/except.h"
-
-#include "clientviewer.h"
-
-using namespace std;
-using namespace google;
-using namespace protobuf;
+#include "client.h"
 
 /////////////////Variables and Declarations/////////////////
 const char *configFileName;
-bool runClientViewer = false;
 //Game world variables
 // TODO: organize/move variables out of client.cpp 
 bool simulationStarted = false;
@@ -72,79 +30,16 @@ int moveRandom = 0;
 
 const int COOLDOWN = 10;
 
-enum EventType {
-  EVENT_CLOSEST_ROBOT_STATE_CHANGE,
-  EVENT_NEW_CLOSEST_ROBOT,
-  EVENT_START_SEEING_PUCKS,
-  EVENT_END_SEEING_PUCKS,
-  EVENT_MAX
-};
-
-class SeenHome {
-public:
-  float relx;
-  float rely;
-  int teamId;
-
-  SeenHome() : relx(0.0), rely(0.0), teamId(-1) {}
-};
-
-class SeenPuck {
-public:
-  float relx;
-  float rely;
-  int stackSize;
-
-  SeenPuck() : relx(0.0), rely(0.0), stackSize(1) {}
-};
-
-class Robot {
-public:
-  float vx;
-  float vy;
-  float angle;
-  bool hasPuck;
-  bool hasCollided;  
-
-  Robot() : vx(0.0), vy(0.0), angle(0.0), hasPuck(false),
-            hasCollided(false) {}
-};
-
-class SeenRobot : public Robot {
-public:
-  int id;
-  int lastTimestepSeen;
-  bool viewable;
-  float relx;
-  float rely;
-
-  SeenRobot() : Robot(), id(-1), lastTimestepSeen(-1), viewable(true),
-      relx(0.0), rely(0.0) {}
-};
-
-class OwnRobot : public Robot {
-public:
-  bool pendingCommand;
-  int whenLastSent;
-  int closestRobotId;
-  int behaviour;
-  vector<SeenRobot*> seenRobots;
-  vector<SeenPuck*> seenPucks;
-  SeenHome* myHome;
-  vector<SeenHome*> seenHomes;
-  vector<EventType> eventQueue;
-
-  OwnRobot() : Robot(), pendingCommand(false), whenLastSent(-1), 
-      closestRobotId(-1), behaviour(-1), myHome(NULL) {}
-};
-
 OwnRobot** ownRobots;
 
 //Config variables
 vector<string> controllerips; //controller IPs 
+
 //Variables for the client viewer only
+//No mutex needed as only the client viewer may write and the client will only read
 int currentRobot=-1;
 ClientViewer* viewer;
+
 ////////////////////////////////////////////////////////////
 
 int clientViewerThread( gpointer *ptr )
@@ -372,10 +267,11 @@ void initializeRobots() {
 }
 
 
-void run(int argc, char** argv) {
+void run(int argc, char** argv, bool runClientViewer) {
   int controllerfd = -1;
   int currentController = rand() % controllerips.size();
-  GAsyncQueue *asyncQueue;
+  //initialized in the claim robot message
+  GAsyncQueue *asyncQueue=NULL;
 
   while(controllerfd < 0)
   {
@@ -508,11 +404,11 @@ void run(int argc, char** argv) {
                     {
                     	if( !g_thread_supported() )
                     	{
-                    		asyncQueue=g_async_queue_new();
                     		GThread *thread;
                     		GError *error = NULL;
 
                     		g_thread_init(NULL);
+                    		asyncQueue=g_async_queue_new();
                     		passToThread pass(argc, argv, robotsPerTeam, asyncQueue );
                     		thread = g_thread_create((GThreadFunc)clientViewerThread, (gpointer)&pass, FALSE, &error);
 
@@ -607,6 +503,12 @@ void run(int argc, char** argv) {
                       }
                     } 
                   }
+                }
+                //TODO: Egor - client viewer work in progress
+                if(runClientViewer)
+                {
+                	g_async_queue_push( asyncQueue, (gpointer) ownRobots[currentRobot] );
+                	viewer->updateViewer();
                 }
 
                 break;
@@ -839,7 +741,7 @@ void run(int argc, char** argv) {
     delete[] ownRobots;
   }
 }
-void tmpTestViewer(int argc, char** argv)
+void tmpTestViewer(int argc, char** argv, bool runClientViewer)
 {
 	if(runClientViewer)
 	{
@@ -862,6 +764,7 @@ void tmpTestViewer(int argc, char** argv)
 //this is the main loop for the client
 int main(int argc, char* argv[])
 {
+	bool runClientViewer = false;
 	srand(time(NULL));
 	//Print a starting message
 	printf("--== Client Software ==-\n");
@@ -877,7 +780,7 @@ int main(int argc, char* argv[])
 
 	runClientViewer=cmdline.getArg("-viewer").length() ? true : false;
 	cout<<"Started client with the client viewer set to "<<runClientViewer<<endl;
-	//tmpTestViewer(argc, argv);
+	//tmpTestViewer(argc, argv, runClientViewer);
 
 	myTeam = strtol(cmdline.getArg("-t", "0").c_str(), NULL, 0);
 	cout << "Trying to control team #" << myTeam << " (use -t <team> to change)"
@@ -885,7 +788,7 @@ int main(int argc, char* argv[])
 	////////////////////////////////////////////////////
 	
 	printf("Client Running!\n");
-	run(argc, argv);
+	run(argc, argv, runClientViewer);
 	
 	printf("Client Shutting Down ...\n");
 	

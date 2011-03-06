@@ -1,4 +1,4 @@
-#include "clientviewer.h"
+#include "client.h"
 
 //"About" toolbar button handler
 void on_About_clicked(GtkWidget *widget, gpointer window) {
@@ -41,7 +41,6 @@ void on_Window_toggled(GtkWidget *widget, gpointer window) {
 		gtk_widget_show_all(GTK_WIDGET(window));
 	else
 		gtk_widget_hide_all(GTK_WIDGET(window));
-
 }
 
 void on_RobotId_changed(GtkWidget *widget, gpointer _passedData) {
@@ -58,9 +57,17 @@ void on_RobotId_changed(GtkWidget *widget, gpointer _passedData) {
 	}
 }
 
+//update the drawing of the robot
+//this is called after the client has written to the async queue
 void ClientViewer::updateViewer()
 {
+	OwnRobot* ownRobot;
+	//watch out for the case where popping will return NULL ( should never happen )
+	ownRobot = (OwnRobot*)g_async_queue_try_pop(asyncQueue);
 
+#ifdef DEBUG
+	debug<<"Read robot at "<<ownRobot->vx<<" and "<<ownRobot->vy<<endl;
+#endif
 }
 
 //ClientViewer::
@@ -123,6 +130,7 @@ ClientViewer::ClientViewer(int argc, char* argv[],  GAsyncQueue* _asyncQueue, in
 }
 
 ClientViewer::~ClientViewer() {
+	g_async_queue_unref(asyncQueue);
 	g_object_unref( G_OBJECT(builder));
 #ifdef DEBUG
 	debug.close();
