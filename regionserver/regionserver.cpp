@@ -538,6 +538,14 @@ void run() {
 						switch (type) {
 						case MSG_CLIENTROBOT:
 							clientrobot.ParseFromArray(buffer, len);
+              if (clientrobot.has_puckpickup()) {
+                if (clientrobot.puckpickup()) {
+                  regionarea->PickUpPuck(clientrobot.id());
+                } else {
+                  regionarea->DropPuck(clientrobot.id());
+                }
+              }
+
 							if (!regionarea->ChangeVelocity(clientrobot.id(), 
                     clientrobot.velocityx(), clientrobot.velocityy())) {
                 // Not my robot!
