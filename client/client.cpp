@@ -22,11 +22,7 @@ int sentMessages = 0;
 int receivedMessages = 0;
 int pendingMessages = 0;
 int timeoutMessages = 0;
-int moveUp = 0;
-int moveDown = 0;
-int moveRight = 0;
-int moveLeft = 0;
-int moveRandom = 0;
+int puckPickupMessages = 0;
 
 const int COOLDOWN = 10;
 
@@ -109,7 +105,7 @@ float relDistance(float x1, float y1) {
 bool sameCoordinates(float x1, float y1, float x2, float y2) {
   // From testing, it looks like floating point errors either add or subtract
   // 0.0001.
-  float maxError = 0.001;
+  float maxError = 0.1;
   if (abs(x1 - x2) > maxError) {
     return false;
   }
@@ -119,133 +115,200 @@ bool sameCoordinates(float x1, float y1, float x2, float y2) {
   return true; 
 }
 
+SeenPuck* findPickUpablePuck(OwnRobot* ownRobot) {
+  if (ownRobot->seenPucks.size() == 0) 
+    return NULL;
+
+  vector<SeenRobot*>::iterator closest;
+  for (vector<SeenPuck*>::iterator it = ownRobot->seenPucks.begin();
+      it != ownRobot->seenPucks.end(); it++) {
+    //cout << "relx= " << (*it)->relx << ", rely= " << (*it)->rely << endl;
+    if (sameCoordinates((*it)->relx, (*it)->rely, 0.0, 0.0)) {
+      return *it; 
+    }
+  }
+  return NULL; // Found nothing in the for loop.
+}
+
+SeenRobot* findClosestRobot(OwnRobot* ownRobot) {
+  if (ownRobot->seenRobots.size() == 0) 
+    return NULL;
+
+  vector<SeenRobot*>::iterator closest;
+  float minDistance = 9000.01; // Over nine thousand!
+  float tempDistance;
+  for (vector<SeenRobot*>::iterator it = ownRobot->seenRobots.begin();
+      it != ownRobot->seenRobots.end(); it++) {
+    tempDistance = relDistance((*it)->relx, (*it)->rely);
+    if (tempDistance < minDistance) {
+      minDistance = tempDistance;
+      closest = it;
+    }
+  }
+  return *closest;
+}
+
+SeenPuck* findClosestPuck(OwnRobot* ownRobot) {
+  if (ownRobot->seenPucks.size() == 0) 
+    return NULL;
+
+  vector<SeenPuck*>::iterator closest;
+  float minDistance = 9000.01; // Over nine thousand!
+  float tempDistance;
+  for (vector<SeenPuck*>::iterator it = ownRobot->seenPucks.begin();
+      it != ownRobot->seenPucks.end(); it++) {
+    tempDistance = relDistance((*it)->relx, (*it)->rely);
+    if (tempDistance < minDistance) {
+      minDistance = tempDistance;
+      closest = it;
+    }
+  }
+  return *closest;
+}
+
+ClientRobotCommand userAiCode(OwnRobot* ownRobot) {
+  ClientRobotCommand command;
+  switch (ownRobot->behaviour) {
+  case 0:
+  {
+    // Forager robot. Pick up any pucks we can. Don't worry about enemy robots.
+
+    // Are we interested in this event?
+    bool pickupPuck = false;
+    for (vector<EventType>::iterator it = ownRobot->eventQueue.begin();
+        it != ownRobot->eventQueue.end() && !pickupPuck; it++) {
+      if (*it == EVENT_CAN_PICKUP_PUCK)  
+        pickupPuck = true;
+    }
+
+    // Check if we are on a puck. If so, just pick it up.
+    if (pickupPuck) {
+      SeenPuck* pickup = findPickUpablePuck(ownRobot);
+      if (pickup != NULL) {
+        command.sendCommand = true;
+        command.changePuckPickup = true;
+        command.puckPickup = true;
+        break;
+      }
+    }
+
+    // Make robot move in direction of the nearest puck. TODO: Add trig!
+    SeenPuck* closest = findClosestPuck(ownRobot);
+    if (closest != NULL) {
+      float ratio = closest->relx / closest->rely;
+      float modx = 1.0;
+      float mody = 1.0;
+      if (ratio > 1.0) {
+        mody = 1.0/ratio;
+      } else {
+        modx = ratio;
+      } 
+      float velocity = 0.1;
+      command.sendCommand = true;
+      if (closest->relx <= 0.0) {
+        // Move left!
+        command.changeVx = true;
+        command.vx = velocity * -1.0 * modx;
+      } else if (closest->relx > 0.0) {
+        command.changeVx = true;
+        command.vx = velocity * modx; 
+      }
+      if (closest->rely <= 0.0) {
+        // Move up!
+        command.changeVy = true;
+        command.vy = velocity * -1.0 * mody;
+      } else if (closest->rely > 0.0) { 
+        command.changeVy = true;
+        command.vy = velocity * mody;
+      }
+    } 
+    break;
+  }
+  case 1:
+  {
+    // Scared robot. Run away from all enemy robots. 
+
+    // Are we interested in this event?
+    bool robotChange = false;
+    for (vector<EventType>::iterator it = ownRobot->eventQueue.begin();
+        it != ownRobot->eventQueue.end() && !robotChange; it++) {
+      if (*it == EVENT_CLOSEST_ROBOT_STATE_CHANGE || 
+          *it == EVENT_NEW_CLOSEST_ROBOT)  
+        robotChange = true;
+    }
+    if (!robotChange) 
+      break;
+
+    // Make robot move in opposite direction. TODO: Add trig!
+    SeenRobot* closest = findClosestRobot(ownRobot);
+    if (closest != NULL) {
+      float velocity = 1.0;
+      command.sendCommand = true;
+      if (closest->relx <= 0.0) {
+        // Move right!
+        command.changeVx = true;
+        command.vx = velocity;
+      } else if (closest->relx > 0.0) {
+        command.changeVx = true;
+        command.vx = velocity * -1.0; 
+      }
+      if (closest->rely <= 0.0) {
+        // Move down!
+        command.changeVy = true;
+        command.vy = velocity;
+      } else if (closest->rely > 0.0) { 
+        command.changeVy = true;
+        command.vy = velocity * -1.0;
+      }
+    } 
+    break;
+  }
+  default:
+    cerr << "You defined a robot behaviour number that you are not checking!" 
+         << endl;
+    break;
+  }
+  return command;
+}
+
 void forceSend() {
   while(theController->queue.remaining() > 0)
     theController->queue.doWrite();
 }
 
 void executeAi(OwnRobot* ownRobot, int index) {
-  // TODO give events to AI handler
-  int type = 1; // TEMP, remove after we create AI handler
+  if (ownRobot->pendingCommand) 
+    return;
 
-  ClientRobot clientRobot;
-  float velocity = 0.1;
-  clientRobot.set_velocityx(ownRobot->vx);
-  clientRobot.set_velocityy(ownRobot->vy);
-  if (type == 0) {
-    // Aggressive robot!
-    if (ownRobot->seenRobots.size() > 0) {
-      // Find the closest seen robot. If none, do nothing.
-      vector<SeenRobot*>::iterator closest;
-      float minDistance = 9000.01; // Over nine thousand!
-      bool foundRobot = false;
-      for (vector<SeenRobot*>::iterator it
-          = ownRobot->seenRobots.begin();
-          it != ownRobot->seenRobots.end(); it++) {
-        if (relDistance((*it)->relx, (*it)->rely) < minDistance &&
-            !weControlRobot((*it)->id)) {
-          closest = it;
-          foundRobot = true;
-        }
-      }
+  // Initialize clientrobot message to current values
+  ClientRobot clientrobot;
+  clientrobot.set_id(indexToRobotId(index));
+  clientrobot.set_velocityx(ownRobot->vx);
+  clientrobot.set_velocityy(ownRobot->vy);
+  clientrobot.set_angle(ownRobot->angle);
 
-      if (foundRobot) {
-        // TODO: Do trig here?
-        if ((*closest)->relx > 0.0 && ownRobot->vx != velocity) {
-          // Move right!
-          ownRobot->pendingCommand = true;
-          clientRobot.set_velocityx(velocity);
-        } else if ((*closest)->relx < 0.0 && 
-            ownRobot->vx != velocity * -1.0) {
-          ownRobot->pendingCommand = true;
-          clientRobot.set_velocityx(velocity * -1.0);
-        } else if ((*closest)->relx == 0.0 && ownRobot->vx != 0.0) {
-          ownRobot->pendingCommand = true;
-          clientRobot.set_velocityx(0.0);
-        }
-        if ((*closest)->rely > 0.0 && ownRobot->vy != velocity) {
-          // Move down!
-          ownRobot->pendingCommand = true;
-          clientRobot.set_velocityy(velocity);
-        } else if ((*closest)->rely < 0.0 && 
-            ownRobot->vy != velocity * -1.0) {
-          ownRobot->pendingCommand = true;
-          clientRobot.set_velocityy(velocity * -1.0);
-        } else if ((*closest)->rely == 0.0 && ownRobot->vy != 0.0) {
-          ownRobot->pendingCommand = true;
-          clientRobot.set_velocityy(0.0);
-        }
-      } 
-    } else {
-      // No seen robots. Make sure we're moving.
-      if (ownRobot->vx == 0.0 || ownRobot->vy == 0.0) {
-        ownRobot->pendingCommand = true;
-        clientRobot.set_velocityx(((rand() % 11) / 10.0) - 0.5);
-        clientRobot.set_velocityy(((rand() % 11) / 10.0) - 0.5);
-      }
+  ClientRobotCommand command = userAiCode(ownRobot);
+  if (command.sendCommand) {
+    if (command.changeVx) 
+      clientrobot.set_velocityx(command.vx);
+    if (command.changeVy) 
+      clientrobot.set_velocityy(command.vy);
+    if (command.changeAngle) 
+      clientrobot.set_angle(command.angle);
+    if (command.changePuckPickup) {
+      puckPickupMessages++;
+      clientrobot.set_puckpickup(command.puckPickup);
     }
-  } else if (type == 1) {
-    // Scared robot!
-    if (ownRobot->seenRobots.size() > 0) {
-      // Find the closest seen robot. If none, do nothing.
-      vector<SeenRobot*>::iterator closest;
-      float minDistance = 9000.01; // Over nine thousand!
-      bool foundRobot = false;
-      for (vector<SeenRobot*>::iterator it
-          = ownRobot->seenRobots.begin();
-          it != ownRobot->seenRobots.end(); it++) {
-        if (relDistance((*it)->relx, (*it)->rely) < minDistance) {
-          closest = it;
-          foundRobot = true;
-        }
-      }
 
-      if (foundRobot) {
-        if ((*closest)->relx <= 0.0 && ownRobot->vx != velocity) {
-          // Move right!
-          ownRobot->pendingCommand = true;
-          clientRobot.set_velocityx(velocity);
-          moveRight++;
-        } else if ((*closest)->relx > 0.0 && 
-            ownRobot->vx != velocity * -1.0) {
-          ownRobot->pendingCommand = true;
-          clientRobot.set_velocityx(velocity * -1.0);
-          moveLeft++;
-        }
-        if ((*closest)->rely <= 0.0 && ownRobot->vy != velocity) {
-          // Move down!
-          ownRobot->pendingCommand = true;
-          clientRobot.set_velocityy(velocity);
-          moveDown++;
-        } else if ((*closest)->rely > 0.0 && 
-            ownRobot->vy != velocity * -1.0) {
-          ownRobot->pendingCommand = true;
-          clientRobot.set_velocityy(velocity * -1.0);
-          moveUp++;
-        }
-      } 
-    } else {
-      // No seen robots. Make sure we're moving.
-      if (ownRobot->vx == 0.0 || ownRobot->vy == 0.0 
-          || currentTimestep - ownRobot->whenLastSent > 10000) {
-        ownRobot->pendingCommand = true;
-        clientRobot.set_velocityx(((rand() % 11) / 10.0) - 0.5);
-        clientRobot.set_velocityy(((rand() % 11) / 10.0) - 0.5);
-        moveRandom++;
-      }
-    }
-  }
-
-  // Did we want to send a command?
-  if (ownRobot->pendingCommand) { 
-    clientRobot.set_id(indexToRobotId(index));
-    clientRobot.set_angle(0.0); // TODO: implement angle
-    theController->queue.push(MSG_CLIENTROBOT, clientRobot);
+    theController->queue.push(MSG_CLIENTROBOT, clientrobot);
     theController->set_writing(true);
+
     ownRobot->whenLastSent = currentTimestep;
     sentMessages++;
+    ownRobot->pendingCommand = true;
+
+    forceSend();
   }
-  forceSend();
 }
 
 
@@ -262,6 +325,7 @@ void initializeRobots() {
     theController->set_writing(true);
     ownRobots[i]->whenLastSent = currentTimestep;
     sentMessages++;
+    ownRobots[i]->behaviour = i % 2;
   }
   forceSend();
 }
@@ -315,21 +379,14 @@ void run(int argc, char** argv, bool runClientViewer) {
         cout << "Received " << receivedMessages << " per second." << endl;
         cout << "Timeout " << timeoutMessages << " per second." << endl;
         cout << "ControllerQueue " << theController->queue.remaining() << endl;
-        cout << "Move up " << moveUp << " per second." << endl;
-        cout << "Move down " << moveDown << " per second." << endl;
-        cout << "Move right " << moveRight << " per second." << endl;
-        cout << "Move left " << moveLeft << " per second." << endl;
-        cout << "Move random " << moveRandom << " per second." << endl << endl;
+        cout << "Puck pickups " << puckPickupMessages << " per second." << endl;
+        cout << endl;
         lastSecond = time(NULL);
         sentMessages = 0;
         pendingMessages = 0;
         receivedMessages = 0;
         timeoutMessages = 0;
-        moveUp = 0;
-        moveDown = 0;
-        moveRight = 0;
-        moveLeft = 0;
-        moveRandom = 0;
+        puckPickupMessages = 0;
       }
 
       int eventcount = epoll_wait(epoll, events, MAX_EVENTS, -1);
@@ -480,13 +537,16 @@ void run(int argc, char** argv, bool runClientViewer) {
                       (*it)->relx -= ownRobots[i]->vx;
                       (*it)->rely -= ownRobots[i]->vy;
                       tempDistance = relDistance((*it)->relx, (*it)->rely);
-                      //cout << "#" << i << " puckRelX = " << (*it)->relx
-                      //     << ", puckRelY = " << (*it)->rely << endl;
                       if (tempDistance > sightDistance) {
                         // We can't see the puck anymore. Delete.
                         delete *it; 
                         it = ownRobots[i]->seenPucks.erase(it);
                         it--; // Compensates for it++ in for loop.
+                      }
+
+                      // If we can pickup this puck, throw event.
+                      if (findPickUpablePuck(ownRobots[i]) != NULL) {
+                        ownRobots[i]->eventQueue.push_back(EVENT_CAN_PICKUP_PUCK);
                       }
                     }
 
@@ -666,9 +726,7 @@ void run(int argc, char** argv, bool runClientViewer) {
                             puckstack.seespuckstack(i).rely())) {
                           (*it)->stackSize = puckstack.stacksize();
                           foundPuck = true;
-                          cout << "Updating puck stacksize!" << endl;
                           if ((*it)->stackSize <= 0) {
-                            cout << "But stacksize is 0, so delete!" << endl;
                             delete *it; 
                             it = ownRobots[index]->seenPucks.erase(it);
                           }

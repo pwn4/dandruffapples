@@ -48,6 +48,7 @@ enum EventType {
   EVENT_NEW_CLOSEST_ROBOT,
   EVENT_START_SEEING_PUCKS,
   EVENT_END_SEEING_PUCKS,
+  EVENT_CAN_PICKUP_PUCK,
   EVENT_MAX
 };
 
@@ -107,6 +108,23 @@ public:
 
   OwnRobot() : Robot(), pendingCommand(false), whenLastSent(-1),
       closestRobotId(-1), behaviour(-1), myHome(NULL) {}
+};
+
+class ClientRobotCommand {
+public:
+  bool sendCommand;
+  bool changeVx;
+  float vx;
+  bool changeVy;
+  float vy;
+  bool changeAngle;
+  float angle;
+  bool changePuckPickup; 
+  bool puckPickup;
+
+  ClientRobotCommand() : sendCommand(false), changeVx(false), vx(0.0),
+      changeVy(false), vy(0.0), changeAngle(false), angle(0.0), 
+      changePuckPickup(false), puckPickup(false) {}
 };
 
 struct passToThread{
