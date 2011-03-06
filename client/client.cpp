@@ -88,15 +88,15 @@ void loadConfigFile()
 }
 
 int indexToRobotId(int index) {
-  return (index + myTeam * robotsPerTeam);
+  return (index + 1 + myTeam * robotsPerTeam);
 }
 
 int robotIdToIndex(int robotId) {
-  return (robotId - myTeam * robotsPerTeam);
+  return (robotId - 1 - myTeam * robotsPerTeam);
 }
 
 bool weControlRobot(int robotId) {
-  int index = robotId - myTeam * robotsPerTeam;
+  int index = robotIdToIndex(robotId);
   return (0 <= index && index < robotsPerTeam);
 }
 
