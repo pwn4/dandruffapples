@@ -192,16 +192,32 @@ ClientRobotCommand userAiCode(OwnRobot* ownRobot) {
       }
     }
 
-    // Make robot move in direction of the nearest puck. TODO: Add trig!
+    // Check if we are not moving
+    bool notMoving = false;
+    for (vector<EventType>::iterator it = ownRobot->eventQueue.begin();
+        it != ownRobot->eventQueue.end() && !notMoving; it++) {
+      if (*it == EVENT_NOT_MOVING)
+        notMoving = true;
+    }
+    if (notMoving) {
+      command.sendCommand = true;
+      command.changeVx = true;
+      command.vx = (((rand() % 11) / 10.0) - 0.5);
+      command.changeVy = true;
+      command.vy = (((rand() % 11) / 10.0) - 0.5);
+      break;
+    }
+
+    // Make robot move in direction of the nearest puck.
     SeenPuck* closest = findClosestPuck(ownRobot);
     if (closest != NULL) {
       float ratio = closest->relx / closest->rely;
       float modx = 1.0;
       float mody = 1.0;
       if (ratio > 1.0) {
-        mody = 1.0/ratio;
+        mody = abs(1.0/ratio);
       } else {
-        modx = ratio;
+        modx = abs(ratio);
       } 
       float velocity = 0.1;
       command.sendCommand = true;
@@ -227,6 +243,22 @@ ClientRobotCommand userAiCode(OwnRobot* ownRobot) {
   case 1:
   {
     // Scared robot. Run away from all enemy robots. 
+
+    // Check if we are not moving
+    bool notMoving = false;
+    for (vector<EventType>::iterator it = ownRobot->eventQueue.begin();
+        it != ownRobot->eventQueue.end() && !notMoving; it++) {
+      if (*it == EVENT_NOT_MOVING)
+        notMoving = true;
+    }
+    if (notMoving) {
+      command.sendCommand = true;
+      command.changeVx = true;
+      command.vx = (((rand() % 11) / 10.0) - 0.5);
+      command.changeVy = true;
+      command.vy = (((rand() % 11) / 10.0) - 0.5);
+      break;
+    }
 
     // Are we interested in this event?
     bool robotChange = false;
@@ -542,12 +574,16 @@ void run(int argc, char** argv, bool runClientViewer) {
                         delete *it; 
                         it = ownRobots[i]->seenPucks.erase(it);
                         it--; // Compensates for it++ in for loop.
-                      }
-
-                      // If we can pickup this puck, throw event.
-                      if (findPickUpablePuck(ownRobots[i]) != NULL) {
+                      } else if (sameCoordinates(
+                            (*it)->relx, (*it)->rely, 0.0, 0.0)) {
+                        // If we can pickup this puck, throw event.
                         ownRobots[i]->eventQueue.push_back(EVENT_CAN_PICKUP_PUCK);
                       }
+                    }
+
+                    // Check if we're not moving
+                    if (ownRobots[i]->vx == 0.0 && ownRobots[i]->vy == 0.0) {
+                      ownRobots[i]->eventQueue.push_back(EVENT_NOT_MOVING);
                     }
 
                     // Check for events
