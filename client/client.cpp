@@ -346,6 +346,7 @@ gboolean run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
       // We don't need to check writability for now
       g_source_remove(gwatch);
       gwatch = g_io_add_watch(ioch, G_IO_IN, run, data);
+      writing = false;
     }
   }
 
