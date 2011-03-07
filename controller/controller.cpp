@@ -133,10 +133,6 @@ int main(int argc, char** argv)
   TimestepUpdate timestep;
   WorldInfo worldinfo;
   RegionInfo regioninfo;
-  ClientRobot clientrobot;
-  ServerRobot serverrobot;
-  ClaimTeam claimteam;
-  Claim claimrobot;
   vector<ClientConnection*> clients;	//can access by client id
   vector<ServerConnection*> servers;
 	set<net::EpollConnection*> seenbyidset;		//to determine who to forward serverrobot msg to
@@ -268,6 +264,7 @@ int main(int argc, char** argv)
 
             case MSG_CLAIMTEAM:
             {
+              ClaimTeam claimteam;
               claimteam.ParseFromArray(buffer, len);
               unsigned client = claimteam.clientid();
               if(claimteam.granted()) {
@@ -316,6 +313,7 @@ int main(int argc, char** argv)
             {
               receivedClientRobot++;
               // Forward to the correct server
+              ClientRobot clientrobot;
               clientrobot.ParseFromArray(buffer, len);
                 
               net::EpollConnection *server = (robots.find(clientrobot.id()))->second.server;
@@ -333,6 +331,7 @@ int main(int argc, char** argv)
 
             case MSG_CLAIMTEAM:
             {
+              ClaimTeam claimteam;
               // Forward to the clock
               claimteam.ParseFromArray(buffer, len);
               
@@ -364,6 +363,7 @@ int main(int argc, char** argv)
             switch(type) {
             case MSG_SERVERROBOT:
             {
+              ServerRobot serverrobot;
               receivedServerRobot++;
               serverrobot.ParseFromArray(buffer, len);
               
@@ -419,7 +419,9 @@ int main(int argc, char** argv)
             }
 
             case MSG_CLAIM:
+            {
               // Update lookup table
+              Claim claimrobot;
               claimrobot.ParseFromArray(buffer, len);
               //another temporary error handle in case
               if(robots.find(claimrobot.id()) == robots.end())
@@ -428,10 +430,10 @@ int main(int argc, char** argv)
               (robots.find(claimrobot.id()))->second.server = c;
 
               //we check to see if the robot has backed up bounced messages
-              if((robots.find(clientrobot.id()))->second.bouncedMessages.size() > 0)
+              if((robots.find(claimrobot.id()))->second.bouncedMessages.size() > 0)
               {
                 net::EpollConnection* robotServer = (robots.find(claimrobot.id()))->second.server;
-                vector<ClientRobot> * robotBacklog = &((robots.find(clientrobot.id()))->second.bouncedMessages);
+                vector<ClientRobot> * robotBacklog = &((robots.find(claimrobot.id()))->second.bouncedMessages);
                 for(unsigned int i = 0; i < robotBacklog->size(); i++)
                 {
                   robotServer->queue.push(MSG_CLIENTROBOT, (*robotBacklog)[i]);
@@ -447,6 +449,7 @@ int main(int argc, char** argv)
               }
 
               break;
+            }
 
             case MSG_BOUNCEDROBOT:
             {
