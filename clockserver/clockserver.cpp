@@ -100,6 +100,71 @@ void addPositions(int newServerRow, int newServerCol, int numRows,
   worldinfo.mutable_region(serverid)->add_position(RegionInfo_Position_LEFT);
 }
 
+//these variables need to be global
+size_t ready = 0;
+vector<RegionConnection*> regions, controllers, worldviewers;
+  size_t connected = 0, worldinfoSent = 0;
+  RegionInfo regioninfo;
+  TimestepDone tsdone;
+  TimestepUpdate timestep;
+  ClaimTeam claimteam;
+  unsigned long long step = 0;
+  time_t lastSecond = time(NULL);
+  int timeSteps = 0;
+  int numPositionedServers = 0;
+  
+  long totalpersecond = 0, number = 0;
+  long values[1000];
+  long freeval = 0;
+  int second = 0;
+  bool running = false;
+
+void checkNewStep(){
+
+  if(ready == server_count + controllers.size() && running) {
+    //check if its time to output
+    if(time(NULL) > lastSecond)
+    {
+      cout << timeSteps/2 << " timesteps/second. second: " << second++ << endl;
+      //do some stats calculations
+      totalpersecond += timeSteps/2;
+      number++;
+      values[freeval++] = (long)timeSteps/2;
+      long avg = (totalpersecond / number);
+      cout << avg << " timesteps/second on average" <<endl;
+      //calc std dev
+      long stddev =0;
+      for(int k = 0; k < freeval; k++)
+        stddev += (values[k] - avg)*(values[k] - avg);
+      stddev /= freeval;
+      stddev = sqrt(stddev);
+      cout << "Standard Deviation: " << stddev << endl << endl;
+      ////////////////////////////
+      timeSteps = 0;
+      lastSecond = time(NULL);
+    }
+    timeSteps++;
+
+    // All servers are ready, prepare to send next step
+    ready = 0;
+    timestep.set_timestep(step++);
+    // Send to regions
+    for(vector<RegionConnection*>::const_iterator i = regions.begin();
+        i != regions.end(); ++i) {
+      (*i)->queue.push(MSG_TIMESTEPUPDATE, timestep);
+      (*i)->set_writing(true);
+    }
+
+    // Send to controllers -- EVERY SINGLE TIMESTEP
+      for(vector<RegionConnection*>::const_iterator i = controllers.begin();
+          i != controllers.end(); ++i) {
+        (*i)->queue.push(MSG_TIMESTEPUPDATE, timestep);
+        (*i)->set_writing(true);
+      }
+  }
+              
+}
+
 int main(int argc, char **argv) {
 	helper::CmdLine cmdline(argc, argv);
 	configFileName=cmdline.getArg("-c", "config").c_str();
@@ -169,25 +234,9 @@ int main(int argc, char **argv) {
     worldlistenconn(epoll, EPOLLIN, worldviewSock, RegionConnection::WORLDVIEWER_LISTEN);
   net::EpollConnection standardinput(epoll, 0, STDIN_FILENO, net::connection::STDIN);
   
-  vector<RegionConnection*> regions, controllers, worldviewers;
   size_t maxevents = 1 + server_count;
   struct epoll_event *events = new struct epoll_event[maxevents];
-  size_t connected = 0, ready = 0, worldinfoSent = 0;
-  RegionInfo regioninfo;
-  TimestepDone tsdone;
-  TimestepUpdate timestep;
-  ClaimTeam claimteam;
-  unsigned long long step = 0;
   timestep.set_timestep(step++);
-  time_t lastSecond = time(NULL);
-  int timeSteps = 0;
-  int numPositionedServers = 0;
-  
-  long totalpersecond = 0, number = 0;
-  long values[1000];
-  long freeval = 0;
-  int second = 0;
-  bool running = false;
 
   cout << "Listening for connections." << endl;
   while(true) {    
@@ -217,49 +266,8 @@ int main(int argc, char **argv) {
               tsdone.ParseFromArray(buffer, len);
               ++ready;
 
-              if(ready == server_count && running) {
-                //check if its time to output
-                if(time(NULL) > lastSecond)
-                {
-                  cout << timeSteps/2 << " timesteps/second. second: " << second++ << endl;
-                  //do some stats calculations
-                  totalpersecond += timeSteps/2;
-                  number++;
-                  values[freeval++] = (long)timeSteps/2;
-                  long avg = (totalpersecond / number);
-                  cout << avg << " timesteps/second on average" <<endl;
-                  //calc std dev
-                  long stddev =0;
-                  for(int k = 0; k < freeval; k++)
-                    stddev += (values[k] - avg)*(values[k] - avg);
-                  stddev /= freeval;
-                  stddev = sqrt(stddev);
-                  cout << "Standard Deviation: " << stddev << endl << endl;
-                  ////////////////////////////
-                  timeSteps = 0;
-                  lastSecond = time(NULL);
-                }
-                timeSteps++;
-            
-                // All servers are ready, prepare to send next step
-                ready = 0;
-                timestep.set_timestep(step++);
-                // Send to regions
-                for(vector<RegionConnection*>::const_iterator i = regions.begin();
-                    i != regions.end(); ++i) {
-                  (*i)->queue.push(MSG_TIMESTEPUPDATE, timestep);
-                  (*i)->set_writing(true);
-                }
-
-                // Send to controllers -- every second timestep
-                if (timestep.timestep() % 2 == 0) {
-                  for(vector<RegionConnection*>::const_iterator i = controllers.begin();
-                      i != controllers.end(); ++i) {
-                    (*i)->queue.push(MSG_TIMESTEPUPDATE, timestep);
-                    (*i)->set_writing(true);
-                  }
-                }
-              }
+              checkNewStep();
+              
               break;
             }
             case MSG_REGIONINFO:
@@ -397,6 +405,15 @@ int main(int argc, char **argv) {
                 }
                 c->queue.push(MSG_CLAIMTEAM, claimteam);
                 c->set_writing(true);
+                break;
+              }
+              case MSG_TIMESTEPDONE:
+              {
+                tsdone.ParseFromArray(buffer, len);
+                ++ready;
+
+                checkNewStep();
+                
                 break;
               }
             
