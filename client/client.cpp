@@ -389,11 +389,11 @@ gboolean run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 				sameTeam = false;
 			}
 		}
-		cout << "Got worldinfo! Calculated " << robotsPerTeam << " robots on each team.\n";
+		cout << "Got worldinfo! Calculated " << robotsPerTeam << " robots on each team."<<endl;
 
 		//create the client viewer GUI
 		if (runClientViewer)
-			viewer->initClientViewer(robotsPerTeam);
+			viewer->initClientViewer(robotsPerTeam, ROBOTDIAMETER, VIEWDISTANCE, DRAWFACTOR );
 
 		// Claim our team
 		claimteam.set_id(myTeam);

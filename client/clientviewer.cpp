@@ -31,7 +31,7 @@ gboolean infoDeleteEvent(GtkWidget *window, GdkEvent *event, gpointer widget) {
 	return TRUE;
 }
 
-//"Robot" and "Info" toolbar button handler
+//"Info" toolbar button handler
 void on_Window_toggled(GtkWidget *widget, gpointer window) {
 	GdkColor bgColor;
 	gdk_color_parse("black", &bgColor);
@@ -43,31 +43,48 @@ void on_Window_toggled(GtkWidget *widget, gpointer window) {
 		gtk_widget_hide_all(GTK_WIDGET(window));
 }
 
+//called when the spin button value is changed
 void on_RobotId_changed(GtkWidget *widget, gpointer data) {
-	int *viewedRobot = (int*)data;
+	int *viewedRobot = (int*) data;
 
 	int changedRobotId = gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(widget));
 
 	if (*viewedRobot != changedRobotId)
 		*viewedRobot = changedRobotId;
 }
-
+//ClientViewer::
 //update the drawing of the robot
-//this is called after the client has written to the async queue
 void ClientViewer::updateViewer(OwnRobot* ownRobot) {
 #ifdef DEBUG
-	debug<<"Read robot "<<viewedRobot<<" moving on x: "<<ownRobot->vx<<" and moving on y: "<<ownRobot->vy<<endl;
+	debug<<"Drawing robot: "<<viewedRobot<<endl;
 #endif
+
+	cairo_surface_t *image= cairo_image_surface_create(IMAGEFORMAT, robotDiameter * drawFactor * 2 + viewDistance * drawFactor,
+			robotDiameter * drawFactor * 2 + viewDistance * drawFactor);
+	cairo_t *cr = gdk_cairo_create(drawingArea->widget.window);
+
+	//paint a white background
+	cairo_set_source_rgb(cr, 1, 1, 1);
+	cairo_paint (cr);
+
+	cairo_set_source_rgb(cr, .5, .5, .5);
+	cairo_arc(cr, imageWidth/2, imageHeight/2, robotDiameter/2, 0, 2*M_PI );
+
+	cairo_set_source_surface(cr, image, 0, 0);
+	cairo_paint(cr);
+
+	cairo_surface_destroy( image);
+	cairo_destroy(cr);
 }
 
-//ClientViewer::
 //initializations and simple modifications for the things that will be drawn
-void ClientViewer::initClientViewer(int numberOfRobots) {
+void ClientViewer::initClientViewer(int numberOfRobots, int _robotDiameter, int _viewDistance, int _drawFactor) {
 #ifdef DEBUG
 	debug<<"Starting the Client Viewer!"<<endl;
 #endif
 	g_type_init();
 
+	//load the builder file
 	gtk_builder_add_from_file(builder, builderPath.c_str(), NULL);
 	gtk_builder_connect_signals(builder, NULL);
 
@@ -78,8 +95,19 @@ void ClientViewer::initClientViewer(int numberOfRobots) {
 	GtkSpinButton *robotId = GTK_SPIN_BUTTON(gtk_builder_get_object(builder, "robotId"));
 	GdkColor color;
 
-	gtk_adjustment_set_upper(GTK_ADJUSTMENT(gtk_builder_get_object(builder, "robotIdAdjustment")), numberOfRobots-1);
+	//drawing related variables
+	robotDiameter = _robotDiameter;
+	viewDistance = _viewDistance;
+	drawFactor = _drawFactor;
+	imageWidth=robotDiameter * drawFactor * 2 + viewDistance * drawFactor;
+	imageHeight=robotDiameter * drawFactor * 2 + viewDistance * drawFactor;
+	drawingArea = GTK_DRAWING_AREA(gtk_builder_get_object(builder, "drawingArea"));
+	//make sure we have enough space to draw a robot, the viewdistance around it and an extra robot length in case a robot is visible right on the boundary
+	gtk_widget_set_size_request(GTK_WIDGET(drawingArea), imageWidth, imageHeight);
 
+	//set the upper value for the spin button
+	gtk_adjustment_set_upper(GTK_ADJUSTMENT(gtk_builder_get_object(builder, "robotIdAdjustment")), numberOfRobots - 1);
+	gtk_adjustment_set_value(GTK_ADJUSTMENT(gtk_builder_get_object(builder, "robotIdAdjustment")), -1);
 	//keep the info window floating on top of the main window
 	gtk_window_set_keep_above(GTK_WINDOW(infoWindow), true);
 
@@ -91,7 +119,7 @@ void ClientViewer::initClientViewer(int numberOfRobots) {
 	gdk_color_parse("white", &color);
 	//gtk_widget_modify_fg(GTK_WIDGET(gtk_builder_get_object(builder, "robotWindowLabel")), GTK_STATE_NORMAL, &color);
 
-	g_signal_connect(robotId, "value-changed", G_CALLBACK(on_RobotId_changed), (gpointer)&viewedRobot);
+	g_signal_connect(robotId, "value-changed", G_CALLBACK(on_RobotId_changed), (gpointer) & viewedRobot);
 
 	g_signal_connect(info, "toggled", G_CALLBACK(on_Window_toggled), (gpointer) infoWindow);
 	g_signal_connect(about, "clicked", G_CALLBACK(on_About_clicked), (gpointer) mainWindow);
@@ -103,10 +131,10 @@ void ClientViewer::initClientViewer(int numberOfRobots) {
 }
 
 ClientViewer::ClientViewer(int argc, char* argv[]) :
-	viewedRobot(0) {
+	viewedRobot(-1) {
 
 	//assume that the clientviewer.builder is in the same directory as the executable that we are running
-	builderPath=argv[0];
+	builderPath = argv[0];
 	builderPath = builderPath.substr(0, builderPath.find_last_of("//") + 1) + "clientviewer.glade";
 	builder = gtk_builder_new();
 

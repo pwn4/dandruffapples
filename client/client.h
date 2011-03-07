@@ -11,6 +11,7 @@ This program communications with controllers.
 #include <cstring>
 #include <cerrno>
 #include <cmath>
+#include <math.h>
 #include <string>
 #include <stdlib.h>
 #include <fstream>
@@ -30,10 +31,17 @@ This program communications with controllers.
 #include <gtk/gtk.h>
 
 #include "../common/helper.h"
+#include "../common/imageconstants.h"
 
 using namespace std;
 using namespace google;
 using namespace protobuf;
+
+//constants for drawing as taken from the regionserver.cpp line ~216
+//apparently in the future they will be set by the clock server
+#define ROBOTDIAMETER 4
+#define VIEWDISTANCE 20
+#define DRAWFACTOR 5
 
 enum EventType {
   EVENT_CLOSEST_ROBOT_STATE_CHANGE,
@@ -124,12 +132,13 @@ public:
 class ClientViewer {
 private:
 	ofstream debug;
-	int viewedRobot;
+	int viewedRobot, robotDiameter, viewDistance, drawFactor, imageWidth, imageHeight;
 	string builderPath;
 	GtkBuilder *builder;
+	GtkDrawingArea *drawingArea;
 
 public:
-	void initClientViewer(int);
+	void initClientViewer(int, int, int, int);
 	void updateViewer(OwnRobot* ownRobot);
 	int getViewedRobot() { return viewedRobot; }
 

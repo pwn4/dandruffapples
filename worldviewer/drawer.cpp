@@ -72,9 +72,9 @@ cairo_surface_t * UnpackImage(RegionRender render, int robotSize, double robotAl
   cairo_paint (stepImageDrawer);
 
   //perhaps just for now, outline the region's boundaries. That way we can see them in the viewer
-  cairo_rectangle (stepImageDrawer, 0, 0, IMAGEWIDTH, IMAGEHEIGHT);
-  cairo_set_source_rgb(stepImageDrawer, .5, .5, .5);
-  cairo_stroke (stepImageDrawer);
+  //cairo_rectangle (stepImageDrawer, 0, 0, IMAGEWIDTH, IMAGEHEIGHT);
+  //cairo_set_source_rgb(stepImageDrawer, .5, .5, .5);
+  //cairo_stroke (stepImageDrawer);
 
   int curY = 0;
   for(int i = 0; i < render.image_size(); i++)

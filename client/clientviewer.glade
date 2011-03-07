@@ -99,7 +99,7 @@
           </packing>
         </child>
         <child>
-          <object class="GtkDrawingArea" id="area">
+          <object class="GtkDrawingArea" id="drawingArea">
             <property name="visible">True</property>
           </object>
           <packing>
@@ -116,6 +116,8 @@
     </child>
   </object>
   <object class="GtkAdjustment" id="robotIdAdjustment">
+    <property name="value">-1</property>
+    <property name="lower">-1</property>
     <property name="step_increment">1</property>
     <property name="page_increment">1</property>
   </object>
