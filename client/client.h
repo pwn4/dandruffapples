@@ -5,20 +5,12 @@ This program communications with controllers.
 #ifndef _CLIENT_H_
 #define _CLIENT_H_
 
-#include <unistd.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <sys/select.h>
-#include <sys/epoll.h>
-
 #include <sstream>
 #include <iostream>
 #include <cstdio>
 #include <cstring>
 #include <cerrno>
 #include <cmath>
-#include <stdio.h>
 #include <string>
 #include <stdlib.h>
 #include <fstream>
@@ -136,6 +128,21 @@ struct passToThread{
 	GAsyncQueue *asyncQueue;
 
 	passToThread(int _argc, char** _argv, int _numberOfRobots, GAsyncQueue *_asyncQueue) : argc(_argc), argv(_argv), numberOfRobots(_numberOfRobots), asyncQueue(_asyncQueue){};
+};
+
+struct passToRun{
+	int argc;
+	char** argv;
+	bool runClientViewer;
+	GAsyncQueue *asyncQueue;
+	WorldInfo worldinfo;
+	TimestepUpdate timestep;
+	ServerRobot serverrobot;
+	ClaimTeam claimteam;
+	net::connection controller;
+
+	passToRun(int _argc, char** _argv, bool _runClientViewer, GAsyncQueue *_asyncQueue, WorldInfo _worldinfo, TimestepUpdate _timestep, ServerRobot _serverrobot, ClaimTeam _claimteam, net::connection _controller) :
+		argc(_argc), argv(_argv), runClientViewer(_runClientViewer), asyncQueue(_asyncQueue), worldinfo(_worldinfo), timestep(_timestep), serverrobot(_serverrobot), claimteam(_claimteam), controller(_controller){};
 };
 
 struct dataToHandler{
