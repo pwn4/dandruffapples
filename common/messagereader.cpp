@@ -8,18 +8,17 @@
 
 #include "except.h"
 
-MessageReader::MessageReader(int fd, size_t initialSize) : _fd(fd), _bufsize(initialSize), _typepos(0), _lenpos(0), _bufpos(0) {
+MessageReader::MessageReader(int fd, size_t initialSize) : _fd(fd), _bufsize(initialSize > _headerlen ? initialSize : _headerlen), _headerpos(0), _msgpos(0) {
   _buffer = (uint8_t*)malloc(_bufsize);
 }
 
 MessageReader::MessageReader(const MessageReader& m) {
   _fd = m._fd;
   _bufsize = m._bufsize;
-  _typepos = m._typepos;
-  _lenpos = m._lenpos;
-  _bufpos = m._bufpos;
+  _headerpos = m._headerpos;
+  _msgpos = m._msgpos;
   _buffer = (uint8_t*)malloc(_bufsize);
-  memcpy(_buffer, m._buffer, _bufpos);
+  memcpy(_buffer, m._buffer, _msgpos + _headerpos);
 }
 
 MessageReader::~MessageReader() {
@@ -29,10 +28,10 @@ MessageReader::~MessageReader() {
 bool MessageReader::doRead(MessageType *type, int *len, const void **buffer) {
   ssize_t bytes;
   // Read type, if necessary
-  if(_typepos < sizeof(_type)) {
+  if(_headerpos < _headerlen) {
     // We're reading a new message; get just its type
     do {
-      bytes = read(_fd, &_type + _typepos, sizeof(_type) - _typepos);
+      bytes = read(_fd, _buffer + _headerpos, _headerlen - _headerpos);
     } while(bytes < 0 && errno == EINTR);
     if(bytes < 0) {
       if(errno == EAGAIN || errno == EWOULDBLOCK) {
@@ -43,10 +42,18 @@ bool MessageReader::doRead(MessageType *type, int *len, const void **buffer) {
       throw EOFError();
     }
     
-    _typepos += bytes;
+    _headerpos += bytes;
 
-    if(_typepos == sizeof(_type)) {
+    if(_headerpos == _headerlen) {
+      // Reorder bytes
+      _msglen = ntohl(*((uint32_t*)(_buffer + 1)));
+      // Realloc buffer as necessary
+      while(_bufsize < _msglen) {
+        _bufsize *= 2;
+        _buffer = (uint8_t*)realloc(_buffer, _bufsize);
+      }
       // No byte reordering necessary because it's one byte.
+      _type = (MessageType)_buffer[0];
     } else {
       return false;
     }
@@ -56,44 +63,13 @@ bool MessageReader::doRead(MessageType *type, int *len, const void **buffer) {
     throw UnknownMessageError();
   }
 
-  // Read length, if necessary
-  if(_lenpos < sizeof(_msglen)) {
-    // We're (still) reading a new message; get just its length
-    do {
-      bytes = read(_fd, &_msglen + _lenpos, sizeof(_msglen) - _lenpos);
-    } while(bytes < 0 && errno == EINTR);
-    if(bytes < 0) {
-      if(errno == EAGAIN || errno == EWOULDBLOCK) {
-        return false;
-      }
-      throw SystemError("Failed to read message size");
-    } else if(bytes == 0) {
-      throw EOFError();
-    }
-    
-    _lenpos += bytes;
-
-    if(_lenpos == sizeof(_msglen)) {
-      // We just finished reading message length
-      // Handle byte ordering
-      _msglen = ntohl(_msglen);
-      // Be sure we have enough space for the entire message
-      while(_bufsize < _msglen) {
-        _bufsize *= 2;
-        _buffer = (uint8_t*)realloc(_buffer, _bufsize);
-      }
-    } else {
-      return false;
-    }
-  }
-
   if(_msglen == 0) {
     throw ZeroLengthMessageError();
   }
 
   // Read message body
   do {
-    bytes = read(_fd, _buffer + _bufpos, _msglen - _bufpos);
+    bytes = read(_fd, _buffer + _headerlen + _msgpos, _msglen - _msgpos);
   } while(bytes < 0 && errno == EINTR);
   if(bytes < 0) {
     if(errno == EAGAIN || errno == EWOULDBLOCK) {
@@ -105,21 +81,20 @@ bool MessageReader::doRead(MessageType *type, int *len, const void **buffer) {
   }
 
   // Keep track of how much we've read
-  _bufpos += bytes;
+  _msgpos += bytes;
   
-  if(_bufpos == _msglen) {
+  if(_msgpos == _msglen) {
     // We've got the complete message.
     // Reset internal state to enable reuse
-    _typepos = 0;
-    _lenpos = 0;
-    _bufpos = 0;
+    _headerpos = 0;
+    _msgpos = 0;
 
     // Make our data available
     if(type) {
-      *type = (MessageType)_type;
+      *type = _type;
     }
     *len = _msglen;
-    *buffer = _buffer;
+    *buffer = _buffer + _headerlen;
 
     return true;
   }
