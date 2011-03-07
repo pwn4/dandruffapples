@@ -327,13 +327,11 @@ void initializeRobots(net::connection controller) {
 		clientRobot.set_velocityy(((rand() % 11) / 10.0) - 0.5);
 		clientRobot.set_angle(0.0);
 		controller.queue.push(MSG_CLIENTROBOT, clientRobot);
-		//controller.queue.doWrite();
+		controller.queue.doWrite();
 		ownRobots[i]->whenLastSent = currentTimestep;
 		sentMessages++;
 		ownRobots[i]->behaviour = i % 2;
 	}
-
-	controller.queue.doWrite();
 
 	forceSend(controller);
 }
@@ -691,6 +689,9 @@ gboolean run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 	default:
 		cerr << "Unknown message!" << endl;
 	}
+
+	//force to send any unsent messages
+	forceSend(controller);
 
 	return true;
 }
