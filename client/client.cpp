@@ -326,6 +326,7 @@ void initializeRobots(net::connection &controller) {
 }
 
 guint gwatch;
+bool writing = false;
 gboolean run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 	MessageType type;
 	int len;
@@ -342,7 +343,6 @@ gboolean run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 
   if(cond & G_IO_OUT) {
     if(controller.queue.doWrite()) {
-      cout << "WRITING DATA" << endl;
       // We don't need to check writability for now
       g_source_remove(gwatch);
       gwatch = g_io_add_watch(ioch, G_IO_IN, run, data);
@@ -699,11 +699,11 @@ gboolean run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 		cerr << "Unknown message!" << endl;
 	}
 
-  if(controller.queue.remaining()) {
-    cout << "We have data to write!" << endl;
+  if(!writing && controller.queue.remaining()) {
     g_source_remove(gwatch);
     // Ensure that we're watching for writability
     gwatch = g_io_add_watch(ioch, (GIOCondition)(G_IO_IN | G_IO_OUT), run, data);
+    writing = true;
   }
 
 	return true;
