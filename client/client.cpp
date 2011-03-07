@@ -325,13 +325,7 @@ void initializeRobots(net::connection controller) {
 	}
 }
 
-gboolean handleWrite(GIOChannel *ioch, GIOCondition cond, gpointer data) {
-  MessageQueue *q = (MessageQueue*)data;
-
-  // Stop watching if we're done writing for now.
-  return !q->doWrite();
-}
-
+guint gwatch;
 gboolean run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 	MessageType type;
 	int len;
@@ -345,6 +339,14 @@ gboolean run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 	ClaimTeam &claimteam=passer->claimteam;
 	net::connection &controller=passer->controller;
 	ClientViewer* &viewer = passer->viewer;
+
+  if(cond & G_IO_OUT) {
+    if(controller.queue.doWrite()) {
+      // We don't need to check writability for now
+      g_source_remove(gwatch);
+      gwatch = g_io_add_watch(ioch, G_IO_IN, run, (gpointer)&controller.queue);
+    }
+  }
 
 	// Stats: Received messages per second
 	if (lastSecond < time(NULL)) {
@@ -363,7 +365,7 @@ gboolean run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 		puckPickupMessages = 0;
 	}
 
-	if(!controller.reader.doRead(&type, &len, &buffer)) {
+	if(!(cond & G_IO_IN && controller.reader.doRead(&type, &len, &buffer))) {
     return true;
   }
 
@@ -697,8 +699,9 @@ gboolean run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 	}
 
   if(controller.queue.remaining()) {
+    g_source_remove(gwatch);
     // Ensure that we're watching for writability
-    g_io_add_watch(ioch, G_IO_OUT, handleWrite, (gpointer)&controller.queue);
+    gwatch = g_io_add_watch(ioch, (GIOCondition)(G_IO_IN | G_IO_OUT), run, (gpointer)&controller.queue);
   }
 
 	return true;
@@ -737,7 +740,7 @@ void initClient(int argc, char** argv, bool runClientViewer) {
 	//this calls the function "run" everytime we get a message from the
 	//"controllerfd"
   GIOChannel *ioch = g_io_channel_unix_new(controllerfd);
-	g_io_add_watch(ioch, (GIOCondition)(G_IO_IN | G_IO_OUT), run, (gpointer)&passer);
+	gwatch = g_io_add_watch(ioch, G_IO_IN, run, (gpointer)&passer);
 
 	gtk_main();
 }
