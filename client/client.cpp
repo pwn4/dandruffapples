@@ -344,7 +344,7 @@ gboolean run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
     if(controller.queue.doWrite()) {
       // We don't need to check writability for now
       g_source_remove(gwatch);
-      gwatch = g_io_add_watch(ioch, G_IO_IN, run, (gpointer)&controller.queue);
+      gwatch = g_io_add_watch(ioch, G_IO_IN, run, data);
     }
   }
 
@@ -701,7 +701,7 @@ gboolean run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
   if(controller.queue.remaining()) {
     g_source_remove(gwatch);
     // Ensure that we're watching for writability
-    gwatch = g_io_add_watch(ioch, (GIOCondition)(G_IO_IN | G_IO_OUT), run, (gpointer)&controller.queue);
+    gwatch = g_io_add_watch(ioch, (GIOCondition)(G_IO_IN | G_IO_OUT), run, data);
   }
 
 	return true;
