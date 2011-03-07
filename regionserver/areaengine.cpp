@@ -214,7 +214,15 @@ void AreaEngine::Step(bool generateImage){
       Command *newCommand = serverChangeQueue.top();
       
       if(newCommand->step == curStep-1){
-        
+
+       //TODO: dirty fix for a seg fault. FIX ME ASAP
+       if( robots[newCommand->robotId] == NULL)
+       {
+           delete newCommand;
+           serverChangeQueue.pop();
+          continue;
+       }
+
         RobotObject* curRobot = robots[newCommand->robotId];
         
         if(newCommand->velocityx != INT_MAX) 
@@ -241,6 +249,13 @@ void AreaEngine::Step(bool generateImage){
     {
       //NOTE: addrobot changes should only be taken in at the end of a timestep, AFTER simulation.
     
+        //TODO: dirty fix for a seg fault #2. FIX ME ASAP
+        if( (*robotIt).second == NULL)
+        {
+        	robots.erase(robotIt++);
+           continue;
+        }
+
       RobotObject * curRobot = (*robotIt).second;
       
       //if the robot is from the future, we should now throw an error because we are now super synchronized
@@ -371,6 +386,13 @@ void AreaEngine::Step(bool generateImage){
     //move the robots, now that we know they won't collide. Because we may remove a robot, we have to increment ourselves
     for(robotIt=robots.begin() ; robotIt != robots.end(); )
     {
+        //TODO: dirty fix for a seg fault #3. FIX ME ASAP
+        if( (*robotIt).second == NULL)
+        {
+        	robots.erase(robotIt++);
+           continue;
+        }
+
       RobotObject * curRobot = (*robotIt).second;
       //if the robot is from the future, don't move it - can happen with fast vs slow neighbors
       if(curRobot->lastStep == curStep)
@@ -524,7 +546,13 @@ void AreaEngine::Step(bool generateImage){
     //check for robot sight and puck sight at the same time.
     for(robotIt=robots.begin() ; robotIt != robots.end(); robotIt++)
     {
-    
+        //TODO: dirty fix for a seg fault #4. FIX ME ASAP
+        if( (*robotIt).second == NULL)
+        {
+        	robots.erase(robotIt++);
+           continue;
+        }
+
       RobotObject * curRobot = (*robotIt).second;
       nowSeenBy = &(curRobot->lastSeenBy);  //for robot sight
       pucksNowSeen = &(curRobot->pucksSeen);  //for puck sight
