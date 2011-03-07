@@ -247,11 +247,14 @@ int main(int argc, char **argv) {
                   (*i)->queue.push(MSG_TIMESTEPUPDATE, timestep);
                   (*i)->set_writing(true);
                 }
-                // Send to controllers
-                for(vector<RegionConnection*>::const_iterator i = controllers.begin();
-                    i != controllers.end(); ++i) {
-                  (*i)->queue.push(MSG_TIMESTEPUPDATE, timestep);
-                  (*i)->set_writing(true);
+
+                // Send to controllers -- every second timestep
+                if (timestep.timestep() % 2 == 0) {
+                  for(vector<RegionConnection*>::const_iterator i = controllers.begin();
+                      i != controllers.end(); ++i) {
+                    (*i)->queue.push(MSG_TIMESTEPUPDATE, timestep);
+                    (*i)->set_writing(true);
+                  }
                 }
               }
               break;
