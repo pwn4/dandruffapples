@@ -68,11 +68,17 @@ TEAMS ${TEAMS}
 ROBOTS_PER_TEAM ${TEAMSIZE}
 EOF
 
+DEBUGGER=""
+if [ $DEBUG ]
+then
+    DEBUGGER="gdb -quiet -ex run --args"
+fi
+
 echo "Starting clock server locally."
 CLOCKSERVER=`host \`hostname\`|cut -d ' ' -f 4`
 mkdir -p "$OUTPATH"
 set -m
-clockserver/clockserver -c "$CLOCKCONF" &
+$DEBUGGER clockserver/clockserver -c "$CLOCKCONF" &
 CLOCKID=$!
 trap "echo -e '\nCaught signal; shutting down.' && cleanup; exit 1" HUP INT TERM
 
@@ -88,7 +94,7 @@ SSHCOMMAND="ssh -o StrictHostKeyChecking=no -o PasswordAuthentication=no -p $SSH
 function wrap {
     if [ $DEBUG ]
     then
-        xterm -e "gdb -quiet -ex run --args $@"
+        xterm -e "$@"
     else
         $@
     fi
@@ -111,7 +117,7 @@ do
     
     if [ $CONTROLLERS_LEFT -gt 0 ]
     then
-        wrap $SSHCOMMAND $HOST "bash -c \"cd '$PROJDIR/controller' && LD_LIBRARY_PATH='$PROJDIR/sharedlibs' ./controller -l $CLOCKSERVER\"" > /dev/null &
+        wrap $SSHCOMMAND $HOST "bash -c \"cd '$PROJDIR/controller' && LD_LIBRARY_PATH='$PROJDIR/sharedlibs' $DEBUGGER ./controller -l $CLOCKSERVER\"" > /dev/null &
         SSHPROCS="$SSHPROCS $!"
         echo -n .
         CONTROLLERS_LEFT=$[$CONTROLLERS_LEFT - 1]
@@ -125,11 +131,11 @@ do
             if [ $CONFIDX -eq 1 ]
             then
 		sleep 0.5
-                wrap $SSHCOMMAND $HOST "bash -c \"cd '$PROJDIR/regionserver' && LD_LIBRARY_PATH='$PROJDIR/sharedlibs' ./regionserver -l $CLOCKSERVER -c config\"" > /dev/null &
+                wrap $SSHCOMMAND $HOST "bash -c \"cd '$PROJDIR/regionserver' && LD_LIBRARY_PATH='$PROJDIR/sharedlibs' $DEBUGGER ./regionserver -l $CLOCKSERVER -c config\"" > /dev/null &
                 SSHPROCS="$SSHPROCS $!"
             else
 		sleep 0.5
-                wrap $SSHCOMMAND $HOST "bash -c \"cd '$PROJDIR/regionserver' && LD_LIBRARY_PATH='$PROJDIR/sharedlibs' ./regionserver -l $CLOCKSERVER -c config${CONFIDX}\"" > /dev/null &
+                wrap $SSHCOMMAND $HOST "bash -c \"cd '$PROJDIR/regionserver' && LD_LIBRARY_PATH='$PROJDIR/sharedlibs' $DEBUGGER ./regionserver -l $CLOCKSERVER -c config${CONFIDX}\"" > /dev/null &
                 SSHPROCS="$SSHPROCS $!"
             fi
             echo -n .
@@ -159,7 +165,7 @@ then
     do
         CLIENTS_LEFT=$[CLIENTS_LEFT - 1]
         HOST=`echo $CONTROLHOSTS |cut -d ' ' -f $[$CLIENTS_LEFT % $HOSTNUM + 1]`
-        wrap $SSHCOMMAND $HOST "bash -c \"cd '$PROJDIR/client' && LD_LIBRARY_PATH='$PROJDIR/sharedlibs' ./client -t $CLIENTS_LEFT\"" > /dev/null &
+        wrap $SSHCOMMAND $HOST "bash -c \"cd '$PROJDIR/client' && LD_LIBRARY_PATH='$PROJDIR/sharedlibs' $DEBUGGER ./client -t $CLIENTS_LEFT\"" > /dev/null &
         SSHPROCS="$SSHPROCS $!"
         echo -n .
     done
