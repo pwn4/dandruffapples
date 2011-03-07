@@ -342,6 +342,7 @@ gboolean run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 	const void *buffer;
 	passToRun *passer = (passToRun*)data;
 
+  // TODO: Most of this shouldn't run repeatedly
 	bool runClientViewer=passer->runClientViewer;
 	WorldInfo worldinfo=passer->worldinfo;
 	TimestepUpdate timestep=passer->timestep;
@@ -367,8 +368,9 @@ gboolean run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 		puckPickupMessages = 0;
 	}
 
-	for (bool complete = false; !complete;)
-		complete = controller.reader.doRead(&type, &len, &buffer);
+	if(!controller.reader.doRead(&type, &len, &buffer)) {
+    return true;
+  }
 
 	// this should be the only type of messages
 	switch (type) {
