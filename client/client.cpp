@@ -353,7 +353,7 @@ gboolean run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 	// Stats: Received messages per second
 	if (lastSecond < time(NULL)) {
 		cout << "Sent " << sentMessages << " per second." << endl;
-		cout << "Pending " << pendingMessages << " per second." << endl;
+		//cout << "Pending " << pendingMessages << " per second." << endl;
 		cout << "Received " << receivedMessages << " per second." << endl;
 		cout << "Timeout " << timeoutMessages << " per second." << endl;
 		cout << "ControllerQueue " << controller.queue.remaining() << endl;
@@ -445,7 +445,11 @@ gboolean run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 		
 			// Update all current positions.
 			for (int i = 0; i < robotsPerTeam; i++) {
-				//if (ownRobots[i]->pendingCommand && currentTimestep - ownRobots[i]->whenLastSent > 100) {
+			  //so far the simulation can handle actions up to every 2 sim steps smoothly. This probably doesn't scale.
+			  //We'll need to implement the optimizations we talked about to improve this
+				if(currentTimestep - ownRobots[i]->whenLastSent < 4)
+				  continue;
+				
 				if (ownRobots[i]->pendingCommand) {
 					// If we've waited too long for an update, send
 					// new ClientRobot messages.
@@ -512,9 +516,8 @@ gboolean run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 				//if (ownRobots[i]->eventQueue.size() > 0 && !ownRobots[i]->pendingCommand) {
 				//robot AIs SHOULD execute every timestep
 				if(!ownRobots[i]->pendingCommand){
-					//executeAi(ownRobots[i], i, controller);
-					if(currentTimestep - ownRobots[i]->whenLastSent > 200)
-					  initializeRobots(controller);
+					executeAi(ownRobots[i], i, controller);
+					//initializeRobots(controller);
 				}
 
 				// Clear the queue, wait for new events.
