@@ -88,7 +88,7 @@ SSHCOMMAND="ssh -o StrictHostKeyChecking=no -o PasswordAuthentication=no -p $SSH
 function wrap {
     if [ $DEBUG ]
     then
-        xterm -e "$@"
+        xterm -e "gdb -quiet -ex run --args $@"
     else
         $@
     fi
