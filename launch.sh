@@ -25,7 +25,7 @@ fi
 
 if [ $# -lt 2 ]
 then
-    echo "Usage: $0 <columns> <rows> [controllers] [teams] [team size]"
+    echo "Usage: $0 <columns> <rows> [teams] [team size] [controllers]"
     echo "If no controller count is specified, no controllers or clients will be launched."
     exit 1
 fi
@@ -46,9 +46,9 @@ function cleanup {
 
 COLS=$1
 ROWS=$2
-CONTROLLERS=$3
-TEAMS=$4
-TEAMSIZE=$5
+TEAMS=$3
+TEAMSIZE=$4
+CONTROLLERS=$5
 
 if [ -z $TEAMS ]
 then
