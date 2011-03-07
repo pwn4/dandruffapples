@@ -122,6 +122,7 @@ namespace net {
   }
   EpollConnection::EpollConnection(int epoll_, int flags_, int fd_, Type type_) :
     connection(fd_, type_), reading(flags_ & EPOLLIN), writing(flags_ & EPOLLOUT), epoll(epoll_) {
+    memset(&event, 0, sizeof(event));
     event.events = flags_;
     event.data.ptr = this;
     if(0 > epoll_ctl(epoll, EPOLL_CTL_ADD, fd, &event)) {
