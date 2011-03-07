@@ -330,7 +330,6 @@ void run() {
 									struct in_addr addr;
 									addr.s_addr = worldinfo.region(i).address();
 									int regionfd = net::do_connect(addr, worldinfo.region(i).regionport());
-									net::set_blocking(regionfd, false);
 									if (regionfd < 0) {
                     throw SystemError("Failed to connect to region server");
 									} else if (regionfd == 0) {
@@ -338,6 +337,7 @@ void run() {
 									} else {
 										cout << "Connected to regionserver" << endl;
 									}
+									net::set_blocking(regionfd, false);
 									net::EpollConnection *newconn = new net::EpollConnection(epoll, EPOLLIN, regionfd,
 											net::connection::REGION);
 									borderRegions.push_back(newconn);
