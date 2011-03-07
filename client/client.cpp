@@ -759,8 +759,10 @@ void initClient(char* argv, bool runClientViewer) {
 
 //this is the main loop for the client
 int main(int argc, char* argv[]) {
-  gtk_init_check(&argc, &argv);
-  g_type_init();
+
+	if( !gtk_init_check(&argc, &argv) )
+		cerr<<"Unable to initialize the X11 windowing system. Client Viewer will not work!"<<endl;
+	g_type_init();
     
 	bool runClientViewer = false;
 	srand( time(NULL));
