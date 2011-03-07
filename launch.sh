@@ -144,11 +144,11 @@ then
     CLIENTS_LEFT=$TEAMS
     while [ $CLIENTS_LEFT -gt 0 ]
     do
+        CLIENTS_LEFT=$[CLIENTS_LEFT - 1]
         HOST=`echo $CONTROLHOSTS |cut -d ' ' -f $[$CLIENTS_LEFT % $HOSTNUM + 1]`
         ssh -o StrictHostKeyChecking=no -o PasswordAuthentication=no -p $SSHPORT $HOST "bash -c \"cd '$PROJDIR/client' && LD_LIBRARY_PATH='$PROJDIR/sharedlibs' ./client -t $CLIENTS_LEFT\"" > /dev/null &
         SSHPROCS="$SSHPROCS $!"
         echo -n .
-        CLIENTS_LEFT=$[CLIENTS_LEFT - 1]
     done
     echo " done!"
 fi
