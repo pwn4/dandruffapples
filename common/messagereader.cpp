@@ -59,7 +59,7 @@ bool MessageReader::doRead(MessageType *type, int *len, const void **buffer) {
     }
   }
 
-  if(_type >= MSG_MAX) {
+  if(_type == 0 || _type >= MSG_MAX) {
     throw UnknownMessageError();
   }
 
