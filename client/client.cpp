@@ -737,7 +737,7 @@ void initClient(int argc, char** argv, bool runClientViewer) {
 	//this calls the function "run" everytime we get a message from the
 	//"controllerfd"
   GIOChannel *ioch = g_io_channel_unix_new(controllerfd);
-	g_io_add_watch(ioch, G_IO_IN | G_IO_OUT, run, (gpointer)&passer);
+	g_io_add_watch(ioch, (GIOCondition)(G_IO_IN | G_IO_OUT), run, (gpointer)&passer);
 
 	gtk_main();
 }
