@@ -25,7 +25,7 @@ fi
 
 if [ $# -lt 2 ]
 then
-    echo "Usage: $0 <columns> <rows> [controllers] [teams] [team size]"
+    echo "Usage: $0 <columns> <rows> [teams] [team size] [controllers]"
     echo "If no controller count is specified, no controllers or clients will be launched."
     exit 1
 fi
@@ -46,9 +46,9 @@ function cleanup {
 
 COLS=$1
 ROWS=$2
-CONTROLLERS=$3
-TEAMS=$4
-TEAMSIZE=$5
+TEAMS=$3
+TEAMSIZE=$4
+CONTROLLERS=$5
 
 if [ -z $TEAMS ]
 then
@@ -144,11 +144,11 @@ then
     CLIENTS_LEFT=$TEAMS
     while [ $CLIENTS_LEFT -gt 0 ]
     do
+        CLIENTS_LEFT=$[CLIENTS_LEFT - 1]
         HOST=`echo $CONTROLHOSTS |cut -d ' ' -f $[$CLIENTS_LEFT % $HOSTNUM + 1]`
         ssh -o StrictHostKeyChecking=no -o PasswordAuthentication=no -p $SSHPORT $HOST "bash -c \"cd '$PROJDIR/client' && LD_LIBRARY_PATH='$PROJDIR/sharedlibs' ./client -t $CLIENTS_LEFT\"" > /dev/null &
         SSHPROCS="$SSHPROCS $!"
         echo -n .
-        CLIENTS_LEFT=$[CLIENTS_LEFT - 1]
     done
     echo " done!"
 fi
