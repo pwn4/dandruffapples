@@ -29,7 +29,7 @@ Index AreaEngine::getRobotIndices(double x, double y, bool clip){
   }
   
   if(rtn.x < -1 || rtn.y < -1 || rtn.x > regionBounds+2 || rtn.y > regionBounds+2)
-    throw SystemError("AreaEngine: Robot tracked too far out of bounds.");
+    throw runtime_error("AreaEngine: Robot tracked too far out of bounds.");
   
   return rtn;
 }
@@ -1009,6 +1009,9 @@ bool AreaEngine::ChangeVelocity(int robotId, double newvx, double newvy){
   // Check if we don't control the robot's grid cell.
   if (!WeControlRobot(robotId))
     return false; 
+
+  if(isnan(newvx) || isnan(newvy))
+    throw runtime_error("AreaEngine: received NaN new velocity");
 
   //enforce max speed
   double len = sqrt(newvx*newvx + newvy*newvy);
