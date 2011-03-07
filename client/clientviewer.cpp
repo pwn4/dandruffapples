@@ -19,14 +19,14 @@ void on_About_clicked(GtkWidget *widget, gpointer window) {
 	gtk_widget_destroy(dialog);
 }
 
-//window destruction methods for the info and navigation windows
-void destroy(GtkWidget *window, gpointer widget) {
+//window destruction methods for the info window
+void infoDestroy(GtkWidget *window, gpointer widget) {
 	gtk_widget_hide_all(GTK_WIDGET(window));
 	gtk_toggle_tool_button_set_active(GTK_TOGGLE_TOOL_BUTTON(widget), FALSE);
 }
 
-gboolean delete_event(GtkWidget *window, GdkEvent *event, gpointer widget) {
-	destroy(window, widget);
+gboolean infoDeleteEvent(GtkWidget *window, GdkEvent *event, gpointer widget) {
+	infoDestroy(window, widget);
 
 	return TRUE;
 }
@@ -43,30 +43,20 @@ void on_Window_toggled(GtkWidget *widget, gpointer window) {
 		gtk_widget_hide_all(GTK_WIDGET(window));
 }
 
-void on_RobotId_changed(GtkWidget *widget, gpointer _passedData) {
-	dataToHandler* passedData = (dataToHandler*) _passedData;
-	int *currentRobot = (int*) passedData->data;
+void on_RobotId_changed(GtkWidget *widget, gpointer data) {
+	int *viewedRobot = (int*)data;
+
 	int changedRobotId = gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(widget));
 
-	if (*((int*) currentRobot) != changedRobotId) {
-#ifdef DEBUG
-		*(passedData->debug)<<"currentRobot changed from "<<*((int*)currentRobot)<<" to "<<changedRobotId<<endl;
-#endif
-		cout << "currentRobot changed from " << *((int*) currentRobot) << " to " << changedRobotId << endl;
-		*((int*) currentRobot) = changedRobotId;
-	}
+	if (*viewedRobot != changedRobotId)
+		*viewedRobot = changedRobotId;
 }
 
 //update the drawing of the robot
 //this is called after the client has written to the async queue
-void ClientViewer::updateViewer()
-{
-	OwnRobot* ownRobot;
-	//watch out for the case where popping will return NULL ( should never happen )
-	ownRobot = (OwnRobot*)g_async_queue_try_pop(asyncQueue);
-
+void ClientViewer::updateViewer(OwnRobot* ownRobot) {
 #ifdef DEBUG
-	debug<<"Read robot at "<<ownRobot->vx<<" and "<<ownRobot->vy<<endl;
+	debug<<"Read robot "<<viewedRobot<<" moving on x: "<<ownRobot->vx<<" and moving on y: "<<ownRobot->vy<<endl;
 #endif
 }
 
@@ -78,6 +68,9 @@ void ClientViewer::initClientViewer(int numberOfRobots) {
 #endif
 	g_type_init();
 
+	gtk_builder_add_from_file(builder, builderPath.c_str(), NULL);
+	gtk_builder_connect_signals(builder, NULL);
+
 	GtkWidget *mainWindow = GTK_WIDGET(gtk_builder_get_object(builder, "window"));
 	GtkToggleToolButton *info = GTK_TOGGLE_TOOL_BUTTON(gtk_builder_get_object(builder, "Info"));
 	GtkWidget *about = GTK_WIDGET(gtk_builder_get_object(builder, "About"));
@@ -85,7 +78,7 @@ void ClientViewer::initClientViewer(int numberOfRobots) {
 	GtkSpinButton *robotId = GTK_SPIN_BUTTON(gtk_builder_get_object(builder, "robotId"));
 	GdkColor color;
 
-	gtk_adjustment_set_upper(GTK_ADJUSTMENT(gtk_builder_get_object(builder, "robotIdAdjustment")), numberOfRobots);
+	gtk_adjustment_set_upper(GTK_ADJUSTMENT(gtk_builder_get_object(builder, "robotIdAdjustment")), numberOfRobots-1);
 
 	//keep the info window floating on top of the main window
 	gtk_window_set_keep_above(GTK_WINDOW(infoWindow), true);
@@ -98,31 +91,25 @@ void ClientViewer::initClientViewer(int numberOfRobots) {
 	gdk_color_parse("white", &color);
 	//gtk_widget_modify_fg(GTK_WIDGET(gtk_builder_get_object(builder, "robotWindowLabel")), GTK_STATE_NORMAL, &color);
 
-
-	dataToHandler data(&debug, currentRobot);
-	g_signal_connect(robotId, "value-changed", G_CALLBACK(on_RobotId_changed), (gpointer) & data);
+	g_signal_connect(robotId, "value-changed", G_CALLBACK(on_RobotId_changed), (gpointer)&viewedRobot);
 
 	g_signal_connect(info, "toggled", G_CALLBACK(on_Window_toggled), (gpointer) infoWindow);
 	g_signal_connect(about, "clicked", G_CALLBACK(on_About_clicked), (gpointer) mainWindow);
 
-	g_signal_connect(infoWindow, "destroy", G_CALLBACK(destroy), (gpointer) info);
-	g_signal_connect(infoWindow, "delete-event", G_CALLBACK(delete_event), (gpointer) info);
+	g_signal_connect(infoWindow, "destroy", G_CALLBACK(infoDestroy), (gpointer) info);
+	g_signal_connect(infoWindow, "delete-event", G_CALLBACK(infoDeleteEvent), (gpointer) info);
 
 	gtk_widget_show_all(mainWindow);
-
-	gtk_main();
 }
 
-ClientViewer::ClientViewer(int argc, char* argv[],  GAsyncQueue* _asyncQueue, int* _currentRobot) :
-	currentRobot(_currentRobot), asyncQueue(_asyncQueue) {
+ClientViewer::ClientViewer(int argc, char* argv[]) :
+	viewedRobot(0) {
 	gtk_init(&argc, &argv);
 
 	//assume that the clientviewer.builder is in the same directory as the executable that we are running
-	string builderPath(argv[0]);
+	builderPath=argv[0];
 	builderPath = builderPath.substr(0, builderPath.find_last_of("//") + 1) + "clientviewer.glade";
 	builder = gtk_builder_new();
-	gtk_builder_add_from_file(builder, builderPath.c_str(), NULL);
-	gtk_builder_connect_signals(builder, NULL);
 
 #ifdef DEBUG
 	debug.open(helper::clientViewerDebugLogName.c_str(), ios::out);
@@ -130,7 +117,6 @@ ClientViewer::ClientViewer(int argc, char* argv[],  GAsyncQueue* _asyncQueue, in
 }
 
 ClientViewer::~ClientViewer() {
-	g_async_queue_unref(asyncQueue);
 	g_object_unref( G_OBJECT(builder));
 #ifdef DEBUG
 	debug.close();

@@ -28,23 +28,7 @@ OwnRobot** ownRobots;
 
 //Config variables
 vector<string> controllerips; //controller IPs 
-
-//Variables for the client viewer only
-//No mutex needed as only the client viewer may write and the client will only read
-int currentRobot = -1;
-ClientViewer* viewer;
-
 ////////////////////////////////////////////////////////////
-
-int clientViewerThread(gpointer *ptr) {
-	passToThread *pass = (passToThread*) ptr;
-	g_async_queue_ref(pass->asyncQueue);
-	viewer = new ClientViewer(pass->argc, pass->argv, pass->asyncQueue, &currentRobot);
-
-	viewer->initClientViewer(pass->numberOfRobots);
-
-	return 0;
-}
 
 //this function loads the config file so that the server parameters don't need to be added every time
 void loadConfigFile() {
@@ -343,11 +327,13 @@ void initializeRobots(net::connection controller) {
 		clientRobot.set_velocityy(((rand() % 11) / 10.0) - 0.5);
 		clientRobot.set_angle(0.0);
 		controller.queue.push(MSG_CLIENTROBOT, clientRobot);
-		controller.queue.doWrite();
+		//controller.queue.doWrite();
 		ownRobots[i]->whenLastSent = currentTimestep;
 		sentMessages++;
 		ownRobots[i]->behaviour = i % 2;
 	}
+
+	controller.queue.doWrite();
 
 	forceSend(controller);
 }
@@ -359,15 +345,13 @@ gboolean run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 	const void *buffer;
 	passToRun *passer = (passToRun*)data;
 
-	int argc=passer->argc;
-	char** argv=passer->argv;
 	bool runClientViewer=passer->runClientViewer;
-	GAsyncQueue *asyncQueue=passer->asyncQueue;
 	WorldInfo worldinfo=passer->worldinfo;
 	TimestepUpdate timestep=passer->timestep;
 	ServerRobot serverrobot=passer->serverrobot;
 	ClaimTeam claimteam=passer->claimteam;
 	net::connection controller=passer->controller;
+	ClientViewer* viewer = passer->viewer;
 
 	// Stats: Received messages per second
 	if (lastSecond < time(NULL)) {
@@ -408,6 +392,10 @@ gboolean run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 		}
 		cout << "Got worldinfo! Calculated " << robotsPerTeam << " robots on each team.\n";
 
+		//create the client viewer GUI
+		if (runClientViewer)
+			viewer->initClientViewer(robotsPerTeam);
+
 		// Claim our team
 		claimteam.set_id(myTeam);
 		controller.queue.push(MSG_CLAIMTEAM, claimteam);
@@ -440,28 +428,6 @@ gboolean run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 				simulationStarted = true;
 
 				initializeRobots(controller);
-
-				//TODO: work in progress. Don't bother testing it.
-				//start a new client viewer thread
-				if (runClientViewer) {
-					if (!g_thread_supported()) {
-						GThread *thread;
-						GError *error = NULL;
-
-						g_thread_init( NULL);
-						asyncQueue = g_async_queue_new();
-						passToThread pass(argc, argv, robotsPerTeam, asyncQueue);
-						thread = g_thread_create((GThreadFunc) clientViewerThread, (gpointer) &pass, FALSE, &error);
-
-						if (thread == NULL) {
-							string tmp = "Failed to created a thread: " + (string) error->message;
-
-							throw SystemError(tmp);
-						}
-					} else
-						throw SystemError("gthreads are not supported.");
-				}
-
 			}
 		} else {
 			cout << "Got CLAIMTEAM message after simulation started" << endl;
@@ -546,11 +512,14 @@ gboolean run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 				ownRobots[i]->eventQueue.clear();
 			}
 		}
-		//TODO: Egor - client viewer work in progress
-		if (runClientViewer) {
-			g_async_queue_push(asyncQueue, (gpointer) ownRobots[currentRobot]);
-			viewer->updateViewer();
+
+		//update the view of the viewed robot
+		if (runClientViewer)
+		{
+			if(viewer->getViewedRobot() != -1 )
+				viewer->updateViewer(ownRobots[viewer->getViewedRobot()]);
 		}
+
 
 		break;
 	}
@@ -730,8 +699,6 @@ gboolean run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 void initClient(int argc, char** argv, bool runClientViewer) {
 	int controllerfd = -1;
 	int currentController = rand() % controllerips.size();
-	//initialized in the claim robot message
-	GAsyncQueue *asyncQueue = NULL;
 
 	while (controllerfd < 0) {
 		cout << "Attempting to connect to controller " << controllerips.at(currentController) << "..." << flush;
@@ -753,9 +720,10 @@ void initClient(int argc, char** argv, bool runClientViewer) {
 	ServerRobot serverrobot;
 	ClaimTeam claimteam;
 	net::connection controller(controllerfd, net::connection::CONTROLLER);
+	ClientViewer* viewer = new ClientViewer(argc, argv);
 
 	//all the variables that we want to read in the controller message handler ( see bellow ) need to be either passed in this struct or delcared global
-	passToRun passer(argc, argv, runClientViewer, asyncQueue, worldinfo, timestep, serverrobot, claimteam, controller);
+	passToRun passer(runClientViewer, worldinfo, timestep, serverrobot, claimteam, controller, viewer);
 
 	//this calls the function "run" everytime we get a message from the "controllerfd"
 	g_io_add_watch(g_io_channel_unix_new(controllerfd), G_IO_IN, run, (gpointer)&passer);

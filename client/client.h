@@ -121,50 +121,33 @@ public:
       changePuckPickup(false), puckPickup(false) {}
 };
 
-struct passToThread{
-	int argc;
-	char** argv;
-	int numberOfRobots;
-	GAsyncQueue *asyncQueue;
+class ClientViewer {
+private:
+	ofstream debug;
+	int viewedRobot;
+	string builderPath;
+	GtkBuilder *builder;
 
-	passToThread(int _argc, char** _argv, int _numberOfRobots, GAsyncQueue *_asyncQueue) : argc(_argc), argv(_argv), numberOfRobots(_numberOfRobots), asyncQueue(_asyncQueue){};
+public:
+	void initClientViewer(int);
+	void updateViewer(OwnRobot* ownRobot);
+	int getViewedRobot() { return viewedRobot; }
+
+	ClientViewer(int, char**);
+	~ClientViewer();
 };
 
 struct passToRun{
-	int argc;
-	char** argv;
 	bool runClientViewer;
-	GAsyncQueue *asyncQueue;
 	WorldInfo worldinfo;
 	TimestepUpdate timestep;
 	ServerRobot serverrobot;
 	ClaimTeam claimteam;
 	net::connection controller;
+	ClientViewer* viewer;
 
-	passToRun(int _argc, char** _argv, bool _runClientViewer, GAsyncQueue *_asyncQueue, WorldInfo _worldinfo, TimestepUpdate _timestep, ServerRobot _serverrobot, ClaimTeam _claimteam, net::connection _controller) :
-		argc(_argc), argv(_argv), runClientViewer(_runClientViewer), asyncQueue(_asyncQueue), worldinfo(_worldinfo), timestep(_timestep), serverrobot(_serverrobot), claimteam(_claimteam), controller(_controller){};
-};
-
-struct dataToHandler{
-	ostream *debug;
-	void* data;
-
-	dataToHandler(ostream *_debug, void* _data) : debug(_debug), data(_data){};
-};
-
-class ClientViewer {
-private:
-	ofstream debug;
-	int* currentRobot;
-	GAsyncQueue *asyncQueue;
-	GtkBuilder *builder;
-
-public:
-	void initClientViewer(int);
-	void updateViewer();
-
-	ClientViewer(int, char**, GAsyncQueue *, int*);
-	~ClientViewer();
+	passToRun( bool _runClientViewer, WorldInfo _worldinfo, TimestepUpdate _timestep, ServerRobot _serverrobot, ClaimTeam _claimteam, net::connection _controller, ClientViewer* _viewer) :
+		runClientViewer(_runClientViewer), worldinfo(_worldinfo), timestep(_timestep), serverrobot(_serverrobot), claimteam(_claimteam), controller(_controller), viewer(_viewer){};
 };
 
 #endif
