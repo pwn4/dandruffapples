@@ -85,7 +85,7 @@ if [ "$1" == "regionserver" ] || [ "$1" == "all" ]; then
 fi
 
 #only testing with one client for now
-export teams=1
+#export teams=1
 
 if [ "$1" == "client" ] || [ "$1" == "all" ]; then
 
