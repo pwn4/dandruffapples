@@ -54,7 +54,7 @@ echo "Found \"$1\" argument"
     client=true
     debug=true
     run=true
-    sleepTime=0.2
+    sleepTime=0.5
     gnomeTerminal=true
   elif [ "$1" == "-all" ]; then
     clockserver=true
