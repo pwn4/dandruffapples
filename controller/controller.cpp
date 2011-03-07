@@ -469,21 +469,30 @@ int main(int argc, char** argv)
                 (robots.find(bouncedrobot.clientrobot().id()))->second.bouncedMessages.push_back(bouncedrobot.clientrobot());
                 //sentClientRobot++;
               } 
-              /*
-              else if (bouncedrobot.bounces() == 2) {
-                // Broadcast to all servers. We should get a Claim message
-                // from the actual Owner
-                cout << "Broadcasting due to 2 bounces: ID #" 
-                     << bouncedrobot.clientrobot().id() << endl;
-                vector<ServerConnection*>::iterator it;
-                vector<ServerConnection*>::iterator last = servers.end();
-                for (it = servers.begin(); it != last; it++) {
-                  (*it)->queue.push(MSG_BOUNCEDROBOT, bouncedrobot);
-                  (*it)->set_writing(true);
-                  sentClientRobot++;
+              
+              //see if we need to flush the buffer
+              //we check to see if the robot has backed up bounced messages
+              if((robots.find(bouncedrobot.clientrobot().id()))->second.server != c){
+                //then the server has changed, so
+                if((robots.find(bouncedrobot.clientrobot().id()))->second.bouncedMessages.size() > 0)
+                {
+                  net::EpollConnection* robotServer = (robots.find(bouncedrobot.clientrobot().id()))->second.server;
+                  vector<ClientRobot> * robotBacklog = &((robots.find(bouncedrobot.clientrobot().id()))->second.bouncedMessages);
+                  for(unsigned int i = 0; i < robotBacklog->size(); i++)
+                  {
+                    robotServer->queue.push(MSG_CLIENTROBOT, (*robotBacklog)[i]);
+		                robotServer->set_writing(true);
+	                }
+	                
+		              //force flush the message before we clear the backlog (OR ELSE)
+                  while(robotServer->queue.remaining() != 0)
+                    robotServer->queue.doWrite(); 
+                  
+                  //NOW we can clear the backlog
+                  robotBacklog->clear();
                 }
               }
-              */
+              
               else {
                 cerr << "BouncedRobot error: Retry failed. Dropping ClientRobot #"
                      << bouncedrobot.clientrobot().id() << "!" << endl;
