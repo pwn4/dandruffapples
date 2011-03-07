@@ -46,6 +46,15 @@ function cleanup {
     done
 }
 
+function wrap {
+    if [ $DEBUG ]
+    then
+        xterm -e "$@"
+    else
+        $@
+    fi
+}
+
 COLS=$1
 ROWS=$2
 TEAMS=$3
@@ -78,7 +87,7 @@ echo "Starting clock server locally."
 CLOCKSERVER=`host \`hostname\`|cut -d ' ' -f 4`
 mkdir -p "$OUTPATH"
 set -m
-$DEBUGGER clockserver/clockserver -c "$CLOCKCONF" &
+wrap $DEBUGGER clockserver/clockserver -c "$CLOCKCONF" &
 CLOCKID=$!
 trap "echo -e '\nCaught signal; shutting down.' && cleanup; exit 1" HUP INT TERM
 
@@ -90,15 +99,6 @@ then
 fi
 
 SSHCOMMAND="ssh -o StrictHostKeyChecking=no -o PasswordAuthentication=no -p $SSHPORT"
-
-function wrap {
-    if [ $DEBUG ]
-    then
-        xterm -e "$@"
-    else
-        $@
-    fi
-}
 
 REGIONS_LEFT=$[$COLS * $ROWS]
 CONTROLLERS_LEFT=0;
