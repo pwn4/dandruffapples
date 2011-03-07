@@ -254,6 +254,7 @@ int main(int argc, char** argv)
             }
 
             case MSG_TIMESTEPUPDATE:
+            {
               timestep.ParseFromArray(buffer, len);
 
               // Enqueue update to all clients
@@ -263,6 +264,7 @@ int main(int argc, char** argv)
                 (*i)->set_writing(true);
               }
               break;
+            }
 
             case MSG_CLAIMTEAM:
             {
@@ -333,6 +335,11 @@ int main(int argc, char** argv)
             {
               // Forward to the clock
               claimteam.ParseFromArray(buffer, len);
+              
+              //temporary error for now to ensure this isn't begin wonky
+              if(((ClientConnection*)c)->id < 1 || ((ClientConnection*)c)->id > 1000)
+                throw runtime_error("Invalid Client Connection Id Due to Bad Cast");
+                
               claimteam.set_clientid(((ClientConnection*)c)->id);
 
               clockconn.queue.push(MSG_CLAIMTEAM, claimteam);
@@ -359,7 +366,9 @@ int main(int argc, char** argv)
             {
               receivedServerRobot++;
               serverrobot.ParseFromArray(buffer, len);
-
+              
+							seenbyidset.clear();	//clear for next serverrobot msg
+							
 							// Forward to the client, and any clients in the seenbyid
               net::EpollConnection *client = (robots.find(serverrobot.id()))->second.client;
               if (client != NULL) {
@@ -383,7 +392,7 @@ int main(int argc, char** argv)
 									}
                 }
 							}
-							seenbyidset.clear();	//clear for next serverrobot msg
+
               break;
             }
 
@@ -391,7 +400,8 @@ int main(int argc, char** argv)
             {
               PuckStack puckstack;
               puckstack.ParseFromArray(buffer, len);
-
+  
+              seenbyidset.clear();	
               net::EpollConnection *client;
               for(int i=0; i<puckstack.seespuckstack_size(); i++){
                 client = (robots.find(puckstack.seespuckstack(i).seenbyid()))->
@@ -404,13 +414,17 @@ int main(int argc, char** argv)
                   }
                 }
               }
-              seenbyidset.clear();	
+              
               break;
             }
 
             case MSG_CLAIM:
               // Update lookup table
               claimrobot.ParseFromArray(buffer, len);
+              //another temporary error handle in case
+              if(robots.find(claimrobot.id()) == robots.end())
+                throw runtime_error("Could not find claimrobot id in robot array upon region claim.");
+                
               (robots.find(claimrobot.id()))->second.server = c;
 
               //we check to see if the robot has backed up bounced messages
@@ -422,7 +436,13 @@ int main(int argc, char** argv)
                 {
                   robotServer->queue.push(MSG_CLIENTROBOT, (*robotBacklog)[i]);
 		              robotServer->set_writing(true);
-                }
+	              }
+	              
+		            //force flush the message before we clear the backlog (OR ELSE)
+                while(robotServer->queue.remaining() != 0)
+                  robotServer->queue.doWrite(); 
+                
+                //NOW we can clear the backlog
                 robotBacklog->clear();
               }
 
@@ -435,8 +455,12 @@ int main(int argc, char** argv)
               bouncedrobot.ParseFromArray(buffer, len);
               if (bouncedrobot.bounces() == 1) {
                 
+                //another temporary error handle in case
+                if(robots.find(bouncedrobot.clientrobot().id()) == robots.end())
+                  throw runtime_error("Could not find claimrobot id in robot array upon bounced message.");
+                
                 // Store it
-                (robots.find(clientrobot.id()))->second.bouncedMessages.push_back(bouncedrobot.clientrobot());
+                (robots.find(bouncedrobot.clientrobot().id()))->second.bouncedMessages.push_back(bouncedrobot.clientrobot());
                 //sentClientRobot++;
               } 
               /*
