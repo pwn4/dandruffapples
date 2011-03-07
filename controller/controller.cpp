@@ -159,7 +159,10 @@ int main(int argc, char** argv)
       sentServerRobot = 0;
     }
 
-    int eventcount = epoll_wait(epoll, events, MAX_EVENTS, -1);
+    int eventcount;
+    do {
+      eventcount = epoll_wait(epoll, events, MAX_EVENTS, -1);
+    } while(eventcount < 0 && errno == EINTR);
     if(0 > eventcount) {
       perror("Failed to wait on sockets");
       break;
