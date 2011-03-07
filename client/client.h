@@ -142,7 +142,7 @@ public:
 	void updateViewer(OwnRobot* ownRobot);
 	int getViewedRobot() { return viewedRobot; }
 
-	ClientViewer(int, char**);
+	ClientViewer(char*);
 	~ClientViewer();
 };
 

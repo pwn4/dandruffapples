@@ -720,7 +720,7 @@ gboolean run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 }
 
 //basic connection initializations for the client
-void initClient(int argc, char** argv, bool runClientViewer) {
+void initClient(char* argv, bool runClientViewer) {
 	int controllerfd = -1;
 	int currentController = rand() % controllerips.size();
 
@@ -744,7 +744,7 @@ void initClient(int argc, char** argv, bool runClientViewer) {
 	ServerRobot serverrobot;
 	ClaimTeam claimteam;
 	net::connection controller(controllerfd, net::connection::CONTROLLER);
-	ClientViewer* viewer = new ClientViewer(argc, argv);
+	ClientViewer* viewer = new ClientViewer(argv);
 
 	//all the variables that we want to read in the controller message handler ( see bellow ) need to be either passed in this struct or delcared global
 	passToRun passer(runClientViewer, worldinfo, timestep, serverrobot, claimteam, controller, viewer);
@@ -759,7 +759,7 @@ void initClient(int argc, char** argv, bool runClientViewer) {
 
 //this is the main loop for the client
 int main(int argc, char* argv[]) {
-  gtk_init(&argc, &argv);
+  gtk_init_check(&argc, &argv);
   g_type_init();
     
 	bool runClientViewer = false;
@@ -784,7 +784,7 @@ int main(int argc, char* argv[]) {
 	////////////////////////////////////////////////////
 
 	cout << "Client Running!" << endl;
-	initClient(argc, argv, runClientViewer);
+	initClient(argv[0], runClientViewer);
 
 	cout << "Client Shutting Down ..." << endl;
 
