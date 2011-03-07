@@ -337,7 +337,7 @@ int main(int argc, char** argv)
               claimteam.ParseFromArray(buffer, len);
               
               //temporary error for now to ensure this isn't begin wonky - so, limit is 1000 clients per controller
-              if(((ClientConnection*)c)->id < 0 || ((ClientConnection*)c)->id >= 1000)
+              if(((ClientConnection*)c)->id >= 1000)
                 throw runtime_error("Invalid Client Connection Id Due to Bad Cast");
                 
               claimteam.set_clientid(((ClientConnection*)c)->id);
