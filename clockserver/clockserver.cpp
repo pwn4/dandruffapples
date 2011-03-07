@@ -393,6 +393,7 @@ int main(int argc, char **argv) {
                   teamclaimed[id] = true;
                 }
                 c->queue.push(MSG_CLAIMTEAM, claimteam);
+                c->set_writing(true);
                 break;
               }
             
@@ -482,6 +483,7 @@ int main(int argc, char **argv) {
           controllers.push_back(newconn);
           
           newconn->queue.push(MSG_WORLDINFO, worldinfo);
+          newconn->set_writing(true);
 
           cout << "Got controller connection." << endl;
           break;
@@ -504,6 +506,7 @@ int main(int argc, char **argv) {
           for(size_t i = 0; i < (unsigned)worldinfo.region_size(); ++i) {
             newconn->queue.push(MSG_REGIONINFO, worldinfo.region(i));
           }
+          newconn->set_writing(true);
 
           cout << "Got world viewer connection." << endl;
           break;
