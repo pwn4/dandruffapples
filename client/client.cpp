@@ -398,7 +398,10 @@ gboolean run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 		// Claim our team
 		claimteam.set_id(myTeam);
 		controller.queue.push(MSG_CLAIMTEAM, claimteam);
-		controller.queue.doWrite();
+    // TODO: Do this asynchronously
+    for(bool complete = false; !complete;) {
+      complete = writingcontroller.queue.doWrite();
+    }
 		cout << "Generating ClaimTeam message for team ID #" << myTeam << endl;
 
 		break;
