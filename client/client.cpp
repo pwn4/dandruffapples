@@ -447,7 +447,8 @@ gboolean run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 		
 			// Update all current positions.
 			for (int i = 0; i < robotsPerTeam; i++) {
-				if (ownRobots[i]->pendingCommand && currentTimestep - ownRobots[i]->whenLastSent > 100) {
+				//if (ownRobots[i]->pendingCommand && currentTimestep - ownRobots[i]->whenLastSent > 100) {
+				if (ownRobots[i]->pendingCommand) {
 					// If we've waited too long for an update, send
 					// new ClientRobot messages.
 					// TODO: Lower from 100.
@@ -496,6 +497,7 @@ gboolean run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 						// If we can pickup this puck, throw event.
 						//cout << "#" << i << " sees puck at relx="
 						//     << (*it)->relx << ", rely=" <<(*it)->rely << endl;
+						
 						ownRobots[i]->eventQueue.push_back(EVENT_CAN_PICKUP_PUCK);
 					} else if (tempDistance < 1.0) {
 						// Close to puck, let AI refine velocities continuously.
@@ -509,21 +511,25 @@ gboolean run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 				}
 
 				// Check if any events exist; if so, call AI.
-				if (ownRobots[i]->eventQueue.size() > 0 && !ownRobots[i]->pendingCommand) {
+				//if (ownRobots[i]->eventQueue.size() > 0 && !ownRobots[i]->pendingCommand) {
+				//robot AIs SHOULD execute every timestep
+				if(!ownRobots[i]->pendingCommand){
 					executeAi(ownRobots[i], i, controller);
 				}
 
 				// Clear the queue, wait for new events.
 				ownRobots[i]->eventQueue.clear();
 			}
-		}
 
-		//update the view of the viewed robot
-		if (runClientViewer)
-		{
-			if(viewer->getViewedRobot() != -1 )
-				viewer->updateViewer(ownRobots[viewer->getViewedRobot()]);
-		}
+	    //update the view of the viewed robot
+	    if (runClientViewer)
+	    {
+		    if(viewer->getViewedRobot() != -1 )
+			    viewer->updateViewer(ownRobots[viewer->getViewedRobot()]);
+	    }
+	  
+	  }else
+	    throw runtime_error("Simulation started before I was ready");
 
 
 		break;
