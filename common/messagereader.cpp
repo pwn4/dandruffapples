@@ -48,7 +48,7 @@ bool MessageReader::doRead(MessageType *type, int *len, const void **buffer) {
       // Reorder bytes
       _msglen = ntohl(*((uint32_t*)(_buffer + 1)));
       // Realloc buffer as necessary
-      while(_bufsize < _msglen) {
+      while(_bufsize < (_msglen + _headerlen)) {
         _bufsize *= 2;
         _buffer = (uint8_t*)realloc(_buffer, _bufsize);
       }
