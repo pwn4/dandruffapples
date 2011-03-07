@@ -216,8 +216,9 @@ void AreaEngine::Step(bool generateImage){
       if(newCommand->step == curStep-1){
 
        //TODO: dirty fix for a seg fault. FIX ME ASAP
-       if( robots[newCommand->robotId] == NULL)
+       if( robots.find(newCommand->robotId) == robots.end())
        {
+           //throw runtime_error("1");
            delete newCommand;
            serverChangeQueue.pop();
           continue;
@@ -252,6 +253,7 @@ void AreaEngine::Step(bool generateImage){
         //TODO: dirty fix for a seg fault #2. FIX ME ASAP
         if( (*robotIt).second == NULL)
         {
+          throw runtime_error("2");
         	robots.erase(robotIt++);
            continue;
         }
@@ -389,6 +391,7 @@ void AreaEngine::Step(bool generateImage){
         //TODO: dirty fix for a seg fault #3. FIX ME ASAP
         if( (*robotIt).second == NULL)
         {
+        throw runtime_error("3");
         	robots.erase(robotIt++);
            continue;
         }
@@ -549,6 +552,7 @@ void AreaEngine::Step(bool generateImage){
         //TODO: dirty fix for a seg fault #4. FIX ME ASAP
         if( (*robotIt).second == NULL)
         {
+        throw runtime_error("4");
         	robots.erase(robotIt++);
            continue;
         }
