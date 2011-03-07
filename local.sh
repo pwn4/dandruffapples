@@ -1,8 +1,8 @@
 #!/bin/bash
 
-#This script will parse the clockserver's config file to see and start the Antix system based on the arguments passed to it
+#This script will parse the clockserver's config file to start the Antix system based on the arguments passed to it
 
-#Usage: local.sh [argument]
+#Usage: local.sh [argument1] [argument2] ...
 
 #ARGUMENTS:
 #-shortcut: will start with the following arguments: -all -sleepTime 0.2 -gnomeTerminal -debug -run
@@ -25,14 +25,11 @@
 #./local.sh -clockserver -gnomeTerminal
 #will launch only the clockserver in gnome-terminal
 
-#./local.sh -client -gnomeTerminal -debug
+#./local.sh -client -debug
 #will launch only the client(s) in xterm, in gdb, but will not auto-run
 
 #./local.sh -shortcut
 #will launch the clockserver, worldviewer, controller, regionserver(s), client(s) in the gnometerminal, in gdb with the auto-run feature enabled and at an interval of 0.2 seconds
-
-
-
 
 
 #WARNING: this script MUST be run from your root antix directory
