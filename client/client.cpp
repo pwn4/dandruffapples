@@ -277,7 +277,7 @@ ClientRobotCommand userAiCode(OwnRobot* ownRobot) {
 	return command;
 }
 
-void executeAi(OwnRobot* ownRobot, int index, net::connection controller) {
+void executeAi(OwnRobot* ownRobot, int index, net::connection &controller) {
 	if (ownRobot->pendingCommand)
 		return;
 
@@ -309,7 +309,7 @@ void executeAi(OwnRobot* ownRobot, int index, net::connection controller) {
 	}
 }
 
-void initializeRobots(net::connection controller) {
+void initializeRobots(net::connection &controller) {
 	ClientRobot clientRobot;
 
 	// Initialize robots to some random velocity.
@@ -342,6 +342,7 @@ gboolean run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 
   if(cond & G_IO_OUT) {
     if(controller.queue.doWrite()) {
+      cout << "WRITING DATA" << endl;
       // We don't need to check writability for now
       g_source_remove(gwatch);
       gwatch = g_io_add_watch(ioch, G_IO_IN, run, data);
@@ -699,6 +700,7 @@ gboolean run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 	}
 
   if(controller.queue.remaining()) {
+    cout << "We have data to write!" << endl;
     g_source_remove(gwatch);
     // Ensure that we're watching for writability
     gwatch = g_io_add_watch(ioch, (GIOCondition)(G_IO_IN | G_IO_OUT), run, data);
