@@ -512,7 +512,9 @@ gboolean run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 				//if (ownRobots[i]->eventQueue.size() > 0 && !ownRobots[i]->pendingCommand) {
 				//robot AIs SHOULD execute every timestep
 				if(!ownRobots[i]->pendingCommand){
-					executeAi(ownRobots[i], i, controller);
+					//executeAi(ownRobots[i], i, controller);
+					if(currentTimestep - ownRobots[i]->whenLastSent > 200)
+					  initializeRobots(controller);
 				}
 
 				// Clear the queue, wait for new events.
@@ -525,6 +527,9 @@ gboolean run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 		    if(viewer->getViewedRobot() != -1 )
 			    viewer->updateViewer(ownRobots[viewer->getViewedRobot()]);
 	    }
+	    
+	    while(controller.queue.remaining() > 0)
+	      controller.queue.doWrite();
 	  
 	  }else
 	    throw runtime_error("Simulation started before I was ready");
