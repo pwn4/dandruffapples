@@ -337,7 +337,6 @@ void initializeRobots(net::connection controller) {
 }
 
 gboolean run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
-	g_type_init();
 	MessageType type;
 	int len;
 	const void *buffer;
@@ -734,6 +733,9 @@ void initClient(int argc, char** argv, bool runClientViewer) {
 
 //this is the main loop for the client
 int main(int argc, char* argv[]) {
+  gtk_init(&argc, &argv);
+  g_type_init();
+    
 	bool runClientViewer = false;
 	srand( time(NULL));
 

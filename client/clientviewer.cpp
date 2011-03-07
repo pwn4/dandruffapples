@@ -104,7 +104,6 @@ void ClientViewer::initClientViewer(int numberOfRobots) {
 
 ClientViewer::ClientViewer(int argc, char* argv[]) :
 	viewedRobot(0) {
-	gtk_init(&argc, &argv);
 
 	//assume that the clientviewer.builder is in the same directory as the executable that we are running
 	builderPath=argv[0];
