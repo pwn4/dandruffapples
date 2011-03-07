@@ -191,7 +191,10 @@ int main(int argc, char **argv) {
 
   cout << "Listening for connections." << endl;
   while(true) {    
-    int eventcount = epoll_wait(epoll, events, maxevents, -1);
+    int eventcount;
+    do {
+      eventcount = epoll_wait(epoll, events, maxevents, -1);
+    } while(eventcount < 0 && errno == EINTR);
     if(eventcount < 0) {
       perror("Failed to wait on sockets");
       break;

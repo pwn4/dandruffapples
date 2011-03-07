@@ -410,7 +410,10 @@ void run() {
       }
       */
 
-      int eventcount = epoll_wait(epoll, events, MAX_EVENTS, -1);
+      int eventcount;
+      do {
+        eventcount = epoll_wait(epoll, events, MAX_EVENTS, -1);
+      } while(eventcount < 0 && errno == EINTR);
       for(size_t i = 0; i < (unsigned)eventcount; i++) {
         net::EpollConnection *c = (net::EpollConnection*)events[i].data.ptr;
         if(events[i].events & EPOLLIN) {
