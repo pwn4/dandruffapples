@@ -426,7 +426,6 @@ gboolean run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 				// Allow AI thread to commence.
 				simulationStarted = true;
 
-				initializeRobots(controller);
 			}
 		} else {
 			cout << "Got CLAIMTEAM message after simulation started" << endl;
@@ -439,6 +438,13 @@ gboolean run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 		currentTimestep = timestep.timestep();
 
 		if (simulationStarted) {
+		  //give the robots initial velocity in the first timestep
+		  if(currentTimestep == 2)
+		  {
+				initializeRobots(controller);
+				break;
+		  }
+		
 			// Update all current positions.
 			for (int i = 0; i < robotsPerTeam; i++) {
 				if (ownRobots[i]->pendingCommand && currentTimestep - ownRobots[i]->whenLastSent > 100) {
