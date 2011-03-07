@@ -277,11 +277,6 @@ ClientRobotCommand userAiCode(OwnRobot* ownRobot) {
 	return command;
 }
 
-void forceSend( net::connection controller ) {
-	while (controller.queue.remaining() > 0)
-		controller.queue.doWrite();
-}
-
 void executeAi(OwnRobot* ownRobot, int index, net::connection controller) {
 	if (ownRobot->pendingCommand)
 		return;
@@ -307,13 +302,10 @@ void executeAi(OwnRobot* ownRobot, int index, net::connection controller) {
 		}
 
 		controller.queue.push(MSG_CLIENTROBOT, clientrobot);
-		controller.queue.doWrite();
 
 		ownRobot->whenLastSent = currentTimestep;
 		sentMessages++;
 		ownRobot->pendingCommand = true;
-
-		forceSend(controller);
 	}
 }
 
@@ -327,13 +319,17 @@ void initializeRobots(net::connection controller) {
 		clientRobot.set_velocityy(((rand() % 11) / 10.0) - 0.5);
 		clientRobot.set_angle(0.0);
 		controller.queue.push(MSG_CLIENTROBOT, clientRobot);
-		controller.queue.doWrite();
 		ownRobots[i]->whenLastSent = currentTimestep;
 		sentMessages++;
 		ownRobots[i]->behaviour = i % 2;
 	}
+}
 
-	forceSend(controller);
+gboolean handleWrite(GIOChannel *ioch, GIOCondition cond, gpointer data) {
+  MessageQueue *q = (MessageQueue*)data;
+
+  // Stop watching if we're done writing for now.
+  return !q->doWrite();
 }
 
 gboolean run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
@@ -342,7 +338,6 @@ gboolean run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 	const void *buffer;
 	passToRun *passer = (passToRun*)data;
 
-  // TODO: Most of this shouldn't run repeatedly
 	bool &runClientViewer=passer->runClientViewer;
 	WorldInfo &worldinfo=passer->worldinfo;
 	TimestepUpdate &timestep=passer->timestep;
@@ -398,10 +393,6 @@ gboolean run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 		// Claim our team
 		claimteam.set_id(myTeam);
 		controller.queue.push(MSG_CLAIMTEAM, claimteam);
-    // TODO: Do this asynchronously
-    for(bool complete = false; !complete;) {
-      complete = writingcontroller.queue.doWrite();
-    }
 		cout << "Generating ClaimTeam message for team ID #" << myTeam << endl;
 
 		break;
@@ -527,7 +518,6 @@ gboolean run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 			if(viewer->getViewedRobot() != -1 )
 				viewer->updateViewer(ownRobots[viewer->getViewedRobot()]);
 		}
-
 
 		break;
 	}
@@ -700,8 +690,10 @@ gboolean run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 		cerr << "Unknown message!" << endl;
 	}
 
-	//force to send any unsent messages
-	forceSend(controller);
+  if(controller.queue.remaining()) {
+    // Ensure that we're watching for writability
+    g_io_add_watch(ioch, G_IO_OUT, handleWrite, (gpointer)&controller.queue);
+  }
 
 	return true;
 }
@@ -736,8 +728,11 @@ void initClient(int argc, char** argv, bool runClientViewer) {
 	//all the variables that we want to read in the controller message handler ( see bellow ) need to be either passed in this struct or delcared global
 	passToRun passer(runClientViewer, worldinfo, timestep, serverrobot, claimteam, controller, viewer);
 
-	//this calls the function "run" everytime we get a message from the "controllerfd"
-	g_io_add_watch(g_io_channel_unix_new(controllerfd), G_IO_IN, run, (gpointer)&passer);
+	//this calls the function "run" everytime we get a message from the
+	//"controllerfd"
+  GIOChannel *ioch = g_io_channel_unix_new(controllerfd);
+	g_io_add_watch(ioch, G_IO_IN, run, (gpointer)&passer);
+  g_io_add_watch(ioch, G_IO_OUT, handleWrite, (gpointer)&controller.queue);
 
 	gtk_main();
 }
