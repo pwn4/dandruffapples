@@ -117,7 +117,7 @@ do
                 SSHPROCS="$SSHPROCS $!"
             else
 		sleep 0.5
-                ssh -o StrictHostKeyChecking=no -o PasswordAuthentication=no -p $SSHPORT $HOST "bash -c \"killall -9 regionserver 2>/dev/null; cd '$PROJDIR/regionserver' && LD_LIBRARY_PATH='$PROJDIR/sharedlibs' ./regionserver -l $CLOCKSERVER -c config${CONFIDX}\"" > /dev/null &
+                ssh -o StrictHostKeyChecking=no -o PasswordAuthentication=no -p $SSHPORT $HOST "bash -c \"cd '$PROJDIR/regionserver' && LD_LIBRARY_PATH='$PROJDIR/sharedlibs' ./regionserver -l $CLOCKSERVER -c config${CONFIDX}\"" > /dev/null &
                 SSHPROCS="$SSHPROCS $!"
             fi
             echo -n .
