@@ -448,7 +448,7 @@ gboolean run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 			for (int i = 0; i < robotsPerTeam; i++) {
 			  //so far the simulation can handle actions up to every 2 sim steps smoothly. This probably doesn't scale.
 			  //We'll need to implement the optimizations we talked about to improve this
-				if(currentTimestep - ownRobots[i]->whenLastSent < 4)
+				if(currentTimestep - ownRobots[i]->whenLastSent < 200)
 				  continue;
 				
 				if (ownRobots[i]->pendingCommand) {
@@ -517,8 +517,8 @@ gboolean run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 				//if (ownRobots[i]->eventQueue.size() > 0 && !ownRobots[i]->pendingCommand) {
 				//robot AIs SHOULD execute every timestep
 				if(!ownRobots[i]->pendingCommand){
-					executeAi(ownRobots[i], i, controller);
-					//initializeRobots(controller);
+					//executeAi(ownRobots[i], i, controller);
+					initializeRobots(controller);
 				}
 
 				// Clear the queue, wait for new events.
@@ -778,6 +778,11 @@ int main(int argc, char* argv[]) {
 
 	runClientViewer = cmdline.getArg("-viewer").length() ? true : false;
 	cout << "Started client with the client viewer set to " << runClientViewer << endl;
+	
+  if(cmdline.getArg("-l").length()) {
+    string newcontrollerip = cmdline.getArg("-l");
+		controllerips.push_back(newcontrollerip);
+  }
 
 	myTeam = strtol(cmdline.getArg("-t", "0").c_str(), NULL, 0);
 	cout << "Trying to control team #" << myTeam << " (use -t <team> to change)" << endl;
