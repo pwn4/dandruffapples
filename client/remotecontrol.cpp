@@ -51,7 +51,7 @@ bool simulationEnded = false;
 int currentTimestep = 0;
 int lastTimestep = 0;
 int myTeam;
-int myRobotId;
+unsigned myRobotId;
 int robotsPerTeam; 
 net::EpollConnection* theController;
 int epoll;
@@ -92,7 +92,7 @@ public:
 
 class SeenRobot : public Robot {
 public:
-  int id;
+  unsigned id;
   int lastTimestepSeen;
   bool viewable;
   float relx;
@@ -519,11 +519,11 @@ void run() {
                 serverrobot.ParseFromArray(buffer, len);
                 receivedMessages++;
                 if (simulationStarted) {
-                  int robotId = serverrobot.id();
+                  unsigned robotId = serverrobot.id();
                   if (robotId == myRobotId) {
                     cout << "Got our own ServerRobot!" << endl;
                     // The serverrobot is from our team.
-                    int index = robotId;
+                    unsigned index = robotId;
                     ownRobot->pendingCommand = false;
                     if (serverrobot.has_velocityx()) 
                       ownRobot->vx = serverrobot.velocityx();
