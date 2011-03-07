@@ -299,7 +299,7 @@ int main(int argc, char** argv)
                   if (i->teamId == (int)claimteam.id()) {
                   
                     if(robots.find(i->robotId) == robots.end())
-                      throw SystemError("No server known for robot.");
+                      throw runtime_error("No server known for robot.");
                       
                     (robots.find(i->robotId))->second.client = clients[client];
                     // TODO: Erase unassignedRobot entries when done.
