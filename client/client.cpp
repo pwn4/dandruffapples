@@ -155,7 +155,8 @@ ClientRobotCommand userAiCode(OwnRobot* ownRobot) {
 		}
 
 		// Check if we are on a puck. If so, just pick it up.
-		if (pickupPuck) {
+		//DONT for now.
+		if (pickupPuck && false) {
 			SeenPuck* pickup = findPickUpablePuck(ownRobot);
 			if (pickup != NULL) {
 				command.sendCommand = true;
