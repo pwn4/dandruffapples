@@ -138,7 +138,7 @@ if [ $controller ]; then
 fi
 
 if [ $worldviewer ]; then
-  echo -e "Starting the world viewer with command:\nx$terminal \"World Viewer\" -e \"$gdbCmd$directory/worldviewer/worldviewer -c $directory/worldviewer/config\" & \n"
+  echo -e "Starting the world viewer with command:\n$terminal \"World Viewer\" -e \"$gdbCmd$directory/worldviewer/worldviewer -c $directory/worldviewer/config\" & \n"
   $terminal "World Viewer" -e "$gdbCmd$directory/worldviewer/worldviewer -c $directory/worldviewer/config" &
   sleep $sleepTime
 fi
