@@ -343,13 +343,13 @@ gboolean run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 	passToRun *passer = (passToRun*)data;
 
   // TODO: Most of this shouldn't run repeatedly
-	bool runClientViewer=passer->runClientViewer;
-	WorldInfo worldinfo=passer->worldinfo;
-	TimestepUpdate timestep=passer->timestep;
-	ServerRobot serverrobot=passer->serverrobot;
-	ClaimTeam claimteam=passer->claimteam;
-	net::connection controller=passer->controller;
-	ClientViewer* viewer = passer->viewer;
+	bool &runClientViewer=passer->runClientViewer;
+	WorldInfo &worldinfo=passer->worldinfo;
+	TimestepUpdate &timestep=passer->timestep;
+	ServerRobot &serverrobot=passer->serverrobot;
+	ClaimTeam &claimteam=passer->claimteam;
+	net::connection &controller=passer->controller;
+	ClientViewer* &viewer = passer->viewer;
 
 	// Stats: Received messages per second
 	if (lastSecond < time(NULL)) {
