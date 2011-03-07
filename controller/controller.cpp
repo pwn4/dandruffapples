@@ -262,6 +262,25 @@ int main(int argc, char** argv)
                 (*i)->queue.push(MSG_TIMESTEPUPDATE, timestep);
                 (*i)->set_writing(true);
               }
+              
+              //force all updates to everyone, before saying I am finished for the timestep
+              for(vector<ServerConnection*>::iterator i = servers.begin();
+                  i != servers.end(); ++i) {
+                  while((*i)->queue.remaining() != 0)
+                    (*i)->queue.doWrite();
+              }
+              for(vector<ClientConnection*>::iterator i = clients.begin();
+                  i != clients.end(); ++i) {
+                  while((*i)->queue.remaining() != 0)
+                    (*i)->queue.doWrite();
+              }
+              
+              //tell the clock we're done
+              TimestepDone tsdone;
+	            tsdone.set_done(true);
+              clockconn.queue.push(MSG_TIMESTEPDONE, tsdone);
+              clockconn.set_writing(true);
+              
               break;
             }
 
@@ -492,11 +511,7 @@ int main(int argc, char** argv)
                   robotBacklog->clear();
                 }
               }
-              
-              else {
-                cerr << "BouncedRobot error: Retry failed. Dropping ClientRobot #"
-                     << bouncedrobot.clientrobot().id() << "!" << endl;
-              }
+
               break;
             }
             default:
