@@ -783,6 +783,7 @@ int main(int argc, char* argv[]) {
 	
   if(cmdline.getArg("-l").length()) {
     string newcontrollerip = cmdline.getArg("-l");
+    controllerips.clear();
 		controllerips.push_back(newcontrollerip);
   }
 
