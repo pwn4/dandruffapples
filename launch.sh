@@ -155,7 +155,7 @@ then
     exit 1
 fi
 
-sleep 3
+sleep 10
 if [ $CONTROLLERS ]
 then
     echo -n "Launching $TEAMS clients across $CONTROLLERS machines"
@@ -163,6 +163,7 @@ then
     CLIENTS_LEFT=$TEAMS
     while [ $CLIENTS_LEFT -gt 0 ]
     do
+        sleep 0.1
         CLIENTS_LEFT=$[CLIENTS_LEFT - 1]
         HOST=`echo $CONTROLHOSTS |cut -d ' ' -f $[$CLIENTS_LEFT % $HOSTNUM + 1]`
         wrap $SSHCOMMAND $HOST "bash -c \"cd '$PROJDIR/client' && LD_LIBRARY_PATH='$PROJDIR/sharedlibs' $DEBUGGER ./client -t $CLIENTS_LEFT\"" > /dev/null &
