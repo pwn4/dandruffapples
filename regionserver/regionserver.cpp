@@ -26,14 +26,12 @@
 
 #include <google/protobuf/message_lite.h>
 
-#include "../common/timestep.pb.h"
-#include "../common/net.h"
 #include "../common/claim.pb.h"
 #include "../common/clientrobot.pb.h"
-#include "../common/serverrobot.pb.h"
 #include "../common/puckstack.pb.h"
 #include "../common/worldinfo.pb.h"
 #include "../common/regionrender.pb.h"
+#include "../common/timestep.pb.h"
 
 #include "../common/ports.h"
 #include "../common/messagewriter.h"
@@ -42,9 +40,6 @@
 #include "../common/net.h"
 #include "../common/except.h"
 #include "../common/parseconf.h"
-#include "../common/timestep.pb.h"
-#include "../common/serverrobot.pb.h"
-#include "../common/puckstack.pb.h"
 
 #include "areaengine.h"
 

@@ -324,7 +324,7 @@ int main(int argc, char** argv)
           break;
         }
         
-				case net::connection::CLIENT:
+		case net::connection::CLIENT:
         {
           MessageType type;
           int len;

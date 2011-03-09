@@ -251,7 +251,7 @@ void benchmarkMessages(regionConnection *region) {
 }
 
 //handler for region received messages
-gboolean io_regionmessage(GIOChannel *ioch, GIOCondition cond, gpointer data) {
+gboolean regionMessage(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 	g_type_init();
 	MessageType type;
 	int len;
@@ -309,7 +309,7 @@ gboolean io_regionmessage(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 }
 
 //handler for clock received messages
-gboolean io_clockmessage(GIOChannel *ioch, GIOCondition cond, gpointer data) {
+gboolean clockMessage(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 	g_type_init();
 	MessageType type;
 	int len;
@@ -365,7 +365,7 @@ gboolean io_clockmessage(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 		}
 
 		//create a new handler to wait for when the server sends a new world view to us
-		g_io_add_watch(g_io_channel_unix_new(regionFd), G_IO_IN, io_regionmessage, NULL);
+		g_io_add_watch(g_io_channel_unix_new(regionFd), G_IO_IN, regionMessage, NULL);
 #ifdef DEBUG
 		debug << "Connected to region server fd=" << regionFd << " located at ( " << regioninfo.draw_x() << ", "
 				<< regioninfo.draw_y() << " )" << endl;
@@ -422,7 +422,7 @@ void setNewRegionPivotAndBuddy(uint32 newPivotRegion[], uint32 newPivotRegionBud
 }
 
 //up button handler
-void on_downButton_clicked(GtkWidget *widget, gpointer window) {
+void onDownButtonClicked(GtkWidget *widget, gpointer window) {
 #ifdef DEBUG
 	debug << "Clicked down" << endl;
 #endif
@@ -466,7 +466,7 @@ void on_downButton_clicked(GtkWidget *widget, gpointer window) {
 }
 
 //down button handler
-void on_upButton_clicked(GtkWidget *widget, gpointer window) {
+void onUpButtonClicked(GtkWidget *widget, gpointer window) {
 #ifdef DEBUG
 	debug << "Clicked up" << endl;
 #endif
@@ -505,7 +505,7 @@ void on_upButton_clicked(GtkWidget *widget, gpointer window) {
 }
 
 //back button handler
-void on_backButton_clicked(GtkWidget *widget, gpointer window) {
+void onBackButtonClicked(GtkWidget *widget, gpointer window) {
 #ifdef DEBUG
 	debug << "Clicked back" << endl;
 #endif
@@ -544,7 +544,7 @@ void on_backButton_clicked(GtkWidget *widget, gpointer window) {
 }
 
 //forward button handler
-void on_forwardButton_clicked(GtkWidget *widget, gpointer window) {
+void onForwardButtonClicked(GtkWidget *widget, gpointer window) {
 #ifdef DEBUG
 	debug << "Clicked forward" << endl;
 #endif
@@ -583,7 +583,7 @@ void on_forwardButton_clicked(GtkWidget *widget, gpointer window) {
 }
 
 //rotate button handler
-void on_rotateButton_clicked(GtkWidget *widget, gpointer window) {
+void onRotateButtonClicked(GtkWidget *widget, gpointer window) {
 #ifdef DEBUG
 	debug << "Clicked rotate" << endl;
 #endif
@@ -650,7 +650,7 @@ static gboolean delete_event(GtkWidget *window, GdkEvent *event, gpointer widget
 }
 
 //"About" toolbar button handler
-void on_About_clicked(GtkWidget *widget, gpointer window) {
+void onAboutClicked(GtkWidget *widget, gpointer window) {
 	GtkWidget *dialog = gtk_about_dialog_new();
 	gtk_about_dialog_set_name(GTK_ABOUT_DIALOG(dialog), "World Viewer");
 	gtk_about_dialog_set_version(GTK_ABOUT_DIALOG(dialog), "0.1");
@@ -669,7 +669,7 @@ void on_About_clicked(GtkWidget *widget, gpointer window) {
 }
 
 //"Navigation" and "Info" toolbar button handler
-void on_Window_toggled(GtkWidget *widget, gpointer window) {
+void onWindowToggled(GtkWidget *widget, gpointer window) {
 	GdkColor bgColor;
 	gdk_color_parse("black", &bgColor);
 	gtk_widget_modify_bg(GTK_WIDGET(window), GTK_STATE_NORMAL, &bgColor);
@@ -686,7 +686,7 @@ void on_Window_toggled(GtkWidget *widget, gpointer window) {
 }
 
 //Fullscreen button handler
-void on_Fullscreen_toggled(GtkWidget *widget, gpointer window) {
+void onFullscreenToggled(GtkWidget *widget, gpointer window) {
 
 	//we will not be able to see any other windows when in fullscreen mode,
 	//so might as well disable the buttons
@@ -719,7 +719,7 @@ gboolean drawingAreaExpose(GtkWidget *widget, GdkEventExpose *event, gpointer da
 		draw[(int)data]=false;
 	}
 
-	return TRUE;
+	return FALSE;
 }
 
 
@@ -783,15 +783,15 @@ void initWorldViewer() {
 	g_signal_connect(worldDrawingArea.at(TOP_RIGHT), "expose-event", G_CALLBACK(drawingAreaExpose), (gpointer)TOP_RIGHT);
 	g_signal_connect(worldDrawingArea.at(BOTTOM_LEFT), "expose-event", G_CALLBACK(drawingAreaExpose), (gpointer)BOTTOM_LEFT);
 
-	g_signal_connect(navigation, "toggled", G_CALLBACK(on_Window_toggled), (gpointer) navigationWindow);
-	g_signal_connect(info, "toggled", G_CALLBACK(on_Window_toggled), (gpointer) infoWindow);
-	g_signal_connect(fullscreen, "toggled", G_CALLBACK(on_Fullscreen_toggled), (gpointer) mainWindow);
-	g_signal_connect(about, "clicked", G_CALLBACK(on_About_clicked), (gpointer) mainWindow);
-	g_signal_connect(upButton, "clicked", G_CALLBACK(on_upButton_clicked), (gpointer) mainWindow);
-	g_signal_connect(downButton, "clicked", G_CALLBACK(on_downButton_clicked), (gpointer) mainWindow);
-	g_signal_connect(backButton, "clicked", G_CALLBACK(on_backButton_clicked), (gpointer) mainWindow);
-	g_signal_connect(forwardButton, "clicked", G_CALLBACK(on_forwardButton_clicked), (gpointer) mainWindow);
-	g_signal_connect(rotateButton, "clicked", G_CALLBACK(on_rotateButton_clicked), (gpointer) mainWindow);
+	g_signal_connect(navigation, "toggled", G_CALLBACK(onWindowToggled), (gpointer) navigationWindow);
+	g_signal_connect(info, "toggled", G_CALLBACK(onWindowToggled), (gpointer) infoWindow);
+	g_signal_connect(fullscreen, "toggled", G_CALLBACK(onFullscreenToggled), (gpointer) mainWindow);
+	g_signal_connect(about, "clicked", G_CALLBACK(onAboutClicked), (gpointer) mainWindow);
+	g_signal_connect(upButton, "clicked", G_CALLBACK(onUpButtonClicked), (gpointer) mainWindow);
+	g_signal_connect(downButton, "clicked", G_CALLBACK(onDownButtonClicked), (gpointer) mainWindow);
+	g_signal_connect(backButton, "clicked", G_CALLBACK(onBackButtonClicked), (gpointer) mainWindow);
+	g_signal_connect(forwardButton, "clicked", G_CALLBACK(onForwardButtonClicked), (gpointer) mainWindow);
+	g_signal_connect(rotateButton, "clicked", G_CALLBACK(onRotateButtonClicked), (gpointer) mainWindow);
 
 	g_signal_connect(navigationWindow, "destroy", G_CALLBACK(destroy), (gpointer)navigation);
 	g_signal_connect(infoWindow, "destroy", G_CALLBACK(destroy), (gpointer)info);
@@ -833,7 +833,7 @@ int main(int argc, char* argv[]) {
 
 	//handle clock messages
 	MessageReader clockReader(clockfd);
-	g_io_add_watch(g_io_channel_unix_new(clockfd), G_IO_IN, io_clockmessage, (gpointer) &clockReader);
+	g_io_add_watch(g_io_channel_unix_new(clockfd), G_IO_IN, clockMessage, (gpointer) &clockReader);
 
 #ifdef DEBUG
 	debug << "Connected to Clock Server " << clockip << endl;

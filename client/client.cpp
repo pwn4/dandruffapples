@@ -3,7 +3,7 @@
 /////////////////Variables and Declarations/////////////////
 const char *configFileName;
 //Game world variables
-// TODO: organize/move variables out of client.cpp 
+// TODO: organize/move variables out of client.cpp
 bool simulationStarted = false;
 bool simulationEnded = false;
 int currentTimestep = 0;
@@ -26,7 +26,7 @@ OwnRobot** ownRobots;
 struct timeval timeCache, microTimeCache;
 
 //Config variables
-vector<string> controllerips; //controller IPs 
+vector<string> controllerips; //controller IPs
 ////////////////////////////////////////////////////////////
 
 //this function loads the config file so that the server parameters don't need to be added every time
@@ -389,7 +389,7 @@ gboolean run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 
 		//create the client viewer GUI
 		if (runClientViewer)
-			viewer->initClientViewer(robotsPerTeam, myTeam, ROBOTDIAMETER, VIEWDISTANCE, DRAWFACTOR );
+			viewer->initClientViewer(robotsPerTeam, myTeam, ROBOTDIAMETER, PUCKDIAMETER, VIEWDISTANCE, DRAWFACTOR );
 
 		// Claim our team
 		ClaimTeam claimteam;
@@ -442,14 +442,14 @@ gboolean run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 				initializeRobots(controller);
 				break;
 		  }
-		
+
 			// Update all current positions.
 			for (int i = 0; i < robotsPerTeam; i++) {
 			  //so far the simulation can handle actions up to every 2 sim steps smoothly. This probably doesn't scale.
 			  //We'll need to implement the optimizations we talked about to improve this
 				if(currentTimestep - ownRobots[i]->whenLastSent < 200)
 				  continue;
-				
+
 				if (ownRobots[i]->pendingCommand) {
 					// If we've waited too long for an update, send
 					// new ClientRobot messages.
@@ -503,7 +503,7 @@ gboolean run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 						// If we can pickup this puck, throw event.
 						//cout << "#" << i << " sees puck at relx="
 						//     << (*it)->relx << ", rely=" <<(*it)->rely << endl;
-						
+
 						ownRobots[i]->eventQueue.push_back(EVENT_CAN_PICKUP_PUCK);
 					} else if (tempDistance < 1.0) {
 						// Close to puck, let AI refine velocities continuously.
@@ -531,16 +531,17 @@ gboolean run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 	    //update the view of the viewed robot
 	    if (runClientViewer)
 	    {
-		    if( viewer->getViewedRobot() != -1 && (timeCache.tv_sec*1000000 + timeCache.tv_usec) > (microTimeCache.tv_sec*1000000 + microTimeCache.tv_usec)+50000)
+	    	gettimeofday(&timeCache, NULL);
+		    if( viewer->getViewedRobot() != -1 && (timeCache.tv_sec*1000000 + timeCache.tv_usec) > (microTimeCache.tv_sec*1000000 + microTimeCache.tv_usec)+DRAWTIME)
 		    {
 			    viewer->updateViewer(ownRobots[viewer->getViewedRobot()]);
 			    microTimeCache = timeCache;
 		    }
 	    }
-	    
+
 	    while(controller.queue.remaining() > 0)
 	      controller.queue.doWrite();
-	  
+
 	  }else
 	    throw runtime_error("Simulation started before I was ready");
 
@@ -550,6 +551,7 @@ gboolean run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 	case MSG_SERVERROBOT: {
 		ServerRobot serverrobot;
 		serverrobot.ParseFromArray(buffer, len);
+
 		receivedMessages++;
 		if (simulationStarted) {
 			int robotId = serverrobot.id();
@@ -557,7 +559,7 @@ gboolean run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 				// The serverrobot is from our team.
 				int index = robotIdToIndex(robotId);
 				ownRobots[index]->pendingCommand = false;
-        
+
         // If x/y exists, this is the relative distance from our home!
         if (serverrobot.has_x())
           ownRobots[index]->homeRelX = serverrobot.x();
@@ -629,10 +631,11 @@ gboolean run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 									(*it)->hasCollided = serverrobot.hascollided();
 									stateChange = true;
 								}
+								/*
 								if (serverrobot.has_team() && (*it)->team != serverrobot.team()) {
 									(*it)->team = serverrobot.team();
 									stateChange = true;
-								}
+								}*/
 								if (serverrobot.seesserverrobot(i).has_relx())
 									(*it)->relx = serverrobot.seesserverrobot(i).relx();
 								if (serverrobot.seesserverrobot(i).has_rely())
@@ -767,6 +770,10 @@ void initClient(int argc, char* argv[], bool runClientViewer) {
 	net::connection controller(controllerfd, net::connection::CONTROLLER);
 	ClientViewer* viewer = new ClientViewer(argv[0]);
 
+	if(runClientViewer){
+		gettimeofday(&microTimeCache, NULL);
+	}
+
 	//all the variables that we want to read in the controller message handler ( see bellow ) need to be either passed in this struct or delcared global
 	passToRun passer(runClientViewer, controller, viewer);
 
@@ -796,7 +803,7 @@ int main(int argc, char* argv[]) {
 
 	runClientViewer = cmdline.getArg("-viewer").length() ? true : false;
 	cout << "Started client with the client viewer set to " << runClientViewer << endl;
-	
+
   if(cmdline.getArg("-l").length()) {
     string newcontrollerip = cmdline.getArg("-l");
     controllerips.clear();

@@ -6,7 +6,7 @@
     <property name="visible">True</property>
     <property name="border_width">10</property>
     <property name="title" translatable="yes">Client Viewer</property>
-    <property name="default_width">425</property>
+    <property name="default_width">550</property>
     <property name="default_height">250</property>
     <signal name="destroy" handler="gtk_main_quit"/>
     <signal name="delete_event" handler="gtk_main_quit"/>
@@ -25,7 +25,7 @@
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
                     <property name="invisible_char">•</property>
-                    <property name="width_chars">7</property>
+                    <property name="width_chars">4</property>
                     <property name="adjustment">robotIdAdjustment</property>
                     <property name="snap_to_ticks">True</property>
                     <property name="numeric">True</property>
@@ -39,6 +39,39 @@
             </child>
             <child>
               <object class="GtkSeparatorToolItem" id="vsep">
+                <property name="visible">True</property>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="homogeneous">True</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkToolButton" id="ZoomIn">
+                <property name="visible">True</property>
+                <property name="label" translatable="yes">Zoom In</property>
+                <property name="use_underline">True</property>
+                <property name="stock_id">gtk-zoom-in</property>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="homogeneous">True</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkToolButton" id="ZoomOut">
+                <property name="visible">True</property>
+                <property name="label" translatable="yes">Zoom Out</property>
+                <property name="use_underline">True</property>
+                <property name="stock_id">gtk-zoom-out</property>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="homogeneous">True</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkSeparatorToolItem" id="toolbutton1">
                 <property name="visible">True</property>
               </object>
               <packing>
