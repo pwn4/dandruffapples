@@ -53,7 +53,7 @@ struct RobotConnection{
   vector<ClientRobot> bouncedMessages;
   net::EpollConnection* client;
   net::EpollConnection* server;
-  
+
   RobotConnection(net::EpollConnection* c, net::EpollConnection* s) : client(c), server(s) {}
 };
 
@@ -65,7 +65,7 @@ struct NoTeamRobot {
   int robotId;
   int regionId;
   int teamId;
-  
+
   NoTeamRobot(int robotId_, int regionId_, int teamId_) : robotId(robotId_),
      regionId(regionId_), teamId(teamId_) {}
 };
@@ -101,7 +101,7 @@ int main(int argc, char** argv)
   strcpy(clockip, cmdline.getArg("-l", (string)clockip, 40).c_str());
 
   cout << "Using clock IP: " << clockip << endl;
-  
+
   // Stat variables
   time_t lastSecond = time(NULL);
   int receivedClientRobot = 0;
@@ -114,13 +114,13 @@ int main(int argc, char** argv)
 
   clockfd = net::do_connect(clockip, CONTROLLERS_PORT);
   cout << "Connected to Clock Server" << endl;
-  
+
   if (clockfd < 0) {
     throw SystemError("Failed to connect to clock server");
 	} else if (clockfd == 0) {
 		throw runtime_error("Invalid clock address");
 	}
-  
+
   listenfd = net::do_listen(CLIENTS_PORT);
   net::set_blocking(listenfd, false);
 
@@ -137,20 +137,20 @@ int main(int argc, char** argv)
   vector<ServerConnection*> servers;
 	set<net::EpollConnection*> seenbyidset;		//to determine who to forward serverrobot msg to
 	pair<set<net::EpollConnection*>::iterator,bool> ret; //return value of insertion
-	
+
 
   #define MAX_EVENTS 128
   struct epoll_event events[MAX_EVENTS];
   while(true) {
     // Stats: Check message send rate
     if (lastSecond < time(NULL)) {
-      cout << "Received " << receivedClientRobot 
+      cout << "Received " << receivedClientRobot
            << " ClientRobot messages per second." << endl;
-      cout << "Sent " << sentClientRobot 
+      cout << "Sent " << sentClientRobot
            << " ClientRobot messages per second." << endl;
-      cout << "Received " << receivedServerRobot 
+      cout << "Received " << receivedServerRobot
            << " ServerRobot messages per second." << endl;
-      cout << "Sent " << sentServerRobot 
+      cout << "Sent " << sentServerRobot
            << " ServerRobot messages per second.\n" << endl;
       lastSecond = time(NULL);
       receivedClientRobot = 0;
@@ -183,7 +183,7 @@ int main(int argc, char** argv)
             {
               worldinfo.ParseFromArray(buffer, len);
               cout << "Got world info." << endl;
-              
+
               // Get the robot information.
               for (int i = 0; i < worldinfo.robot_size(); i++) {
                 unassignedRobots.push_back(NoTeamRobot(worldinfo.robot(i).id(),
@@ -204,7 +204,7 @@ int main(int argc, char** argv)
                   cout << "Connected to a region server." << endl;
                 }
                 ServerConnection *newServer = new ServerConnection(
-                    worldinfo.region(i).id(), epoll, EPOLLIN, regionfd, 
+                    worldinfo.region(i).id(), epoll, EPOLLIN, regionfd,
                     net::connection::REGION);
                 servers.push_back(newServer);
 
@@ -238,7 +238,7 @@ int main(int argc, char** argv)
                 cout << "Connected to a region server." << endl;
               }
               ServerConnection *newServer = new ServerConnection(
-                  regioninfo.id(), epoll, EPOLLIN, regionfd, 
+                  regioninfo.id(), epoll, EPOLLIN, regionfd,
                   net::connection::REGION);
               servers.push_back(newServer);
 
@@ -262,7 +262,7 @@ int main(int argc, char** argv)
                 (*i)->queue.push(MSG_TIMESTEPUPDATE, timestep);
                 (*i)->set_writing(true);
               }
-              
+
               //force all updates to everyone, before saying I am finished for the timestep
               for(vector<ServerConnection*>::iterator i = servers.begin();
                   i != servers.end(); ++i) {
@@ -274,13 +274,13 @@ int main(int argc, char** argv)
                   while((*i)->queue.remaining() != 0)
                     (*i)->queue.doWrite();
               }
-              
+
               //tell the clock we're done
               TimestepDone tsdone;
 	            tsdone.set_done(true);
               clockconn.queue.push(MSG_TIMESTEPDONE, tsdone);
               clockconn.set_writing(true);
-              
+
               break;
             }
 
@@ -293,14 +293,14 @@ int main(int argc, char** argv)
                 cout << "Client " << client << " granted team " << claimteam.id()
                      << "." << endl;
 
-                // Update lookup table. 
+                // Update lookup table.
                 for(vector<NoTeamRobot>::iterator i = unassignedRobots.begin();
                     i != unassignedRobots.end(); ++i) {
                   if (i->teamId == (int)claimteam.id()) {
-                  
+
                     if(robots.find(i->robotId) == robots.end())
                       throw runtime_error("No server known for robot.");
-                      
+
                     (robots.find(i->robotId))->second.client = clients[client];
                     // TODO: Erase unassignedRobot entries when done.
                   }
@@ -323,7 +323,7 @@ int main(int argc, char** argv)
           }
           break;
         }
-        
+
 		case net::connection::CLIENT:
         {
           MessageType type;
@@ -337,7 +337,7 @@ int main(int argc, char** argv)
               // Forward to the correct server
               ClientRobot clientrobot;
               clientrobot.ParseFromArray(buffer, len);
-                
+
               net::EpollConnection *server = (robots.find(clientrobot.id()))->second.server;
 							if(server == NULL){//this should not happen...
 								cout << "Ugh, robot#" << clientrobot.id() << "does not belong to a server?"
@@ -356,11 +356,11 @@ int main(int argc, char** argv)
               ClaimTeam claimteam;
               // Forward to the clock
               claimteam.ParseFromArray(buffer, len);
-              
+
               //temporary error for now to ensure this isn't begin wonky - so, limit is 1000 clients per controller
               if(((ClientConnection*)c)->id >= 1000)
                 throw runtime_error("Invalid Client Connection Id Due to Bad Cast");
-                
+
               claimteam.set_clientid(((ClientConnection*)c)->id);
 
               clockconn.queue.push(MSG_CLAIMTEAM, claimteam);
@@ -375,7 +375,7 @@ int main(int argc, char** argv)
           }
 					break;
 				}
-				
+
 				case net::connection::REGION:
         {
           MessageType type;
@@ -388,9 +388,9 @@ int main(int argc, char** argv)
               ServerRobot serverrobot;
               receivedServerRobot++;
               serverrobot.ParseFromArray(buffer, len);
-              
+
 							seenbyidset.clear();	//clear for next serverrobot msg
-							
+
 							// Forward to the client, and any clients in the seenbyid
               net::EpollConnection *client = (robots.find(serverrobot.id()))->second.client;
               if (client != NULL) {
@@ -422,8 +422,8 @@ int main(int argc, char** argv)
             {
               PuckStack puckstack;
               puckstack.ParseFromArray(buffer, len);
-  
-              seenbyidset.clear();	
+
+              seenbyidset.clear();
               net::EpollConnection *client;
               for(int i=0; i<puckstack.seespuckstack_size(); i++){
                 client = (robots.find(puckstack.seespuckstack(i).seenbyid()))->
@@ -436,7 +436,7 @@ int main(int argc, char** argv)
                   }
                 }
               }
-              
+
               break;
             }
 
@@ -448,7 +448,7 @@ int main(int argc, char** argv)
               //another temporary error handle in case
               if(robots.find(claimrobot.id()) == robots.end())
                 throw runtime_error("Could not find claimrobot id in robot array upon region claim.");
-                
+
               (robots.find(claimrobot.id()))->second.server = c;
 
               //we check to see if the robot has backed up bounced messages
@@ -461,11 +461,11 @@ int main(int argc, char** argv)
                   robotServer->queue.push(MSG_CLIENTROBOT, (*robotBacklog)[i]);
 		              robotServer->set_writing(true);
 	              }
-	              
+
 		            //force flush the message before we clear the backlog (OR ELSE)
                 while(robotServer->queue.remaining() != 0)
-                  robotServer->queue.doWrite(); 
-                
+                  robotServer->queue.doWrite();
+
                 //NOW we can clear the backlog
                 robotBacklog->clear();
               }
@@ -479,16 +479,16 @@ int main(int argc, char** argv)
               BouncedRobot bouncedrobot;
               bouncedrobot.ParseFromArray(buffer, len);
               if (bouncedrobot.bounces() == 1) {
-                
+
                 //another temporary error handle in case
                 if(robots.find(bouncedrobot.clientrobot().id()) == robots.end())
                   throw runtime_error("Could not find claimrobot id in robot array upon bounced message.");
-                
+
                 // Store it
                 (robots.find(bouncedrobot.clientrobot().id()))->second.bouncedMessages.push_back(bouncedrobot.clientrobot());
                 //sentClientRobot++;
-              } 
-              
+              }
+
               //see if we need to flush the buffer
               //we check to see if the robot has backed up bounced messages
               if((robots.find(bouncedrobot.clientrobot().id()))->second.server != c){
@@ -502,11 +502,11 @@ int main(int argc, char** argv)
                     robotServer->queue.push(MSG_CLIENTROBOT, (*robotBacklog)[i]);
 		                robotServer->set_writing(true);
 	                }
-	                
+
 		              //force flush the message before we clear the backlog (OR ELSE)
                   while(robotServer->queue.remaining() != 0)
-                    robotServer->queue.doWrite(); 
-                  
+                    robotServer->queue.doWrite();
+
                   //NOW we can clear the backlog
                   robotBacklog->clear();
                 }
@@ -521,7 +521,7 @@ int main(int argc, char** argv)
           }
 					break;
 				}
-				
+
         case net::connection::CLIENT_LISTEN:
 				//for client connections
         {
@@ -558,11 +558,13 @@ int main(int argc, char** argv)
           }
           break;
         default:
-          cerr << "Unexpected writable socket of type " << c->type << "!" 
+          cerr << "Unexpected writable socket of type " << c->type << "!"
                << endl;
           break;
         }
       }
     }
   }
+
+  return 0;
 }

@@ -10,12 +10,17 @@
 using namespace std;
 
 //comment to disable generation of debug for certain programs
-//#define DEBUG
+#define DEBUG
 //#define ENABLE_LOGGING
 
 namespace helper {
+template <class T>
+inline string toString (const T& t){
+	stringstream ss;
+	ss << t;
 
-string toString(int);
+	return ss.str();;
+}
 string getNewName(string);
 
 class CmdLine {

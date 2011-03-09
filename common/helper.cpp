@@ -1,14 +1,6 @@
 #include "helper.h"
 
 namespace helper {
-
-string toString(int t) {
-	stringstream ss;
-	ss << t;
-
-	return ss.str();
-}
-
 string getNewName(string base) {
 	string name = base;
 	struct stat stFileInfo;

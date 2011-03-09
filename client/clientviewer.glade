@@ -6,8 +6,6 @@
     <property name="visible">True</property>
     <property name="border_width">10</property>
     <property name="title" translatable="yes">Client Viewer</property>
-    <property name="default_width">550</property>
-    <property name="default_height">250</property>
     <signal name="destroy" handler="gtk_main_quit"/>
     <signal name="delete_event" handler="gtk_main_quit"/>
     <child>
@@ -145,7 +143,41 @@
   <object class="GtkWindow" id="infoWindow">
     <property name="title" translatable="yes">Info</property>
     <child>
-      <placeholder/>
+      <object class="GtkVBox" id="infoVbox">
+        <property name="visible">True</property>
+        <child>
+          <object class="GtkLabel" id="labSpeed">
+            <property name="visible">True</property>
+          </object>
+          <packing>
+            <property name="position">0</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkLabel" id="labAngle">
+            <property name="visible">True</property>
+          </object>
+          <packing>
+            <property name="position">1</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkLabel" id="labPuck">
+            <property name="visible">True</property>
+          </object>
+          <packing>
+            <property name="position">2</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkLabel" id="labFrames">
+            <property name="visible">True</property>
+          </object>
+          <packing>
+            <property name="position">3</property>
+          </packing>
+        </child>
+      </object>
     </child>
   </object>
   <object class="GtkAdjustment" id="robotIdAdjustment">

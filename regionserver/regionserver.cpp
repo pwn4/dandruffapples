@@ -282,9 +282,9 @@ void run() {
 						case MSG_WORLDINFO: {
 							worldinfo.ParseFromArray(buffer, len);
 							cout << "Got world info." << endl;
-							//added pucks to the world 							
-              unsigned pucks = 0;								
-              while(pucks < worldinfo.numpucks() ){// populate the world with numpucks which are randomly distributed over the region 
+							//added pucks to the world
+              					unsigned pucks = 0;
+              					while(pucks < worldinfo.numpucks() ){// populate the world with numpucks which are randomly distributed over the region
 								int a = (2 * robotDiameter)+minElementSize + rand() % (regionSideLen-2*((2 * robotDiameter)+minElementSize));
 								int b = (2 * robotDiameter)+minElementSize + rand() % (regionSideLen-2*((2 * robotDiameter)+minElementSize));
 							  regionarea->AddPuck(a, b);
@@ -300,23 +300,23 @@ void run() {
               // ---+----+---
               // 06 | 05 | 04
               for (int region = 0; region < worldinfo.region_size(); region++) {
-                for (int pos = 0; 
+                for (int pos = 0;
                     pos < worldinfo.region(region).position_size(); pos++) {
                   serverByPosition[(int)(worldinfo.region(region).
                       position(pos))] = worldinfo.region(region).id();
                 }
               }
-              cout << std::setw(2) << std::setfill('0') << serverByPosition[0] 
+              cout << std::setw(2) << std::setfill('0') << serverByPosition[0]
                    << " | " << std::setw(2) << std::setfill('0')
-                   << serverByPosition[1] << " | " << std::setw(2) 
-                   << std::setfill('0') << serverByPosition[2] << endl 
-                   << "---+----+---\n" << std::setw(2) << std::setfill('0') 
-                   << serverByPosition[7] << " | ME | " << std::setw(2) 
-                   << std::setfill('0') << serverByPosition[3] 
-                   << endl << "---+----+---\n" << std::setw(2) 
-                   << std::setfill('0') << serverByPosition[6] << " | " 
-                   << std::setw(2) << std::setfill('0') << serverByPosition[5] 
-                   << " | " << std::setw(2) << std::setfill('0') 
+                   << serverByPosition[1] << " | " << std::setw(2)
+                   << std::setfill('0') << serverByPosition[2] << endl
+                   << "---+----+---\n" << std::setw(2) << std::setfill('0')
+                   << serverByPosition[7] << " | ME | " << std::setw(2)
+                   << std::setfill('0') << serverByPosition[3]
+                   << endl << "---+----+---\n" << std::setw(2)
+                   << std::setfill('0') << serverByPosition[6] << " | "
+                   << std::setw(2) << std::setfill('0') << serverByPosition[5]
+                   << " | " << std::setw(2) << std::setfill('0')
                    << serverByPosition[4] << endl;
 
 							// Connect to existing RegionServers.
@@ -326,7 +326,7 @@ void run() {
 									addr.s_addr = worldinfo.region(i).address();
 									int regionfd = net::do_connect(addr, worldinfo.region(i).regionport());
 									if (regionfd < 0) {
-                    throw SystemError("Failed to connect to region server");
+                   						 throw SystemError("Failed to connect to region server");
 									} else if (regionfd == 0) {
 										throw runtime_error("Invalid controller address");
 									} else {
@@ -383,7 +383,7 @@ void run() {
 									newconn->set_writing(true);
 								}
 							}
-							
+
 							//send the timestepdone packet to tell the clock server we're ready
 	            writer.init(MSG_TIMESTEPDONE, tsdone);
 	            for (bool complete = false; !complete;) {
@@ -399,11 +399,11 @@ void run() {
 						}
 						case MSG_TIMESTEPUPDATE: {
 							timestep.ParseFromArray(buffer, len);
-							
+
 							//do our initializations here in the init step
 							if(!initialized)
 							{
-							
+
 								// Find our robots, and add to the simulation
 							  vector<int> myRobotIds;
 							  vector<int> myRobotTeams;
@@ -419,7 +419,7 @@ void run() {
 							  numRobots = 0;
 							  int rowCounter = 0;
 							  bool firstrow = true;
-	
+
 							  //add some test pucks for now
 							//  regionarea->AddPuck((2 * robotDiameter)+minElementSize+104, (2 * robotDiameter)+minElementSize+110);
 							//  regionarea->AddPuck((2 * robotDiameter)+minElementSize+204, (2 * robotDiameter)+minElementSize+130);
@@ -428,9 +428,9 @@ void run() {
 
 							  for (int j = (2 * robotDiameter)+(4 * minElementSize); j < (regionSideLen+(1 * minElementSize)) - (2 * (robotDiameter)+(4 * minElementSize)) && numRobots	< wantRobots; j += 5 * (robotDiameter)) {
 								  for (int i = (2 * robotDiameter)+(4 * minElementSize); i < (regionSideLen+(1 * minElementSize)) - (2 * (robotDiameter)+(4 * minElementSize)) && numRobots	< wantRobots; i += 5 * (robotDiameter)){
-								  
+
 								  //regionarea->AddRobot(myRobotIds[numRobots], i, j, 0, 0, 0, 0, myRobotTeams[numRobots], true);
-								  
+
 									  if(rowCounter == 0)
 									    regionarea->AddRobot(myRobotIds[numRobots], i, j, 0, 0, -.5, 0, myRobotTeams[numRobots], true);
 									  else if(rowCounter == 1)
@@ -447,15 +447,15 @@ void run() {
 							  }
 
 							  cout << numRobots << " robots created." << endl;
-							  
+
 							  regionarea->flushNeighbours();
-							  
+
 							  initialized = true;
-							  
+
 							  //Respond with done message
 							  c->queue.push(MSG_TIMESTEPDONE, tsdone);
 							  c->set_writing(true);
-							  
+
 							  break;
 						  }
 
@@ -473,7 +473,7 @@ void run() {
 									}
 								}
 							}
-							
+
 							regionarea->Step(generateImage);
 
 							timeSteps++; //Note: only use this for this temp stat taking. use regionarea->curStep for syncing
@@ -544,7 +544,7 @@ void run() {
                 }
               }
 
-							if (!regionarea->ChangeVelocity(clientrobot.id(), 
+							if (!regionarea->ChangeVelocity(clientrobot.id(),
                     clientrobot.velocityx(), clientrobot.velocityy())) {
                 // Not my robot!
                 BouncedRobot bouncedrobot;
@@ -555,7 +555,7 @@ void run() {
                 c->queue.push(MSG_BOUNCEDROBOT, bouncedrobot);
                 c->set_writing(true);
               }
-              // TODO: Combine angle and velocity into ChangeState, or 
+              // TODO: Combine angle and velocity into ChangeState, or
               // something to that effect.
 							//regionarea->ChangeAngle(clientrobot.id(), clientrobot.angle());
 
@@ -567,19 +567,19 @@ void run() {
               if (regionarea->WeControlRobot(bouncedrobot.clientrobot().id())) {
                 // Robot is ours. Process clientrobot message.
                 // TODO: Change angle/state too
-                regionarea->ChangeVelocity(bouncedrobot.clientrobot().id(), 
-                    bouncedrobot.clientrobot().velocityx(), 
+                regionarea->ChangeVelocity(bouncedrobot.clientrobot().id(),
+                    bouncedrobot.clientrobot().velocityx(),
                     bouncedrobot.clientrobot().velocityy());
                 /*
                 if (bouncedrobot.bounces() == 2) {
-                  cout << "Sending bounce claim: ID #" 
+                  cout << "Sending bounce claim: ID #"
                        << bouncedrobot.clientrobot().id() << endl;
                   // Message was broadcast to all. Let's claim the robot.
                   Claim claim;
                   claim.set_id(bouncedrobot.clientrobot().id());
                   // Send claim to all controllers
                   vector<net::EpollConnection*>::iterator it;
-                  vector<net::EpollConnection*>::iterator last = 
+                  vector<net::EpollConnection*>::iterator last =
                       controllers.end();
                   for (it = controllers.begin(); it != last; it++) {
                     (*it)->queue.push(MSG_CLAIM, claim);
@@ -628,24 +628,24 @@ void run() {
 								regionarea->SetNeighbour((int) regioninfo.position(i), c);
 							}
 
-              cout << std::setw(2) << std::setfill('0') << serverByPosition[0] 
+              cout << std::setw(2) << std::setfill('0') << serverByPosition[0]
                    << " | " << std::setw(2) << std::setfill('0')
-                   << serverByPosition[1] << " | " << std::setw(2) 
-                   << std::setfill('0') << serverByPosition[2] << endl 
-                   << "---+----+---\n" << std::setw(2) << std::setfill('0') 
-                   << serverByPosition[7] << " | ME | " << std::setw(2) 
-                   << std::setfill('0') << serverByPosition[3] 
-                   << endl << "---+----+---\n" << std::setw(2) 
-                   << std::setfill('0') << serverByPosition[6] << " | " 
-                   << std::setw(2) << std::setfill('0') << serverByPosition[5] 
-                   << " | " << std::setw(2) << std::setfill('0') 
+                   << serverByPosition[1] << " | " << std::setw(2)
+                   << std::setfill('0') << serverByPosition[2] << endl
+                   << "---+----+---\n" << std::setw(2) << std::setfill('0')
+                   << serverByPosition[7] << " | ME | " << std::setw(2)
+                   << std::setfill('0') << serverByPosition[3]
+                   << endl << "---+----+---\n" << std::setw(2)
+                   << std::setfill('0') << serverByPosition[6] << " | "
+                   << std::setw(2) << std::setfill('0') << serverByPosition[5]
+                   << " | " << std::setw(2) << std::setfill('0')
                    << serverByPosition[4] << endl;
-                   
+
               //disable epoll for the neighbour now that we'd initialized with it, so that
               //the engine can handle writing / reading
               c->set_reading(false);
               c->set_writing(false);
-                   
+
 							break;
 						}
 						default:
@@ -828,4 +828,6 @@ int main(int argc, char* argv[]) {
 	printf("Server Shutting Down ...\n");
 
 	printf("Goodbye!\n");
+
+	return 0;
 }

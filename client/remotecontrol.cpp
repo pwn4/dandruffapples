@@ -45,14 +45,14 @@ using namespace protobuf;
 const char *configFileName;
 
 //Game world variables
-// TODO: organize/move variables out of client.cpp 
+// TODO: organize/move variables out of client.cpp
 bool simulationStarted = false;
 bool simulationEnded = false;
 int currentTimestep = 0;
 int lastTimestep = 0;
 int myTeam;
 unsigned myRobotId;
-int robotsPerTeam; 
+int robotsPerTeam;
 net::EpollConnection* theController;
 int epoll;
 
@@ -84,7 +84,7 @@ public:
   float vy;
   float angle;
   bool hasPuck;
-  bool hasCollided;  
+  bool hasCollided;
 
   Robot() : vx(0.0), vy(0.0), angle(0.0), hasPuck(false),
             hasCollided(false) {}
@@ -115,7 +115,7 @@ public:
 OwnRobot* ownRobot;
 
 //Config variables
-vector<string> controllerips; //controller IPs 
+vector<string> controllerips; //controller IPs
 
 ////////////////////////////////////////////////////////////
 
@@ -125,17 +125,17 @@ void loadConfigFile()
 	//open the config file
 	FILE * fileHandle;
 	fileHandle = fopen (configFileName,"r");
-	
+
 	//create a read buffer. No line should be longer than 200 chars long.
 	char readBuffer [200];
 	char * token;
-	
+
 	if (fileHandle != NULL)
 	{
 		while(fgets (readBuffer , sizeof(readBuffer) , fileHandle) != 0)
-		{	
+		{
 			token = strtok(readBuffer, " \n");
-			
+
 			//if it's a REGION WIDTH definition...
 			if(strcmp(token, "CONTROLLERIP") == 0){
 				token = strtok(NULL, " \n");
@@ -144,7 +144,7 @@ void loadConfigFile()
 				printf("Storing controller IP: %s\n", newcontrollerip.c_str());
       }
 		}
-		
+
 		fclose (fileHandle);
 	}else
 		printf("Error: Cannot open config file %s\n", configFileName);
@@ -193,7 +193,7 @@ void executeAiVersion(int type, OwnRobot* ownRobot, ClientRobot* clientRobot) {
           // Move right!
           ownRobot->pendingCommand = true;
           clientRobot->set_velocityx(velocity);
-        } else if ((*closest)->relx < 0.0 && 
+        } else if ((*closest)->relx < 0.0 &&
             ownRobot->vx != velocity * -1.0) {
           ownRobot->pendingCommand = true;
           clientRobot->set_velocityx(velocity * -1.0);
@@ -205,7 +205,7 @@ void executeAiVersion(int type, OwnRobot* ownRobot, ClientRobot* clientRobot) {
           // Move down!
           ownRobot->pendingCommand = true;
           clientRobot->set_velocityy(velocity);
-        } else if ((*closest)->rely < 0.0 && 
+        } else if ((*closest)->rely < 0.0 &&
             ownRobot->vy != velocity * -1.0) {
           ownRobot->pendingCommand = true;
           clientRobot->set_velocityy(velocity * -1.0);
@@ -213,7 +213,7 @@ void executeAiVersion(int type, OwnRobot* ownRobot, ClientRobot* clientRobot) {
           ownRobot->pendingCommand = true;
           clientRobot->set_velocityy(0.0);
         }
-      } 
+      }
     } else {
       // No seen robots. Make sure we're moving.
       if (ownRobot->vx == 0.0 || ownRobot->vy == 0.0) {
@@ -244,7 +244,7 @@ void executeAiVersion(int type, OwnRobot* ownRobot, ClientRobot* clientRobot) {
           ownRobot->pendingCommand = true;
           clientRobot->set_velocityx(velocity);
           moveRight++;
-        } else if ((*closest)->relx > 0.0 && 
+        } else if ((*closest)->relx > 0.0 &&
             ownRobot->vx != velocity * -1.0) {
           ownRobot->pendingCommand = true;
           clientRobot->set_velocityx(velocity * -1.0);
@@ -255,16 +255,16 @@ void executeAiVersion(int type, OwnRobot* ownRobot, ClientRobot* clientRobot) {
           ownRobot->pendingCommand = true;
           clientRobot->set_velocityy(velocity);
           moveDown++;
-        } else if ((*closest)->rely > 0.0 && 
+        } else if ((*closest)->rely > 0.0 &&
             ownRobot->vy != velocity * -1.0) {
           ownRobot->pendingCommand = true;
           clientRobot->set_velocityy(velocity * -1.0);
           moveUp++;
         }
-      } 
+      }
     } else {
       // No seen robots. Make sure we're moving.
-      if (ownRobot->vx == 0.0 || ownRobot->vy == 0.0 
+      if (ownRobot->vx == 0.0 || ownRobot->vy == 0.0
           || currentTimestep - ownRobot->whenLastSent > 100) {
         ownRobot->pendingCommand = true;
         clientRobot->set_velocityx(((rand() % 11) / 10.0) - 0.5);
@@ -305,15 +305,15 @@ void *artificialIntelligence(void *threadid) {
     lastTimestep = currentTimestep;
     if (i >= robotsPerTeam) {
       i = 0;
-    }  
-    for ( ; i < robotsPerTeam && !simulationEnded 
+    }
+    for ( ; i < robotsPerTeam && !simulationEnded
          && lastTimestep == currentTimestep; i++) {
-      if (!ownRobots[i]->pendingCommand 
+      if (!ownRobots[i]->pendingCommand
           && currentTimestep - ownRobots[i]->whenLastSent > COOLDOWN) {
         pthread_mutex_lock(&connectionMutex);
         // Run different AIs depending on i.
-        //executeAiVersion(i % 1, ownRobots[i], &clientRobot); 
-        executeAiVersion(1, ownRobots[i], &clientRobot); 
+        //executeAiVersion(i % 1, ownRobots[i], &clientRobot);
+        executeAiVersion(1, ownRobots[i], &clientRobot);
         // Did we want to send a command?
         if (ownRobots[i]->pendingCommand) {
           clientRobot.set_id(indexToRobotId(i));
@@ -330,14 +330,14 @@ void *artificialIntelligence(void *threadid) {
         sched_yield();
       }
     }
-    
+
     //force updates
     pthread_mutex_lock(&connectionMutex);
     while(theController->queue.remaining() > 0)
       theController->queue.doWrite();
     pthread_mutex_unlock(&connectionMutex);
-      
-    
+
+
     //sleep(5); // delay this thread for 5 seconds
   }
 
@@ -363,14 +363,14 @@ void run() {
   net::set_blocking(controllerfd, false);
 
   cout << " connected." << endl;
-  
+
   epoll = epoll_create(1); // defined as a gobal variable
   if (epoll < 0) {
     perror("Failed to create epoll handle");
     close(controllerfd);
     exit(1);
   }
-  net::EpollConnection controllerconn(epoll, EPOLLIN, controllerfd, 
+  net::EpollConnection controllerconn(epoll, EPOLLIN, controllerfd,
                                  net::connection::CONTROLLER);
   theController = &controllerconn; // Allows other thread to access. Fix later.
 
@@ -433,15 +433,15 @@ void run() {
                 bool sameTeam = true;
                 robotsPerTeam = 0; // global var
 
-                // Count number of robots per team 
+                // Count number of robots per team
                 for(int i = 0; i < robotSize && sameTeam; i++) {
                   if (worldinfo.robot(i).team() == 0) {
                     robotsPerTeam++;
                   } else {
-                    sameTeam = false; 
+                    sameTeam = false;
                   }
                 }
-                cout << "Got worldinfo! Calculated " << robotsPerTeam 
+                cout << "Got worldinfo! Calculated " << robotsPerTeam
                      << " robots on each team.\n";
 
                 // Claim our team
@@ -458,7 +458,7 @@ void run() {
                 if (!simulationStarted) {
                   if (claimteam.granted()) {
                     myTeam = claimteam.id();
-                    cout << "ClaimTeam: Success! We control team #" << myTeam 
+                    cout << "ClaimTeam: Success! We control team #" << myTeam
                            << endl;
                   } else { // claimteam.granted() == false
                     myTeam = -1;
@@ -468,7 +468,7 @@ void run() {
                   // Assign teams--can only happen once.
                   if (myTeam > -1) {
                     ownRobot = new OwnRobot();
-                    myRobotId = myTeam * robotsPerTeam; // first robot of team 
+                    myRobotId = myTeam * robotsPerTeam; // first robot of team
                     cout << "I am controlling robotId #" << myRobotId << endl;
 
                     // Allow AI thread to commence.
@@ -486,7 +486,7 @@ void run() {
 
                 if (simulationStarted) {
                   // Update all current positions.
-                  if (ownRobot->pendingCommand && 
+                  if (ownRobot->pendingCommand &&
                       currentTimestep - ownRobot->whenLastSent > 100) {
                     // If we've waited too long for an update, send
                     // new ClientRobot messages.
@@ -515,7 +515,7 @@ void run() {
 
                 break;
               case MSG_SERVERROBOT:
-              { 
+              {
                 serverrobot.ParseFromArray(buffer, len);
                 receivedMessages++;
                 if (simulationStarted) {
@@ -525,15 +525,15 @@ void run() {
                     // The serverrobot is from our team.
                     unsigned index = robotId;
                     ownRobot->pendingCommand = false;
-                    if (serverrobot.has_velocityx()) 
+                    if (serverrobot.has_velocityx())
                       ownRobot->vx = serverrobot.velocityx();
-                    if (serverrobot.has_velocityy()) 
+                    if (serverrobot.has_velocityy())
                       ownRobot->vy = serverrobot.velocityy();
-                    if (serverrobot.has_angle()) 
+                    if (serverrobot.has_angle())
                       ownRobot->angle = serverrobot.angle();
-                    if (serverrobot.has_haspuck()) 
+                    if (serverrobot.has_haspuck())
                       ownRobot->hasPuck = serverrobot.haspuck();
-                    if (serverrobot.has_hascollided()) 
+                    if (serverrobot.has_hascollided())
                       ownRobot->hasCollided = serverrobot.hascollided();
                   }
 
@@ -542,7 +542,7 @@ void run() {
                   int listSize = serverrobot.seesserverrobot_size();
                   for (int i = 0; i < listSize; i++) {
                     if (myRobotId == serverrobot.seesserverrobot(i).seenbyid()) {
-                      cout << "We see updated data for robotId #" 
+                      cout << "We see updated data for robotId #"
                            << serverrobot.id() << endl;
                       if (myRobotId == serverrobot.id()) {
                         cout << "Flying batmans! We see ourself!" << endl;
@@ -562,7 +562,7 @@ void run() {
                             // it can't see it anymore.
                             //cout << "Our #" << index << " lost see "
                             //     << serverrobot.id() << endl;
-                            delete *it; 
+                            delete *it;
                             ownRobot->seenRobots.erase(it);
                             break;
                           }
@@ -577,17 +577,17 @@ void run() {
                           if ((*it)->id == serverrobot.id()) {
                             foundRobot = true;
                             //cout << "Our #" << index << " update see "
-                            //     << serverrobot.id() << " at relx: " 
+                            //     << serverrobot.id() << " at relx: "
                             //     << serverrobot.seesserverrobot(i).relx() << endl;
-                            if (serverrobot.has_velocityx()) 
+                            if (serverrobot.has_velocityx())
                               (*it)->vx = serverrobot.velocityx();
-                            if (serverrobot.has_velocityy()) 
+                            if (serverrobot.has_velocityy())
                               (*it)->vy = serverrobot.velocityy();
-                            if (serverrobot.has_angle()) 
+                            if (serverrobot.has_angle())
                               (*it)->angle = serverrobot.angle();
-                            if (serverrobot.has_haspuck()) 
+                            if (serverrobot.has_haspuck())
                               (*it)->hasPuck = serverrobot.haspuck();
-                            if (serverrobot.has_hascollided()) 
+                            if (serverrobot.has_hascollided())
                               (*it)->hasCollided = serverrobot.hascollided();
                             (*it)->relx = serverrobot.seesserverrobot(i).relx();
                             (*it)->rely = serverrobot.seesserverrobot(i).rely();
@@ -598,15 +598,15 @@ void run() {
                           SeenRobot *r = new SeenRobot();
                           //cout << "Our #" << index << " begin see "
                           //     << serverrobot.id() << endl;
-                          if (serverrobot.has_velocityx()) 
+                          if (serverrobot.has_velocityx())
                             r->vx = serverrobot.velocityx();
-                          if (serverrobot.has_velocityy()) 
+                          if (serverrobot.has_velocityy())
                             r->vy = serverrobot.velocityy();
-                          if (serverrobot.has_angle()) 
+                          if (serverrobot.has_angle())
                             r->angle = serverrobot.angle();
-                          if (serverrobot.has_haspuck()) 
+                          if (serverrobot.has_haspuck())
                             r->hasPuck = serverrobot.haspuck();
-                          if (serverrobot.has_hascollided()) 
+                          if (serverrobot.has_hascollided())
                             r->hasCollided = serverrobot.hascollided();
                           r->id = serverrobot.id();
                           r->relx = serverrobot.seesserverrobot(i).relx();
@@ -654,7 +654,7 @@ void run() {
   while (simulationStarted) {
    // Wait until child thread stops
    sched_yield();
-  } 
+  }
 
   // Clean up
   shutdown(controllerfd, SHUT_RDWR);
@@ -666,30 +666,32 @@ void run() {
 //this is the main loop for the client
 int main(int argc, char* argv[])
 {
-  srand(time(NULL));
+	srand(time(NULL));
 	//Print a starting message
 	printf("--== Client Software ==-\n");
-	
+
 	////////////////////////////////////////////////////
 	printf("Client Initializing ...\n");
-	
+
 	helper::CmdLine cmdline(argc, argv);
 	configFileName=cmdline.getArg("-c", "config").c_str();
 	cout<<"Using config file: "<<configFileName<<endl;
 
 	myTeam = strtol(cmdline.getArg("-t", "0").c_str(), NULL, 0);
 
-  cout << "Trying to control team #" << myTeam << " (use -t <team> to change)"
+	cout << "Trying to control team #" << myTeam << " (use -t <team> to change)"
        << endl;
-	
+
 	loadConfigFile();
 	////////////////////////////////////////////////////
-	
+
 	printf("Client Running!\n");
-	
+
 	run();
-	
+
 	printf("Client Shutting Down ...\n");
-	
+
 	printf("Goodbye!\n");
+
+	return 0;
 }

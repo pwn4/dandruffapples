@@ -172,17 +172,20 @@ struct passToRun {
 
 struct passToDrawingAreaExpose {
 	int myTeam;
+	int numberOfRobots;
 	int *drawFactor;
 	int robotDiameter;
 	int puckDiameter;
 	int viewDistance;
 	bool *draw;
 	OwnRobot* ownRobotDraw;
+	GtkToggleToolButton *info;
+	GtkBuilder *builder;
 
-	passToDrawingAreaExpose(int _myTeam, int *_drawFactor, int _robotDiameter, int _puckDiameter, int _viewDistance, bool* _draw,
-			OwnRobot* _ownRobotDraw) :
-		myTeam(_myTeam), drawFactor(_drawFactor), robotDiameter(_robotDiameter), puckDiameter(_puckDiameter), viewDistance(_viewDistance),
-				draw(_draw), ownRobotDraw(_ownRobotDraw) {
+	passToDrawingAreaExpose(int _myTeam, int _numberOfRobots, int *_drawFactor, int _robotDiameter, int _puckDiameter, int _viewDistance, bool* _draw,
+			OwnRobot* _ownRobotDraw, GtkToggleToolButton *_info,	GtkBuilder *_builder) :
+		myTeam(_myTeam), numberOfRobots(_numberOfRobots), drawFactor(_drawFactor), robotDiameter(_robotDiameter), puckDiameter(_puckDiameter), viewDistance(_viewDistance),
+				draw(_draw), ownRobotDraw(_ownRobotDraw), info(_info), builder(_builder) {
 	}
 	;
 };
