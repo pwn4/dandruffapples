@@ -25,6 +25,7 @@ int puckPickupMessages = 0;
 const int COOLDOWN = 10;
 
 OwnRobot** ownRobots;
+struct timeval timeCache, microTimeCache;
 
 //Config variables
 vector<string> controllerips; //controller IPs 
@@ -335,10 +336,6 @@ gboolean run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 	passToRun *passer = (passToRun*)data;
 
 	bool &runClientViewer=passer->runClientViewer;
-	WorldInfo &worldinfo=passer->worldinfo;
-	TimestepUpdate &timestep=passer->timestep;
-	ServerRobot &serverrobot=passer->serverrobot;
-	ClaimTeam &claimteam=passer->claimteam;
 	net::connection &controller=passer->controller;
 	ClientViewer* &viewer = passer->viewer;
 
@@ -376,6 +373,7 @@ gboolean run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 	switch (type) {
 	case MSG_WORLDINFO: {
 		// Should be the first message we recieve from the controller
+		WorldInfo worldinfo;
 		worldinfo.ParseFromArray(buffer, len);
 		int robotSize = worldinfo.robot_size();
 		bool sameTeam = true;
@@ -393,9 +391,10 @@ gboolean run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 
 		//create the client viewer GUI
 		if (runClientViewer)
-			viewer->initClientViewer(robotsPerTeam, ROBOTDIAMETER, VIEWDISTANCE, DRAWFACTOR );
+			viewer->initClientViewer(robotsPerTeam, myTeam, ROBOTDIAMETER, VIEWDISTANCE, DRAWFACTOR );
 
 		// Claim our team
+		ClaimTeam claimteam;
 		claimteam.set_id(myTeam);
 		controller.queue.push(MSG_CLAIMTEAM, claimteam);
 		cout << "Generating ClaimTeam message for team ID #" << myTeam << endl;
@@ -403,6 +402,7 @@ gboolean run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 		break;
 	}
 	case MSG_CLAIMTEAM: {
+		ClaimTeam claimteam;
 		claimteam.ParseFromArray(buffer, len);
 		if (!simulationStarted) {
 			if (claimteam.granted()) {
@@ -433,6 +433,7 @@ gboolean run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 		break;
 	}
 	case MSG_TIMESTEPUPDATE: {
+		TimestepUpdate timestep;
 		timestep.ParseFromArray(buffer, len);
 		currentTimestep = timestep.timestep();
 
@@ -528,8 +529,11 @@ gboolean run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 	    //update the view of the viewed robot
 	    if (runClientViewer)
 	    {
-		    if(viewer->getViewedRobot() != -1 )
+		    if( viewer->getViewedRobot() != -1 && (timeCache.tv_sec*1000000 + timeCache.tv_usec) > (microTimeCache.tv_sec*1000000 + microTimeCache.tv_usec)+50000)
+		    {
 			    viewer->updateViewer(ownRobots[viewer->getViewedRobot()]);
+			    microTimeCache = timeCache;
+		    }
 	    }
 	    
 	    while(controller.queue.remaining() > 0)
@@ -542,6 +546,7 @@ gboolean run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 	}
 
 	case MSG_SERVERROBOT: {
+		ServerRobot serverrobot;
 		serverrobot.ParseFromArray(buffer, len);
 		receivedMessages++;
 		if (simulationStarted) {
@@ -573,7 +578,7 @@ gboolean run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 						// Could see before, can't see anymore.
 						for (vector<SeenRobot*>::iterator it = ownRobots[index]->seenRobots.begin(); it
 								!= ownRobots[index]->seenRobots.end(); it++) {
-							if ((unsigned)(*it)->id == serverrobot.id()) {
+							if ((*it)->id == serverrobot.id()) {
 								// TODO: we may want to store data about this
 								// robot on the client for x timesteps after
 								// it can't see it anymore.
@@ -589,7 +594,7 @@ gboolean run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 						bool foundRobot = false;
 						for (vector<SeenRobot*>::iterator it = ownRobots[index]->seenRobots.begin(); it
 								!= ownRobots[index]->seenRobots.end() && !foundRobot; it++) {
-							if ((unsigned)(*it)->id == serverrobot.id()) {
+							if ((*it)->id == serverrobot.id()) {
 								foundRobot = true;
 								//cout << "Our #" << index << " update see "
 								//     << serverrobot.id() << " at relx: "
@@ -613,6 +618,10 @@ gboolean run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 								}
 								if (serverrobot.has_hascollided() && (*it)->hasCollided != serverrobot.hascollided()) {
 									(*it)->hasCollided = serverrobot.hascollided();
+									stateChange = true;
+								}
+								if (serverrobot.has_team() && (*it)->team != serverrobot.team()) {
+									(*it)->team = serverrobot.team();
 									stateChange = true;
 								}
 								if (serverrobot.seesserverrobot(i).has_relx())
@@ -720,7 +729,14 @@ gboolean run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 }
 
 //basic connection initializations for the client
-void initClient(char* argv, bool runClientViewer) {
+void initClient(int argc, char* argv[], bool runClientViewer) {
+
+	if( !gtk_init_check(&argc, &argv) ){
+		cerr<<"Unable to initialize the X11 windowing system. Client Viewer will not work!"<<endl;
+		runClientViewer=false;
+	}
+	g_type_init();
+
 	int controllerfd = -1;
 	int currentController = rand() % controllerips.size();
 
@@ -739,19 +755,15 @@ void initClient(char* argv, bool runClientViewer) {
 
 	cout << " connected." << endl;
 
-	WorldInfo worldinfo;
-	TimestepUpdate timestep;
-	ServerRobot serverrobot;
-	ClaimTeam claimteam;
 	net::connection controller(controllerfd, net::connection::CONTROLLER);
-	ClientViewer* viewer = new ClientViewer(argv);
+	ClientViewer* viewer = new ClientViewer(argv[0]);
 
 	//all the variables that we want to read in the controller message handler ( see bellow ) need to be either passed in this struct or delcared global
-	passToRun passer(runClientViewer, worldinfo, timestep, serverrobot, claimteam, controller, viewer);
+	passToRun passer(runClientViewer, controller, viewer);
 
 	//this calls the function "run" everytime we get a message from the
 	//"controllerfd"
-  GIOChannel *ioch = g_io_channel_unix_new(controllerfd);
+	GIOChannel *ioch = g_io_channel_unix_new(controllerfd);
 	gwatch = g_io_add_watch(ioch, G_IO_IN, run, (gpointer)&passer);
 
 	gtk_main();
@@ -759,11 +771,6 @@ void initClient(char* argv, bool runClientViewer) {
 
 //this is the main loop for the client
 int main(int argc, char* argv[]) {
-
-	if( !gtk_init_check(&argc, &argv) )
-		cerr<<"Unable to initialize the X11 windowing system. Client Viewer will not work!"<<endl;
-	g_type_init();
-    
 	bool runClientViewer = false;
 	srand( time(NULL));
 
@@ -792,7 +799,7 @@ int main(int argc, char* argv[]) {
 	////////////////////////////////////////////////////
 
 	cout << "Client Running!" << endl;
-	initClient(argv[0], runClientViewer);
+	initClient(argc, argv, runClientViewer);
 
 	cout << "Client Shutting Down ..." << endl;
 

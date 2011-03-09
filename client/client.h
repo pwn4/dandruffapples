@@ -15,6 +15,7 @@ This program communications with controllers.
 #include <string>
 #include <stdlib.h>
 #include <fstream>
+#include <sys/time.h>
 
 #include "../common/claimteam.pb.h"
 #include "../common/clientrobot.pb.h"
@@ -32,6 +33,7 @@ This program communications with controllers.
 
 #include "../common/helper.h"
 #include "../common/imageconstants.h"
+#include "../worldviewer/drawer.h"
 
 using namespace std;
 using namespace google;
@@ -41,7 +43,7 @@ using namespace protobuf;
 //apparently in the future they will be set by the clock server
 #define ROBOTDIAMETER 4
 #define VIEWDISTANCE 20
-#define DRAWFACTOR 5
+#define DRAWFACTOR 10
 
 enum EventType {
   EVENT_CLOSEST_ROBOT_STATE_CHANGE,
@@ -86,11 +88,12 @@ public:
 
 class SeenRobot : public Robot {
 public:
-  int id;
+  unsigned int id;
   int lastTimestepSeen;
   bool viewable;
   float relx;
   float rely;
+  unsigned int team;
 
   SeenRobot() : Robot(), id(-1), lastTimestepSeen(-1), viewable(true),
       relx(0.0), rely(0.0) {}
@@ -132,13 +135,14 @@ public:
 class ClientViewer {
 private:
 	ofstream debug;
-	int viewedRobot, robotDiameter, viewDistance, drawFactor, imageWidth, imageHeight;
+	int viewedRobot, robotDiameter, viewDistance, imageWidth, imageHeight, drawFactor, myTeam;
+	int origin[2];
 	string builderPath;
 	GtkBuilder *builder;
 	GtkDrawingArea *drawingArea;
 
 public:
-	void initClientViewer(int, int, int, int);
+	void initClientViewer(int, int, int, int, int);
 	void updateViewer(OwnRobot* ownRobot);
 	int getViewedRobot() { return viewedRobot; }
 
@@ -148,15 +152,12 @@ public:
 
 struct passToRun{
 	bool runClientViewer;
-	WorldInfo worldinfo;
-	TimestepUpdate timestep;
-	ServerRobot serverrobot;
-	ClaimTeam claimteam;
+
 	net::connection controller;
 	ClientViewer* viewer;
 
-	passToRun( bool _runClientViewer, WorldInfo _worldinfo, TimestepUpdate _timestep, ServerRobot _serverrobot, ClaimTeam _claimteam, net::connection _controller, ClientViewer* _viewer) :
-		runClientViewer(_runClientViewer), worldinfo(_worldinfo), timestep(_timestep), serverrobot(_serverrobot), claimteam(_claimteam), controller(_controller), viewer(_viewer){};
+	passToRun( bool _runClientViewer, net::connection _controller, ClientViewer* _viewer) :
+		runClientViewer(_runClientViewer), controller(_controller), viewer(_viewer){};
 };
 
 #endif
