@@ -21,7 +21,7 @@ struct ColorObject{
 };
 
 ColorObject colorFromTeam(int teamId);
-void UnpackImage(cairo_t *cr, RegionRender render, int robotSize, double robotAlpha);
+void UnpackImage(cairo_t *cr, RegionRender* render, int robotSize, double robotAlpha);
 unsigned int BytePack(int a, int b);
 TwoInt ByteUnpack(unsigned int data);
 

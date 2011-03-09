@@ -57,22 +57,22 @@ ColorObject colorFromTeam(int teamId){
   return coloringMap[teamId];
 }
 
-void UnpackImage(cairo_t *cr, RegionRender render, int robotSize, double robotAlpha)
+void UnpackImage(cairo_t *cr, RegionRender* render, int robotSize, double robotAlpha)
 {
   int curY = 0;
-  for(int i = 0; i < render.image_size(); i++)
+  for(int i = 0; i < render->image_size(); i++)
   {
-    TwoInt curRobot = ByteUnpack(render.image(i));
+    TwoInt curRobot = ByteUnpack(render->image(i));
 
-    while(curRobot.one == 65535 && curRobot.two == 65535 && i < render.image_size()){
+    while(curRobot.one == 65535 && curRobot.two == 65535 && i < render->image_size()){
       i++;
-      if(i >= render.image_size())
+      if(i >= render->image_size())
         break;
-      curRobot = ByteUnpack(render.image(i));
+      curRobot = ByteUnpack(render->image(i));
       curY++;
     }
 
-    if(i >= render.image_size())
+    if(i >= render->image_size())
       break;
 
     //set the color

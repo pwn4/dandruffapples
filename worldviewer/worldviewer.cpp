@@ -713,7 +713,7 @@ gboolean drawingAreaExpose(GtkWidget *widget, GdkEventExpose *event, gpointer da
 	{
 		cairo_t *cr = gdk_cairo_create(worldDrawingArea.at((int)data)->widget.window);
 
-		UnpackImage(cr, renderDraw[(int)data], robotSize, robotAlpha);
+		UnpackImage(cr, &renderDraw[(int)data], robotSize, robotAlpha);
 
 		cairo_destroy(cr);
 		draw[(int)data]=false;
