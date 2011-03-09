@@ -1,5 +1,5 @@
 message RegionRender {
-  required uint64 timestep = 1;
+  required uint32 timestep = 1;
   repeated uint32 image = 2;
 }
 
