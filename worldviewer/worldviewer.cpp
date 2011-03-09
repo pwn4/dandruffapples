@@ -60,6 +60,8 @@ GtkBuilder *builder;
 bool runForTheFirstTime = true;
 uint32 worldServerRows = 0, worldServerColumns = 0;
 map<int, map<int, GtkDrawingArea*> > worldGrid;
+RegionRender renderDraw[3];
+bool draw[3];
 //this is the region that the navigation will move the grid around
 regionConnection *pivotRegion = NULL, *pivotRegionBuddy = NULL;
 
@@ -113,15 +115,10 @@ void displayWorldView(int regionNum, RegionRender render) {
 	else if (horizontalView && regions.at(regionNum) == pivotRegionBuddy)
 		position = TOP_RIGHT;
 
-  //double buffer the images
-	cairo_t *cr = gdk_cairo_create(worldDrawingArea.at(position)->widget.window);
-	cairo_surface_t *image = UnpackImage(render, robotSize, robotAlpha);
- 
-	cairo_set_source_surface(cr, image, 0, 0);
-	cairo_paint(cr);
+	renderDraw[position]=render;
+	draw[position]=true;
+	gtk_widget_queue_draw(GTK_WIDGET(worldDrawingArea.at(position)));
 
-  cairo_surface_destroy(image);
-	cairo_destroy(cr);
 }
 
 //set whether a region with a given 'fd' will send or not send world views
@@ -709,6 +706,23 @@ void on_Fullscreen_toggled(GtkWidget *widget, gpointer window) {
 	}
 }
 
+//called on the drawingArea's expose event
+gboolean drawingAreaExpose(GtkWidget *widget, GdkEventExpose *event, gpointer data)
+{
+	if( draw[(int)data] )
+	{
+		cairo_t *cr = gdk_cairo_create(worldDrawingArea.at((int)data)->widget.window);
+
+		UnpackImage(cr, &renderDraw[(int)data], robotSize, robotAlpha);
+
+		cairo_destroy(cr);
+		draw[(int)data]=false;
+	}
+
+	return TRUE;
+}
+
+
 //initializations and simple modifications for the things that will be drawn
 void initWorldViewer() {
 	g_type_init();
@@ -728,8 +742,15 @@ void initWorldViewer() {
 	GtkWidget *rotateButton = GTK_WIDGET(gtk_builder_get_object( builder, "rotate" ));
 	GdkColor color;
 
+	draw[0]=false;
+	draw[1]=false;
+	draw[2]=false;
 	gtk_window_set_keep_above(GTK_WINDOW(infoWindow), true);
 	gtk_window_set_keep_above(GTK_WINDOW(navigationWindow), true);
+
+	//change the color of the main window's background to black
+	gdk_color_parse("black", &color);
+	gtk_widget_modify_bg(GTK_WIDGET(mainWindow), GTK_STATE_NORMAL, &color);
 
 	//change the color of the label's text to white
 	gdk_color_parse("white", &color);
@@ -748,18 +769,19 @@ void initWorldViewer() {
 				GTK_STATE_NORMAL, &color);
 	}
 
-	//change the color of the main window's background to black
-	gdk_color_parse("black", &color);
-	gtk_widget_modify_bg(GTK_WIDGET(mainWindow), GTK_STATE_NORMAL, &color);
-
 	//create a grid to display the received world views
 	for (guint i = 0; i < tableWorldViewRows; i++) {
 		for (guint j = 0; j < tableWorldViewColumns; j++) {
 			GtkDrawingArea* area = GTK_DRAWING_AREA(gtk_drawing_area_new());
+			gtk_widget_modify_bg(GTK_WIDGET(area), GTK_STATE_NORMAL, &color);
 			gtk_table_attach(GTK_TABLE(table), GTK_WIDGET(area), j, j + 1, i, i + 1, GTK_FILL, GTK_FILL, 0, 0);
 			worldDrawingArea.push_back(GTK_DRAWING_AREA(area));
 		}
 	}
+
+	g_signal_connect(worldDrawingArea.at(TOP_LEFT), "expose-event", G_CALLBACK(drawingAreaExpose), (gpointer)TOP_LEFT);
+	g_signal_connect(worldDrawingArea.at(TOP_RIGHT), "expose-event", G_CALLBACK(drawingAreaExpose), (gpointer)TOP_RIGHT);
+	g_signal_connect(worldDrawingArea.at(BOTTOM_LEFT), "expose-event", G_CALLBACK(drawingAreaExpose), (gpointer)BOTTOM_LEFT);
 
 	g_signal_connect(navigation, "toggled", G_CALLBACK(on_Window_toggled), (gpointer) navigationWindow);
 	g_signal_connect(info, "toggled", G_CALLBACK(on_Window_toggled), (gpointer) infoWindow);

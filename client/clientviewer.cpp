@@ -52,33 +52,24 @@ void on_RobotId_changed(GtkWidget *widget, gpointer data) {
 	if (*viewedRobot != changedRobotId)
 		*viewedRobot = changedRobotId;
 }
-//ClientViewer::
+
 //update the drawing of the robot
 void ClientViewer::updateViewer(OwnRobot* ownRobot) {
 #ifdef DEBUG
 	debug<<"Drawing robot: "<<viewedRobot<<endl;
 #endif
 
-	cairo_surface_t *image= cairo_image_surface_create(IMAGEFORMAT, robotDiameter * drawFactor * 2 + viewDistance * drawFactor,
-			robotDiameter * drawFactor * 2 + viewDistance * drawFactor);
 	cairo_t *cr = gdk_cairo_create(drawingArea->widget.window);
 
-	//paint a white background
 	cairo_set_source_rgb(cr, 1, 1, 1);
-	cairo_paint (cr);
+	cairo_arc(cr, origin[0], origin[1], robotDiameter/2, 0, 2*M_PI );
+	cairo_stroke (cr);
 
-	cairo_set_source_rgb(cr, .5, .5, .5);
-	cairo_arc(cr, imageWidth/2, imageHeight/2, robotDiameter/2, 0, 2*M_PI );
-
-	cairo_set_source_surface(cr, image, 0, 0);
-	cairo_paint(cr);
-
-	cairo_surface_destroy( image);
 	cairo_destroy(cr);
 }
 
 //initializations and simple modifications for the things that will be drawn
-void ClientViewer::initClientViewer(int numberOfRobots, int _robotDiameter, int _viewDistance, int _drawFactor) {
+void ClientViewer::initClientViewer(int numberOfRobots, int _myTeam, int _robotDiameter, int _viewDistance, int _drawFactor) {
 #ifdef DEBUG
 	debug<<"Starting the Client Viewer!"<<endl;
 #endif
@@ -96,14 +87,18 @@ void ClientViewer::initClientViewer(int numberOfRobots, int _robotDiameter, int 
 	GdkColor color;
 
 	//drawing related variables
-	robotDiameter = _robotDiameter;
-	viewDistance = _viewDistance;
+	myTeam=_myTeam;
 	drawFactor = _drawFactor;
-	imageWidth=robotDiameter * drawFactor * 2 + viewDistance * drawFactor;
-	imageHeight=robotDiameter * drawFactor * 2 + viewDistance * drawFactor;
+	robotDiameter = _robotDiameter*drawFactor;
+	viewDistance = _viewDistance *drawFactor;
+	imageWidth=robotDiameter * 2 + viewDistance;
+	imageHeight=robotDiameter * 2 + viewDistance;
+	origin[0]=imageWidth/2;
+	origin[1]=imageHeight/2;
 	drawingArea = GTK_DRAWING_AREA(gtk_builder_get_object(builder, "drawingArea"));
 	//make sure we have enough space to draw a robot, the viewdistance around it and an extra robot length in case a robot is visible right on the boundary
 	gtk_widget_set_size_request(GTK_WIDGET(drawingArea), imageWidth, imageHeight);
+	gtk_window_resize (GTK_WINDOW (mainWindow), imageWidth, imageHeight);
 
 	//set the upper value for the spin button
 	gtk_adjustment_set_upper(GTK_ADJUSTMENT(gtk_builder_get_object(builder, "robotIdAdjustment")), numberOfRobots - 1);
@@ -114,10 +109,8 @@ void ClientViewer::initClientViewer(int numberOfRobots, int _robotDiameter, int 
 	//change the color of the main window's background to black
 	gdk_color_parse("black", &color);
 	gtk_widget_modify_bg(GTK_WIDGET(mainWindow), GTK_STATE_NORMAL, &color);
-
-	//change the color of the label's text to white
 	gdk_color_parse("white", &color);
-	//gtk_widget_modify_fg(GTK_WIDGET(gtk_builder_get_object(builder, "robotWindowLabel")), GTK_STATE_NORMAL, &color);
+	gtk_widget_modify_bg(GTK_WIDGET(drawingArea), GTK_STATE_NORMAL, &color);
 
 	g_signal_connect(robotId, "value-changed", G_CALLBACK(on_RobotId_changed), (gpointer) & viewedRobot);
 
@@ -126,6 +119,7 @@ void ClientViewer::initClientViewer(int numberOfRobots, int _robotDiameter, int 
 
 	g_signal_connect(infoWindow, "destroy", G_CALLBACK(infoDestroy), (gpointer) info);
 	g_signal_connect(infoWindow, "delete-event", G_CALLBACK(infoDeleteEvent), (gpointer) info);
+
 
 	gtk_widget_show_all(mainWindow);
 }

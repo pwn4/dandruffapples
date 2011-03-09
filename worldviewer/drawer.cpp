@@ -57,39 +57,22 @@ ColorObject colorFromTeam(int teamId){
   return coloringMap[teamId];
 }
 
-cairo_surface_t * UnpackImage(RegionRender render, int robotSize, double robotAlpha)
+void UnpackImage(cairo_t *cr, RegionRender* render, int robotSize, double robotAlpha)
 {
-  //double buffer
-  cairo_surface_t *stepImage;
-  cairo_t *stepImageDrawer;
-  
-  //init our surface
-  stepImage = cairo_image_surface_create (IMAGEFORMAT , IMAGEWIDTH, IMAGEHEIGHT);
-  stepImageDrawer = cairo_create (stepImage);
-
-  //clear the image
-  cairo_set_source_rgb (stepImageDrawer, 1, 1, 1);
-  cairo_paint (stepImageDrawer);
-
-  //perhaps just for now, outline the region's boundaries. That way we can see them in the viewer
-  //cairo_rectangle (stepImageDrawer, 0, 0, IMAGEWIDTH, IMAGEHEIGHT);
-  //cairo_set_source_rgb(stepImageDrawer, .5, .5, .5);
-  //cairo_stroke (stepImageDrawer);
-
   int curY = 0;
-  for(int i = 0; i < render.image_size(); i++)
+  for(int i = 0; i < render->image_size(); i++)
   {
-    TwoInt curRobot = ByteUnpack(render.image(i));
+    TwoInt curRobot = ByteUnpack(render->image(i));
 
-    while(curRobot.one == 65535 && curRobot.two == 65535 && i < render.image_size()){
+    while(curRobot.one == 65535 && curRobot.two == 65535 && i < render->image_size()){
       i++;
-      if(i >= render.image_size())
+      if(i >= render->image_size())
         break;
-      curRobot = ByteUnpack(render.image(i));
+      curRobot = ByteUnpack(render->image(i));
       curY++;
     }
 
-    if(i >= render.image_size())
+    if(i >= render->image_size())
       break;
 
     //set the color
@@ -97,9 +80,9 @@ cairo_surface_t * UnpackImage(RegionRender render, int robotSize, double robotAl
 
     //pixel precision robot drawing
     if(robotSize == 1){
-      cairo_set_source_rgba(stepImageDrawer, robotColor.r, robotColor.g, robotColor.b, robotAlpha);
-      cairo_rectangle (stepImageDrawer, curRobot.one, curY, robotSize, robotSize);
-      cairo_fill (stepImageDrawer);
+      cairo_set_source_rgba(cr, robotColor.r, robotColor.g, robotColor.b, robotAlpha);
+      cairo_rectangle (cr, curRobot.one, curY, robotSize, robotSize);
+      cairo_fill (cr);
     }else{
     //aliased precision
         //init the gradient
@@ -107,14 +90,10 @@ cairo_surface_t * UnpackImage(RegionRender render, int robotSize, double robotAl
       cairo_pattern_add_color_stop_rgba (radpat, 0,  robotColor.r, robotColor.g, robotColor.b, robotAlpha);
       cairo_pattern_add_color_stop_rgba (radpat, (double)robotSize / 2.0,  robotColor.r, robotColor.g, robotColor.b, 0.0);
       
-      cairo_rectangle (stepImageDrawer, curRobot.one - (robotSize / 2.0), curY - (robotSize / 2.0), robotSize, robotSize);
-      cairo_set_source (stepImageDrawer, radpat);
-      cairo_fill (stepImageDrawer);
+      cairo_rectangle (cr, curRobot.one - (robotSize / 2.0), curY - (robotSize / 2.0), robotSize, robotSize);
+      cairo_set_source (cr, radpat);
+      cairo_fill (cr);
     }
     
   }
-  
-  cairo_destroy(stepImageDrawer);
-
-  return stepImage;
 }
