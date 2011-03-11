@@ -84,10 +84,10 @@ bool sameCoordinates(float x1, float y1, float x2, float y2) {
 	// From testing, it looks like floating point errors either add or subtract
 	// 0.0001.
 	float maxError = 0.1;
-	if (abs(abs(x1) - abs(x2)) > maxError) {
+	if (abs(x1 - x2) > maxError) {
 		return false;
 	}
-	if (abs(abs(y1) - abs(y2)) > maxError) {
+	if (abs(y1 - y2) > maxError) {
 		return false;
 	}
 	return true;
