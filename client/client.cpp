@@ -22,8 +22,6 @@ int pendingMessages = 0;
 int timeoutMessages = 0;
 int puckPickupMessages = 0;
 
-const int COOLDOWN = 10;
-
 OwnRobot** ownRobots;
 struct timeval timeCache, microTimeCache;
 
@@ -460,6 +458,10 @@ gboolean run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 					timeoutMessages++;
 				}
 
+        // Update rel distance of our home.
+        ownRobots[i]->homeRelX -= ownRobots[i]->vx;
+        ownRobots[i]->homeRelY -= ownRobots[i]->vy;
+
 				// Update rel distance of seenRobots.
 				float minDistance = 9000.01;
 				float tempDistance;
@@ -555,6 +557,13 @@ gboolean run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 				// The serverrobot is from our team.
 				int index = robotIdToIndex(robotId);
 				ownRobots[index]->pendingCommand = false;
+        
+        // If x/y exists, this is the relative distance from our home!
+        if (serverrobot.has_x())
+          ownRobots[index]->homeRelX = serverrobot.x();
+        if (serverrobot.has_y())
+          ownRobots[index]->homeRelY = serverrobot.y();
+
 				if (serverrobot.has_velocityx())
 					ownRobots[index]->vx = serverrobot.velocityx();
 				if (serverrobot.has_velocityy())

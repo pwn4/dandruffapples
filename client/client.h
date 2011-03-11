@@ -56,15 +56,6 @@ enum EventType {
   EVENT_MAX
 };
 
-class SeenHome {
-public:
-  float relx;
-  float rely;
-  int teamId;
-
-  SeenHome() : relx(0.0), rely(0.0), teamId(-1) {}
-};
-
 class SeenPuck {
 public:
   float relx;
@@ -107,12 +98,12 @@ public:
   int behaviour;
   vector<SeenRobot*> seenRobots;
   vector<SeenPuck*> seenPucks;
-  SeenHome* myHome;
-  vector<SeenHome*> seenHomes;
+  float homeRelX;
+  float homeRelY;
   vector<EventType> eventQueue;
 
   OwnRobot() : Robot(), pendingCommand(false), whenLastSent(-1),
-      closestRobotId(-1), behaviour(-1), myHome(NULL) {}
+      closestRobotId(-1), behaviour(-1), homeRelX(0.0), homeRelY(0.0) {}
 };
 
 class ClientRobotCommand {
