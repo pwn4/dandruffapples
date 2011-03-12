@@ -50,11 +50,14 @@ void MessageQueue::push(MessageType typeTag, const google::protobuf::MessageLite
       while(newsize < datalen + blocklen) {
         newsize *= 2;
       }
+
       uint8_t *newbuf = new uint8_t[newsize];
       if(_buffer) {
         memcpy(newbuf, _buffer + _writept, datalen);
         delete[] _buffer;
       }
+      
+      _bufsize = newsize;
       _buffer = newbuf;
       _appendpt -= _writept;
       _writept = 0;
