@@ -447,8 +447,6 @@ gboolean run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 			for (int i = 0; i < robotsPerTeam; i++) {
 			  //so far the simulation can handle actions up to every 2 sim steps smoothly. This probably doesn't scale.
 			  //We'll need to implement the optimizations we talked about to improve this
-				if(currentTimestep - ownRobots[i]->whenLastSent < 200)
-				  continue;
 
 				if (ownRobots[i]->pendingCommand) {
 					// If we've waited too long for an update, send
@@ -520,8 +518,10 @@ gboolean run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 				//if (ownRobots[i]->eventQueue.size() > 0 && !ownRobots[i]->pendingCommand) {
 				//robot AIs SHOULD execute every timestep
 				if(!ownRobots[i]->pendingCommand){
-					//executeAi(ownRobots[i], i, controller);
-					initializeRobots(controller);
+					if(currentTimestep - ownRobots[i]->whenLastSent > 200){
+					  //executeAi(ownRobots[i], i, controller);
+					  initializeRobots(controller);
+					}
 				}
 
 				// Clear the queue, wait for new events.
