@@ -100,8 +100,11 @@ done
 
 if [ $debug ]; then
     gdbCmd="gdb -quiet --args "
+    #gdbCmd="valgrind --tool=callgrind "
   if [ $run ]; then
     gdbCmd="gdb -quiet -ex run --args "
+    #gdbCmd="valgrind --tool=callgrind "
+    
   fi
 fi
 
