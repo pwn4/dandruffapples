@@ -51,7 +51,7 @@ using namespace protobuf;
 #define MAXZOOMED 20
 
 //draw every DRAWTIME microseconds
-#define DRAWTIME 0
+#define DRAWTIME 100000
 
 enum EventType {
 	EVENT_CLOSEST_ROBOT_STATE_CHANGE,
