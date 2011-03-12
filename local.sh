@@ -80,7 +80,7 @@ echo "Found \"$1\" argument"
     else
       echo "Cannot specify the \"-run\" argument without a preceding \"-debug\" argument"
     fi
-  elif [ "$1" == "-clientViewer" ]; then
+  elif [ "$1" == "-clientviewer" ]; then
     if [ $client ]; then
       clientViewer="-viewer"
     else
