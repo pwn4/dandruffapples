@@ -35,7 +35,6 @@ TwoInt ByteUnpack(unsigned int data) {
 //globals
 ColorObject coloringMap[65535];
 bool colorMapInitialized = false;
-cairo_pattern_t *radpat;  //for drawing gradients with large robots
 
 //this is the color mapping method: teams->Color components
 ColorObject colorFromTeam(int teamId){
@@ -44,13 +43,13 @@ ColorObject colorFromTeam(int teamId){
   {
     //use the same seed always so that our colors are the same everywhere
     srand(1);
-  
+
     for(int i = 0; i < 65534; i++)
       coloringMap[i] = ColorObject(0.01*(rand() % 60) + 0.2, 0.01*(rand() % 60) + 0.2, 0.01*(rand() % 60) + 0.2);
-      
+
     //set puck color
     coloringMap[65534] = ColorObject(0, 0, 0);
-    
+
     colorMapInitialized = true;
   }
 
@@ -84,16 +83,19 @@ void UnpackImage(cairo_t *cr, RegionRender* render, int robotSize, double robotA
       cairo_rectangle (cr, curRobot.one, curY, robotSize, robotSize);
       cairo_fill (cr);
     }else{
+    	cairo_pattern_t *radpat;  //for drawing gradients with large robots
     //aliased precision
         //init the gradient
       radpat = cairo_pattern_create_radial (curRobot.one, curY, 0.0,  curRobot.one, curY, (double)robotSize / 2.0);
       cairo_pattern_add_color_stop_rgba (radpat, 0,  robotColor.r, robotColor.g, robotColor.b, robotAlpha);
       cairo_pattern_add_color_stop_rgba (radpat, (double)robotSize / 2.0,  robotColor.r, robotColor.g, robotColor.b, 0.0);
-      
+
       cairo_rectangle (cr, curRobot.one - (robotSize / 2.0), curY - (robotSize / 2.0), robotSize, robotSize);
       cairo_set_source (cr, radpat);
       cairo_fill (cr);
+      cairo_pattern_destroy(radpat);
     }
-    
+
   }
+
 }
