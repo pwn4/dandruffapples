@@ -535,18 +535,25 @@ void run() {
 					if (c->reader.doRead(&type, &len, &buffer)) {
 						switch (type) {
 						case MSG_CLIENTROBOT:
+						{
 							clientrobot.ParseFromArray(buffer, len);
-              if (clientrobot.has_puckpickup()) {
-                if (clientrobot.puckpickup()) {
-                  regionarea->PickUpPuck(clientrobot.id());
-                } else {
-                  regionarea->DropPuck(clientrobot.id());
+							
+							if(regionarea->WeControlRobot(clientrobot.id()))
+							{
+							  if (clientrobot.has_puckpickup()) {
+                  if (clientrobot.puckpickup()) {
+                    regionarea->PickUpPuck(clientrobot.id());
+                  } else {
+                    //regionarea->DropPuck(clientrobot.id());
+                  }
                 }
-              }
 
-							if (!regionarea->ChangeVelocity(clientrobot.id(),
-                    clientrobot.velocityx(), clientrobot.velocityy())) {
-                // Not my robot!
+							  regionarea->ChangeVelocity(clientrobot.id(),
+                    clientrobot.velocityx(), clientrobot.velocityy());
+
+							}else{
+							  //bounced
+
                 BouncedRobot bouncedrobot;
                 ClientRobot* newClientRobot = bouncedrobot.mutable_clientrobot();
                 newClientRobot->CopyFrom(clientrobot);
@@ -554,12 +561,15 @@ void run() {
 
                 c->queue.push(MSG_BOUNCEDROBOT, bouncedrobot);
                 c->set_writing(true);
-              }
-              // TODO: Combine angle and velocity into ChangeState, or
+
+              }		
+							
+              // TODO: Combine angle and velocity into ChangeState, or 
               // something to that effect.
 							//regionarea->ChangeAngle(clientrobot.id(), clientrobot.angle());
 
 							break;
+						}
             case MSG_BOUNCEDROBOT:
             {
               BouncedRobot bouncedrobot;
