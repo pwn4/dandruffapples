@@ -63,8 +63,7 @@ void ClientViewer::updateViewer(OwnRobot* ownRobot) {
 #ifdef DEBUG
 	debug << "Drawing robot: " << viewedRobot/*<<", moving at angle of: "<<ownRobot->angle*/<< endl;
 	for (unsigned int i = 0; i < ownRobot->seenRobots.size(); i++) {
-		debug << "See robot: " << ownRobot->seenRobots.at(i)->id << " on team " << ownRobot->seenRobots.at(i)->id
-				/ 1000 << " ( HADCODED to /1000 ) relatively at (" << ownRobot->seenRobots.at(i)->relx << ", "
+		debug << "See robot: " << ownRobot->seenRobots.at(i)->id <<" relatively at (" << ownRobot->seenRobots.at(i)->relx << ", "
 				<< ownRobot->seenRobots.at(i)->rely << " )" << endl;
 	}
 
@@ -132,6 +131,8 @@ gboolean drawingAreaExpose(GtkWidget *widgetDrawingArea, GdkEventExpose *event, 
 		int robotDiameter = passed->robotDiameter;
 		int puckDiameter = passed->puckDiameter;
 		int viewDistance = passed->viewDistance;
+		int imageWidth = (viewDistance + robotDiameter) * (*drawFactor) * 2;
+		int imageHeight = (viewDistance + robotDiameter) * (*drawFactor) * 2;
 
 		//origin is the middle point where our viewed robot is located
 		int origin[] = { viewDistance * (*drawFactor), viewDistance * (*drawFactor) };
@@ -140,17 +141,12 @@ gboolean drawingAreaExpose(GtkWidget *widgetDrawingArea, GdkEventExpose *event, 
 		cairo_set_line_width(cr, *drawFactor / 7);
 
 		ColorObject color = colorFromTeam(myTeam);
-		cairo_set_source_rgb(cr, color.r, color.g, color.b);
 
+		cairo_set_source_rgb(cr, 1, 1, 1);
 		cairo_arc(cr, origin[0], origin[1], robotDiameter * *drawFactor / 2, 0, 2 * M_PI);
-		cairo_stroke(cr);
-
-		//fill robot green if it has the puck
-		if (ownRobotDraw->hasPuck) {
-			cairo_arc(cr, origin[0], origin[1], robotDiameter * *drawFactor / 2, 0, 2 * M_PI);
-			cairo_set_source_rgb(cr, 0, 1, 0);
-			cairo_fill(cr);
-		}
+		cairo_stroke_preserve(cr);
+		cairo_set_source_rgb(cr, color.r, color.g, color.b);
+		cairo_fill(cr);
 
 		//ownRobot->angle does not provide a valid angle ( it's always zero )!
 		//draw the line showing the angle that the robot is moving at
@@ -160,26 +156,27 @@ gboolean drawingAreaExpose(GtkWidget *widgetDrawingArea, GdkEventExpose *event, 
 		 cairo_stroke(cr);*/
 
 		for (unsigned int i = 0; i < ownRobotDraw->seenRobots.size(); i++) {
-			color = colorFromTeam(ownRobotDraw->seenRobots.at(i)->id / numberOfRobots);
-			cairo_set_source_rgb(cr, color.r, color.g, color.b);
-			cairo_arc(cr, origin[0] + (ownRobotDraw->seenRobots.at(i)->relx * *drawFactor),
-					(origin[1] + ownRobotDraw->seenRobots.at(i)->rely * *drawFactor), robotDiameter * *drawFactor / 2,
-					0, 2 * M_PI);
-			cairo_stroke(cr);
+				color = colorFromTeam(ownRobotDraw->seenRobots.at(i)->id / numberOfRobots);
+				cairo_set_source_rgb(cr, 1, 1, 1);
+				cairo_arc(cr, origin[0] + (ownRobotDraw->seenRobots.at(i)->relx * *drawFactor),
+						(origin[1] + ownRobotDraw->seenRobots.at(i)->rely * *drawFactor),
+						robotDiameter * *drawFactor / 2, 0, 2 * M_PI);
+				cairo_stroke_preserve(cr);
+
+				cairo_set_source_rgb(cr, color.r, color.g, color.b);
+				cairo_fill(cr);
 		}
 
 		//draw seen pucks
 		cairo_set_source_rgb(cr, 0, 0, 0);
 		for (unsigned int i = 0; i < ownRobotDraw->seenPucks.size(); i++) {
-			cairo_arc(cr, origin[0] + ownRobotDraw->seenPucks.at(i)->relx,
-					origin[1] + ownRobotDraw->seenPucks.at(i)->rely, puckDiameter * *drawFactor / 2, 0, 2 * M_PI);
-			cairo_fill(cr);
+				cairo_arc(cr, origin[0] + ownRobotDraw->seenPucks.at(i)->relx * *drawFactor,
+						origin[1] + ownRobotDraw->seenPucks.at(i)->rely * *drawFactor, puckDiameter * *drawFactor / 2, 0, 2 * M_PI);
+				cairo_fill(cr);
 		}
 
 		//draw a rectangle around the drawing area
-		int width, height;
-		gtk_widget_get_size_request(widgetDrawingArea, &width, &height);
-		cairo_rectangle(cr, 0, 0, width, height);
+		cairo_rectangle(cr, 0, 0, imageWidth, imageHeight);
 		cairo_stroke(cr);
 
 		cairo_destroy(cr);
