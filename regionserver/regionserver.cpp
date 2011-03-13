@@ -648,7 +648,7 @@ void run() {
 								sendMoreWorldViews[c->fd].value = doWeSend.enable();
 								sendMoreWorldViews[c->fd].initialized = true;
 								cout << "Setting sendMoreWorldViews for fd " << c->fd << " to " << doWeSend.enable()
-										<< endl;
+										<< endl<<endl;
 								break;
 							}
 							default:
@@ -720,7 +720,6 @@ void run() {
 						worldviewers.push_back(newconnOut);
 						sendMoreWorldViews[fd].value = false;
 						sendMoreWorldViews[fd].initialized = true;
-						cout << "set " << fd << " to true" << endl;
 					} catch (SystemError e) {
 						cerr << e.what() << endl;
 						return;

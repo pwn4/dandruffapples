@@ -28,6 +28,7 @@
 #include "../common/parseconf.h"
 
 #include "../common/helper.h"
+#include "../common/globalconstants.h"
 
 using namespace std;
 
@@ -101,7 +102,10 @@ void addPositions(int newServerRow, int newServerCol, int numRows, int numCols, 
 	serverid = ((thisRow * server_cols) + thisCol);
 	worldinfo.mutable_region(serverid)->add_position(RegionInfo_Position_LEFT);
 }
-
+struct xyCoord {
+	int x;
+	int y;
+};
 //these variables need to be global
 size_t ready = 0;
 vector<RegionConnection*> regions, controllers, worldviewers;
@@ -114,7 +118,6 @@ unsigned long long step = 0;
 time_t lastSecond = time(NULL);
 int timeSteps = 0;
 int numPositionedServers = 0;
-
 long totalpersecond = 0, number = 0;
 long values[1000];
 long freeval = 0;
@@ -164,6 +167,108 @@ void checkNewStep() {
 
 }
 
+//distance between two points
+float distanceBetween(int x1, int x2, int y1, int y2) {
+	return sqrt((x1 - x2)*(x1 - x2) + (y1 - y2)*(y1 - y2));
+}
+
+//handle the drawing of home
+//going to draw the homes to have the minimal impact on the performance of the system
+void handleHomes(int teams, int serverCount) {
+	//int regionid, regionHomeNum, draw co-ordinates
+	map<int, map<int, xyCoord> > home;
+
+	//draw homes uniformly,
+	int homesPerRegion = teams / serverCount;
+	int leftOverHomes = teams % serverCount;
+	int coord[2];
+
+	//loop through all the regions
+	for (int i = 0; i < serverCount; i++) {
+		//get homesPerRegion homes per region
+		for (int j = 0; j < homesPerRegion; j++) {
+			//don't draw the home too close to the border of the region
+			coord[0] = MINDISTANCEFROMHOME / 2 + rand() % (REGIONSIDELEN - MINDISTANCEFROMHOME);
+			coord[1] = MINDISTANCEFROMHOME / 2 + rand() % (REGIONSIDELEN - MINDISTANCEFROMHOME);
+
+			//make sure that the new home is at least MINDISTANCEFROMHOME units away from all the other homes in the area
+			for (int k = 0; k < j; k++) {
+				if (distanceBetween(home[i][k].x, coord[0], home[i][k].y, coord[1]) <= MINDISTANCEFROMHOME) {
+#ifdef DEBUG
+
+					cerr << "Failed because distance is " + helper::toString(
+							distanceBetween(home[i][k].x, coord[0], home[i][k].y, coord[1])) << endl;
+					cerr << "Failed with (" + helper::toString(home[i][k].x) + ", " + helper::toString(home[i][k].y) + "), ("+ helper::toString(coord[0])  + ", "+ helper::toString(coord[1])+")"<<endl;
+#endif
+					//get new coordinates
+					coord[0] = MINDISTANCEFROMHOME / 2 + rand() % (REGIONSIDELEN - MINDISTANCEFROMHOME);
+					coord[1] = MINDISTANCEFROMHOME / 2 + rand() % (REGIONSIDELEN - MINDISTANCEFROMHOME);
+#ifdef DEBUG
+					cerr << "New house at (" + helper::toString(coord[0]) + ", " + helper::toString(coord[1]) + ")"
+							<< endl << endl;
+#endif
+
+					//restart the loop
+					k = -1;
+					continue;
+				}
+			}
+
+			home[i][j].x = coord[0];
+			home[i][j].y = coord[1];
+
+#ifdef DEBUG
+			cout<<"             New home on region " + helper::toString(i) + " for team " + helper::toString(i * homesPerRegion + j) + " at ("+ helper::toString(coord[0]) + ", " + helper::toString(coord[1]) + ")"<<endl;
+
+#endif
+			HomeInfo *homeInfo=worldinfo.add_home();
+			homeInfo->set_home_x(coord[0]);
+			homeInfo->set_home_y(coord[1]);
+			homeInfo->set_team(i * homesPerRegion + j);
+		}
+	}
+#ifdef DEBUG
+	cout << "/////////////////////////////////////////////////////////////////////////" << endl;
+	cout << "/////////////////////////////////////////////////////////////////////////" << endl;
+	cout << "/////////////////////////////////////////////////////////////////////////" << endl;
+	cout << "/////////////////////////////////////////////////////////////////////////" << endl;
+#endif
+	//handle the odd homes at one home per server
+	//loop through all the regions
+	for (int i = 0; i < leftOverHomes; i++) {
+		coord[0] = MINDISTANCEFROMHOME / 2 + rand() % (REGIONSIDELEN - MINDISTANCEFROMHOME);
+		coord[1] = MINDISTANCEFROMHOME / 2 + rand() % (REGIONSIDELEN - MINDISTANCEFROMHOME);
+
+		//make sure that the new home is at least MINDISTANCEFROMHOME units away from all the other homes in the area
+		for (unsigned int j = 0; j < home[i].size(); j++) {
+			if (distanceBetween(home[i][j].x, coord[0], home[i][j].y, coord[1]) <= MINDISTANCEFROMHOME) {
+#ifdef DEBUG
+				cerr << "Failed because distance is " + helper::toString(
+						distanceBetween(home[i][j].x, coord[0], home[i][j].y, coord[1])) << endl;
+				cerr << "Failed with (" + helper::toString(home[i][j].x) + ", " + helper::toString(home[i][j].y) + "), ("+ helper::toString(coord[0])  + ", "+ helper::toString(coord[1])+")"<<endl;
+#endif
+				//get new coordinates
+				coord[0] = MINDISTANCEFROMHOME / 2 + rand() % (REGIONSIDELEN - MINDISTANCEFROMHOME);
+				coord[1] = MINDISTANCEFROMHOME / 2 + rand() % (REGIONSIDELEN - MINDISTANCEFROMHOME);
+
+#ifdef DEBUG
+				cerr << "New house at (" + helper::toString(coord[0]) + ", " + helper::toString(coord[1]) + ")" << endl
+						<< endl;
+#endif
+				//restart the loop
+				j = -1;
+				continue;
+			}
+		}
+#ifdef DEBUG
+		cout << "             New home on region " + helper::toString(i) + " for team " + helper::toString(i + home.size() * home[i].size()) + " at ("
+				+ helper::toString(coord[0]) + ", " + helper::toString(coord[1]) + ")" << endl;
+#endif
+		home[i][home[i].size()].x = coord[0];
+		home[i][home[i].size()-1].y = coord[1];
+	}
+}
+
 int main(int argc, char **argv) {
 	helper::CmdLine cmdline(argc, argv);
 	configFileName = cmdline.getArg("-c", "config").c_str();
@@ -192,6 +297,9 @@ int main(int argc, char **argv) {
 	worldinfo.set_numpucks(1000);//send the number of pucks in the region
 	unsigned teams = atoi(configuration["TEAMS"].c_str());
 	unsigned robots_per_team = atoi(configuration["ROBOTS_PER_TEAM"].c_str());
+
+	//handleHomes(teams, server_count);
+
 	// Note that robot ID 0 is invalid.
 	unsigned id = 1, region = 0;
 	teamclaimed = new bool[teams];
