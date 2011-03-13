@@ -260,12 +260,19 @@ void handleHomes(int teams, int serverCount) {
 				continue;
 			}
 		}
-#ifdef DEBUG
-		cout << "             New home on region " + helper::toString(i) + " for team " + helper::toString(i + home.size() * home[i].size()) + " at ("
-				+ helper::toString(coord[0]) + ", " + helper::toString(coord[1]) + ")" << endl;
-#endif
+
 		home[i][home[i].size()].x = coord[0];
 		home[i][home[i].size()-1].y = coord[1];
+
+#ifdef DEBUG
+		cout << "             New home on region " + helper::toString(i) + " for team " + helper::toString(i + home.size() * (home[i].size()-1)) + " at ("
+				+ helper::toString(coord[0]) + ", " + helper::toString(coord[1]) + ")" << endl;
+#endif
+
+		HomeInfo *homeInfo=worldinfo.add_home();
+		homeInfo->set_home_x(coord[0]);
+		homeInfo->set_home_y(coord[1]);
+		homeInfo->set_team(i + home.size() * (home[i].size()-1));
 	}
 }
 
@@ -298,7 +305,7 @@ int main(int argc, char **argv) {
 	unsigned teams = atoi(configuration["TEAMS"].c_str());
 	unsigned robots_per_team = atoi(configuration["ROBOTS_PER_TEAM"].c_str());
 
-	//handleHomes(teams, server_count);
+	handleHomes(teams, server_count);
 
 	// Note that robot ID 0 is invalid.
 	unsigned id = 1, region = 0;
@@ -319,10 +326,10 @@ int main(int argc, char **argv) {
 	///////////////new robot generating loop
 	int wantRobots = teams * robots_per_team;
 	int numRobots = 0;
-	
+
 	for (unsigned int j = (2 * ROBOTDIAMETER)+(4 * MINELEMENTSIZE); j < (REGIONSIDELEN+(1 * MINELEMENTSIZE)) - (2 * (ROBOTDIAMETER)+(4 * MINELEMENTSIZE)) && numRobots	< wantRobots; j += 5 * (ROBOTDIAMETER)) {
 	  for (unsigned int i = (2 * ROBOTDIAMETER)+(4 * MINELEMENTSIZE); i < (REGIONSIDELEN+(1 * MINELEMENTSIZE)) - (2 * (ROBOTDIAMETER)+(4 * MINELEMENTSIZE)) && numRobots	< wantRobots; i += 5 * (ROBOTDIAMETER)){
-      
+
       //we repeat this across all regions
       for(unsigned int k = 0; k < server_count && numRobots < wantRobots; k++){
 
@@ -336,7 +343,7 @@ int main(int argc, char **argv) {
 		    numRobots++;
 		  }
 	  }
-  }	
+  }
 	///////////////
 
 	// Disregard SIGPIPE so we can handle things normally
