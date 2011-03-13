@@ -12,11 +12,12 @@
 #-worldviewer: run the worldviewer
 #-regionserver: run the regionserver(s)
 #-client: run the client(s)
-#-clientViewer: works ONLY if -client has been passed somewhere prior to it. Will start the client(s) with the -viewer option
+#-clientviewer: works ONLY if -client has been passed somewhere prior to it. Will start the client(s) with the -viewer option
 #-debug: launch all the server in gdb
 #-run: works ONLY if -debug has been passed somewhere prior to it. Will tell gdb to auto-run all the servers
 #-gnomeTerminal: if passed then all the servers will be open using the "gnome-terminal" ( default: xterm )
 #-sleepTime: time in seconds to wait before launching a new server ( default: 0 )
+#-valgrind: launch the servers in vallgrind with the callgrind tool
 
 #EXAMPLES:
 #./local.sh -clockserver -worldivewer -regionserver
@@ -45,8 +46,8 @@ terminal="xterm -T"
 
 #figure out what flags need to be set from the arguments passed
 while [ "$1" != "" ]; do
-echo "Found \"$1\" argument"
-  if [ "$1" == "-shortcut" ]; then
+echo "Found \"${1,,}\" argument"
+  if [ "${1,,}" == "-shortcut" ]; then
     clockserver=true
     regionserver=true
     controller=true
@@ -54,43 +55,45 @@ echo "Found \"$1\" argument"
     debug=true
     run=true
     sleepTime=0.5
-  elif [ "$1" == "-all" ]; then
+  elif [ "${1,,}" == "-all" ]; then
     clockserver=true
     worldviewer=true
     regionserver=true
     controller=true
     client=true
-  elif [ "$1" == "-clockserver" ]; then
+  elif [ "${1,,}" == "-clockserver" ]; then
     clockserver=true
-  elif [ "$1" == "-worldviewer" ]; then
+  elif [ "${1,,}" == "-worldviewer" ]; then
     worldviewer=true
-  elif [ "$1" == "-regionserver" ]; then
+  elif [ "${1,,}" == "-regionserver" ]; then
     regionserver=true
-  elif [ "$1" == "-controller" ]; then
+  elif [ "${1,,}" == "-controller" ]; then
     controller=true
-  elif [ "$1" == "-client" ]; then
+  elif [ "${1,,}" == "-client" ]; then
     client=true
-  elif [ "$1" == "-debug" ]; then
+  elif [ "${1,,}" == "-debug" ]; then
     debug=true
-  elif [ "$1" == "-run" ]; then
+  elif [ "${1,,}" == "-run" ]; then
     if [ $debug ]; then
       run=true
     else
       echo "Cannot specify the \"-run\" argument without a preceding \"-debug\" argument"
     fi
-  elif [ "$1" == "-clientviewer" ]; then
+  elif [ "${1,,}" == "-clientviewer" ]; then
     if [ $client ]; then
       clientViewer="-viewer"
     else
       echo "Cannot specify the \"-clientViewer\" argument without a preceding \"-client\" argument"
     fi
-  elif [ "$1" == "-gnomeTerminal" ]; then
+  elif [ "${1,,}" == "-gnometerminal" ]; then
     gnomeTerminal=true
-  elif [ "$1" == "-sleepTime" ]; then
+  elif [ "${1,,}" == "-valgrind" ]; then
+    valgrind=true
+  elif [ "${1,,}" == "-sleeptime" ]; then
     shift
     sleepTime=$1
   else
-    echo "$1 is not a valid argument. Please read the documentation in this script"
+    echo "${1,,} is not a valid argument. Please read the documentation in this script"
   fi
 
   shift
@@ -98,12 +101,13 @@ done
 
 if [ $debug ]; then
     gdbCmd="gdb -quiet --args "
-    #gdbCmd="valgrind --tool=callgrind "
   if [ $run ]; then
-    gdbCmd="gdb -quiet -ex run --args "
-    #gdbCmd="valgrind --tool=callgrind "
-    
+    gdbCmd="gdb -quiet -ex run --args "    
   fi
+fi
+
+if [ $valgrindvalgrind ]; then
+    gdbCmd="valgrind --tool=callgrind "
 fi
 
 if [ $gnomeTerminal ]; then
