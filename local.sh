@@ -48,14 +48,12 @@ while [ "$1" != "" ]; do
 echo "Found \"$1\" argument"
   if [ "$1" == "-shortcut" ]; then
     clockserver=true
-    worldviewer=true
     regionserver=true
     controller=true
     client=true
     debug=true
     run=true
     sleepTime=0.5
-    gnomeTerminal=true
   elif [ "$1" == "-all" ]; then
     clockserver=true
     worldviewer=true
