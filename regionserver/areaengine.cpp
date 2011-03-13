@@ -41,6 +41,7 @@ AreaEngine::AreaEngine(int robotSize, int regionSize, int minElementSize, double
   //min a[][] element size in terms of pucks
 
   robotRatio = robotSize;
+  pickupRange = 4*(robotRatio / 2); //hard coded
   regionRatio = regionSize;
   curStep = 0;
   viewDist = viewDistance;
@@ -609,13 +610,42 @@ void AreaEngine::Step(bool generateImage){
       //puck sight losses
       for(pSightCheck = (*pucksNowSeen).begin(); pSightCheck != pSightEnd; )
       {
-        if(puckq.find((*pSightCheck).first) == puckq.end())
+        PuckStack * puckStackAccess;
+        puckStack = (*pSightCheck).first;
+        if(puckq.find(puckStack) == puckq.end())
         {
+          //check if this is the first seen by for the stack
+          if(puckUpdates.find(puckStack) == puckUpdates.end()){
+            PuckStack *newStack = new PuckStack;
+            newStack->set_stacksize(puckStack->count);
+            puckUpdates.insert(pair<PuckStackObject*, PuckStack*>(puckStack, newStack));
+          }
+        
+          puckStackAccess = puckUpdates[puckStack];
+          SeesPuckStack* seesPuckStack = puckStackAccess->add_seespuckstack();
+          seesPuckStack->set_viewlostid(true);
+          seesPuckStack->set_seenbyid(curRobot->id);
+          seesPuckStack->set_relx(puckStack->x - curRobot->x);
+          seesPuckStack->set_rely(puckStack->x - curRobot->y);
+                    
           pucksNowSeen->erase(pSightCheck++);
           continue;
         }
-        puckStack = (*pSightCheck).first;
+        
         if(!AreaEngine::Sees(curRobot->x, curRobot->y, puckStack->x, puckStack->y)){
+          //check if this is the first seen by for the stack
+          if(puckUpdates.find(puckStack) == puckUpdates.end()){
+            PuckStack *newStack = new PuckStack;
+            newStack->set_stacksize(puckStack->count);
+            puckUpdates.insert(pair<PuckStackObject*, PuckStack*>(puckStack, newStack));
+          }
+          
+          puckStackAccess = puckUpdates[puckStack];
+          SeesPuckStack* seesPuckStack = puckStackAccess->add_seespuckstack();
+          seesPuckStack->set_viewlostid(true);
+          seesPuckStack->set_seenbyid(curRobot->id);
+          seesPuckStack->set_relx(puckStack->x - curRobot->x);
+          seesPuckStack->set_rely(puckStack->x - curRobot->y);
         
           pucksNowSeen->erase(pSightCheck++);
           continue;
@@ -780,17 +810,20 @@ void AreaEngine::forceUpdates(){
 
 //these are the robot puck handling methods - if the action is not possible they will
 //gracefully fail. Since puck updates don't require sync precision, we can notify best effort
+//Also, this method is blunt right now. Just pick up any pick beneath you.
 void AreaEngine::PickUpPuck(int robotId){
+
   //find the robot
   RobotObject * curRobot = robots.find(robotId)->second;
   
   if(curRobot->holdingPuck) //already have a puck
     return;
-  
+ 
   if(RemovePuck(curRobot->x, curRobot->y))  //can pick up a puck
   {
     curRobot->holdingPuck = true;
   }
+   
 }
 
 void AreaEngine::DropPuck(int robotId){
@@ -816,15 +849,24 @@ void AreaEngine::SetPuckStack(double newx, double newy, int newc){
   int y = (int) newy;
   
   PuckStackObject * curStack = element->pucks;
+  PuckStackObject * lastStack = NULL;
   //iterate through the pucks, looking for a match
   while(curStack != NULL)
   {
     if(curStack->x == x && curStack->y == y)
       break;
+      
+    lastStack = curStack;
     curStack = curStack->nextStack;
   }
   
   if(newc == 0){
+  
+    if(lastStack == NULL) //its the first one
+      element->pucks = curStack->nextStack;
+    else{
+      lastStack->nextStack = curStack->nextStack;
+    }
   
     puckq.erase(curStack);
     delete curStack;
@@ -878,39 +920,59 @@ void AreaEngine::AddPuck(double newx, double newy){
 }
 
 //remove a puck - returns a success boolean. This way we can just call the method when a client
-//requests and not bother checking ourselves
+//requests and not bother checking ourselves. Tries to remove a puck within the pickup range of x and y
 bool AreaEngine::RemovePuck(double x, double y){
-  Index puckElement = getRobotIndices(x, y, true);
-  
-  ArrayObject *element = &robotArray[puckElement.x][puckElement.y];
-  
-  int ix = (int) x;
-  int iy = (int) y;
-  
-  PuckStackObject * curStack = element->pucks;
-  //iterate through the pucks, looking for a match
-  while(curStack != NULL)
-  {
-    if(curStack->x == ix && curStack->y == iy)
-      break;
-    curStack = curStack->nextStack;
-  }
-  
-  if(curStack == NULL)
-    return false;
-   
-  curStack->count--;
-  
-  BroadcastPuckStack(curStack);
-  
-  //check it for deletion
-  if(curStack->count == 0)
-  {
-    puckq.erase(curStack);
-    delete curStack;
-  }
 
-  return true;
+  Index topLeft = getRobotIndices(x-pickupRange, y-pickupRange, true);
+  Index botRight = getRobotIndices(x+pickupRange, y+pickupRange, true);
+  
+  double tlx = x-pickupRange;
+  double tly = y-pickupRange;
+  double brx = x+pickupRange;
+  double bry = y+pickupRange;
+  
+  //do puck and robot sight acquires
+  for(int j = topLeft.x; j <= botRight.x; j++)
+    for(int k = topLeft.y; k <= botRight.y; k++)
+    {      
+      ArrayObject *element = &robotArray[j][k];
+
+      PuckStackObject * curStack = element->pucks;      
+      PuckStackObject * lastStack = NULL;
+      
+      //iterate through the pucks, looking for a match
+      while(curStack != NULL)
+      {
+        if(curStack->x >= tlx && curStack->y >= tly && curStack->x <= brx && curStack->y <= bry)
+          break;
+
+        lastStack = curStack;
+        curStack = curStack->nextStack;
+      }
+      
+      if(curStack == NULL)
+        continue;
+       
+      curStack->count--;
+      
+      BroadcastPuckStack(curStack);
+      
+      //check it for deletion
+      if(curStack->count == 0)
+      {
+        if(lastStack == NULL) //its the first one
+          element->pucks = curStack->nextStack;
+        else{
+          lastStack->nextStack = curStack->nextStack;
+        }
+        puckq.erase(curStack);
+        delete curStack;
+      }
+
+      return true;
+    }
+  
+  return false;
 }
 
 //add a robot to the system.
