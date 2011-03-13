@@ -138,7 +138,7 @@ gboolean drawingAreaExpose(GtkWidget *widgetDrawingArea, GdkEventExpose *event, 
 		int origin[] = { viewDistance * (*drawFactor), viewDistance * (*drawFactor) };
 
 		cairo_t *cr = gdk_cairo_create(GTK_DRAWING_AREA(widgetDrawingArea)->widget.window);
-		cairo_set_line_width(cr, *drawFactor / 7);
+		cairo_set_line_width(cr, 3);
 
 		ColorObject color = colorFromTeam(myTeam);
 
