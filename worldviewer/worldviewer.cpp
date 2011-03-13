@@ -29,7 +29,7 @@
 #include "../common/timestep.pb.h"
 
 #include "../common/helper.h"
-#include "../common/imageconstants.h"
+#include "../common/globalconstants.h"
 #include "drawer.h"
 
 #include <gtk/gtk.h>
@@ -97,8 +97,8 @@ void loadConfigFile(const char *configFileName, char* clockip) {
 	}
 
 	strcpy(clockip, configuration["CLOCKIP"].c_str());
-	
-	
+
+
 	if (configuration.find("ROBOTSIZE") != configuration.end())
 	  robotSize = atoi(configuration["ROBOTSIZE"].c_str());
 

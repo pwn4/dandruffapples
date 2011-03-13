@@ -2,7 +2,7 @@
 #define _AREAENGINE_H_
 
 #include "../common/except.h"
-#include "../common/imageconstants.h"
+#include "../common/globalconstants.h"
 #include <algorithm>
 #include <iostream>
 #include <limits.h>
@@ -41,7 +41,7 @@ using namespace net;
 
 struct Index{
   int x, y;
-  
+
   Index() : x(0), y(0) {}
   Index(int newx, int newy) : x(newx), y(newy) {}
 };
@@ -49,9 +49,9 @@ struct Index{
 struct PuckStackObject{
   int x, y;
   int count;
-  
+
   PuckStackObject * nextStack;
-  
+
   PuckStackObject(int newx, int newy) : x(newx), y(newy), count(1), nextStack(NULL) {}
 };
 
@@ -68,8 +68,8 @@ struct RobotObject{
   RobotObject * nextRobot;
   int controllerfd;
   int team;
- 
-  
+
+
   RobotObject(int newid, double newx, double newy, double newa, Index aLoc, int curStep, int teamId) : id(newid), lastStep(curStep-1), x(newx), y(newy), angle(newa), vx(0), vy(0), arrayLocation(aLoc), lastCollision(time(NULL)), nextRobot(NULL), controllerfd(-1), team(teamId) {}
   RobotObject(int newid, double newx, double newy, double newa, double newvx, double newvy, Index aLoc, int curStep, int teamId) : id(newid), lastStep(curStep-1), x(newx), y(newy), angle(newa), vx(newvx), vy(newvy), arrayLocation(aLoc), lastCollision(time(NULL)), nextRobot(NULL), controllerfd(-1), team(teamId) {}
 };
@@ -77,7 +77,7 @@ struct RobotObject{
 struct ArrayObject{
   PuckStackObject * pucks;
   RobotObject * robots;
-  
+
   ArrayObject() : pucks(NULL), robots(NULL) {}
 };
 
@@ -91,7 +91,7 @@ struct Command {
   double velocityx, velocityy;
   double angle;
   int step;
-  
+
   Command() : robotId(-1), velocityx(INT_MAX), velocityy(INT_MAX), angle(INT_MAX), step(-1) {}
 };
 
@@ -124,34 +124,34 @@ double sightSquare, collisionSquare;
 
   void BroadcastRobot(RobotObject *curRobot, Index oldIndices, Index newIndices, int step);
   void BroadcastPuckStack(PuckStackObject *curStack);
-  
+
 public:
   RegionRender render;
   int curStep;
   Index getRobotIndices(double x, double y, bool clip);
-  
+
   void Step(bool generateImage);
-  
+
   bool Sees(double x1, double y1, double x2, double y2);
-  
+
   bool Collides(double x1, double y1, double x2, double y2);
-  
+
   void PickUpPuck(int robotId);
   void DropPuck(int robotId);
   void AddPuck(double newx, double newy);
   bool RemovePuck(double x, double y);
   void SetPuckStack(double newx, double newy, int newc);
-  
+
   void AddRobot(RobotObject * oldRobot);
   RobotObject* AddRobot(int robotId, double newx, double newy, double newa, double newvx, double newvy, int atStep, int teamId, bool broadcast);
-  
+
   void RemoveRobot(int robotId, int xInd, int yInd, bool freeMem);
-  
+
   AreaEngine(int robotSize, int regionSize, int minElementSize, double viewDistance, double viewAngle, double maximumSpeed, double maximumRotate);
   ~AreaEngine();
 
   bool WeControlRobot(int robotId);
-  
+
   //Robot modifiers
   bool ChangeVelocity(int robotId, double newvx, double newvy); //Allows strafing, if we may want it
   bool ChangeAngle(int robotId, double newangle);  //Allows turning
@@ -160,15 +160,15 @@ public:
   void SetNeighbour(int placement, EpollConnection* socketHandle);
 
   void GotServerRobot(ServerRobot message);
-  
+
   void GotPuckStack(PuckStack message);
 
   void AddController(EpollConnection* socketHandle);
-  
+
   void flushNeighbours();
-  
+
   void flushControllers();
-  
+
   void forceUpdates();
 
 };

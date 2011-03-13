@@ -631,11 +631,6 @@ gboolean run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 									(*it)->hasCollided = serverrobot.hascollided();
 									stateChange = true;
 								}
-								/*
-								if (serverrobot.has_team() && (*it)->team != serverrobot.team()) {
-									(*it)->team = serverrobot.team();
-									stateChange = true;
-								}*/
 								if (serverrobot.seesserverrobot(i).has_relx())
 									(*it)->relx = serverrobot.seesserverrobot(i).relx();
 								if (serverrobot.seesserverrobot(i).has_rely())

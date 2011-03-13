@@ -32,26 +32,12 @@
 #include <gtk/gtk.h>
 
 #include "../common/helper.h"
-#include "../common/imageconstants.h"
+#include "../common/globalconstants.h"
 #include "../worldviewer/drawer.h"
 
 using namespace std;
 using namespace google;
 using namespace protobuf;
-
-//constants for drawing as taken from the regionserver.cpp line ~216
-//apparently in the future they will be set by the clock server
-#define ROBOTDIAMETER 4
-#define PUCKDIAMETER 1
-#define VIEWDISTANCE 20
-#define DRAWFACTOR 10
-
-#define ZOOMSPEED 1
-#define MINZOOMED 5
-#define MAXZOOMED 20
-
-//draw every DRAWTIME microseconds
-#define DRAWTIME 100000
 
 enum EventType {
 	EVENT_CLOSEST_ROBOT_STATE_CHANGE,

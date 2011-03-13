@@ -4,7 +4,7 @@
 #include <netinet/in.h>
 #include <cairo.h>
 #include <stdio.h>
-#include "../common/imageconstants.h"
+#include "../common/globalconstants.h"
 #include "../common/regionrender.pb.h"
 
 struct TwoInt{

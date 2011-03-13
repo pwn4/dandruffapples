@@ -206,16 +206,9 @@ void run() {
 	WorldInfo worldinfo;
 	RegionInfo regioninfo;
 	unsigned myId = 0; //region id
-	//Region Area Variables (should be set by clock server)
-	int regionSideLen = 2500;
-	int robotDiameter = 4;
-	int minElementSize = 25;
-	double viewDistance = 20;
-	double viewAngle = 360;
-	double maxSpeed = 4;
-	double maxRotate = 2;
-	AreaEngine* regionarea = new AreaEngine(robotDiameter, regionSideLen, minElementSize, viewDistance, viewAngle,
-			maxSpeed, maxRotate);
+
+	AreaEngine* regionarea = new AreaEngine(ROBOTDIAMETER,REGIONSIDELEN, MINELEMENTSIZE, VIEWDISTANCE, VIEWANGLE,
+			MAXSPEED, MAXROTATE);
 	//create robots for benchmarking!
 	int numRobots = 0;
 	int wantRobots = 1000;
@@ -285,8 +278,8 @@ void run() {
 							//added pucks to the world
               					unsigned pucks = 0;
               					while(pucks < worldinfo.numpucks() ){// populate the world with numpucks which are randomly distributed over the region
-								int a = (2 * robotDiameter)+minElementSize + rand() % (regionSideLen-2*((2 * robotDiameter)+minElementSize));
-								int b = (2 * robotDiameter)+minElementSize + rand() % (regionSideLen-2*((2 * robotDiameter)+minElementSize));
+								int a = (2 * ROBOTDIAMETER)+MINELEMENTSIZE + rand() % (REGIONSIDELEN-2*((2 * ROBOTDIAMETER)+MINELEMENTSIZE));
+								int b = (2 * ROBOTDIAMETER)+MINELEMENTSIZE + rand() % (REGIONSIDELEN-2*((2 * ROBOTDIAMETER)+MINELEMENTSIZE));
 							  regionarea->AddPuck(a, b);
 								pucks++;
               }
@@ -426,8 +419,8 @@ void run() {
 							//  regionarea->AddPuck((2 * robotDiameter)+minElementSize+304, (2 * robotDiameter)+minElementSize+150);
 							  //j is the y, i is the x
 
-							  for (int j = (2 * robotDiameter)+(4 * minElementSize); j < (regionSideLen+(1 * minElementSize)) - (2 * (robotDiameter)+(4 * minElementSize)) && numRobots	< wantRobots; j += 5 * (robotDiameter)) {
-								  for (int i = (2 * robotDiameter)+(4 * minElementSize); i < (regionSideLen+(1 * minElementSize)) - (2 * (robotDiameter)+(4 * minElementSize)) && numRobots	< wantRobots; i += 5 * (robotDiameter)){
+							  for (int j = (2 * ROBOTDIAMETER)+(4 * MINELEMENTSIZE); j < (REGIONSIDELEN+(1 * MINELEMENTSIZE)) - (2 * (ROBOTDIAMETER)+(4 * MINELEMENTSIZE)) && numRobots	< wantRobots; j += 5 * (ROBOTDIAMETER)) {
+								  for (int i = (2 * ROBOTDIAMETER)+(4 * MINELEMENTSIZE); i < (REGIONSIDELEN+(1 * MINELEMENTSIZE)) - (2 * (ROBOTDIAMETER)+(4 * MINELEMENTSIZE)) && numRobots	< wantRobots; i += 5 * (ROBOTDIAMETER)){
 
 								  //regionarea->AddRobot(myRobotIds[numRobots], i, j, 0, 0, 0, 0, myRobotTeams[numRobots], true);
 
@@ -537,7 +530,7 @@ void run() {
 						case MSG_CLIENTROBOT:
 						{
 							clientrobot.ParseFromArray(buffer, len);
-							
+
 							if(regionarea->WeControlRobot(clientrobot.id()))
 							{
 							  if (clientrobot.has_puckpickup()) {
@@ -562,9 +555,9 @@ void run() {
                 c->queue.push(MSG_BOUNCEDROBOT, bouncedrobot);
                 c->set_writing(true);
 
-              }		
-							
-              // TODO: Combine angle and velocity into ChangeState, or 
+              }
+
+              // TODO: Combine angle and velocity into ChangeState, or
               // something to that effect.
 							//regionarea->ChangeAngle(clientrobot.id(), clientrobot.angle());
 
