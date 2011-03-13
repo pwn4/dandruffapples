@@ -104,6 +104,7 @@ class CompareCommand {
 class AreaEngine {
 protected:
 int robotRatio, regionRatio;    //robotDiameter:puckDiameter, regionSideLength:puckDiameter
+double pickupRange;
 int regionBounds;
 int elementSize;  //in pucks
 double viewDist, viewAng;
