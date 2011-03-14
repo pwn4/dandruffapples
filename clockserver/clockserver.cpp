@@ -310,7 +310,7 @@ int main(int argc, char **argv) {
 	handleHomes(teams, server_count);
 
 	// Note that robot ID 0 is invalid.
-	unsigned id = 1, region = 0;
+	unsigned id = 1;
 	teamclaimed = new bool[teams];
 	for (unsigned team = 0; team < teams; ++team)
 	  teamclaimed[team] = false;
@@ -530,6 +530,35 @@ int main(int argc, char **argv) {
 									cout << "Team " << id << " has been claimed." << endl;
 									claimteam.set_granted(true);
 									teamclaimed[id] = true;
+									
+									//find the team's home
+									const HomeInfo * teamsHome = NULL;
+									for(int i = 0; i < worldinfo.home_size(); i++)
+									  if(worldinfo.home(i).team() == id)
+									  {
+									    teamsHome = &(worldinfo.home(i));
+									    break;
+								    }
+								  //find the home's region
+									const RegionInfo * homesRegion = NULL;
+									for(int i = 0; i < worldinfo.region_size(); i++)
+									  if(worldinfo.region(i).id() == teamsHome->region_id())
+									  {
+									    homesRegion = &(worldinfo.region(i));
+									    break;
+								    }
+									
+									//now, send the home info for the robots
+									for(int i = 0; i < worldinfo.robot_size(); i++)
+									{
+									  if(worldinfo.robot(i).team() == id)
+									  {
+							  			RobotHomeInfo *rhi = claimteam.add_homes();
+			                rhi->set_id(worldinfo.robot(i).id());
+			                rhi->set_relx(((homesRegion->draw_x() * REGIONSIDELEN) + teamsHome->home_x()) - worldinfo.robot(i).x());
+			                rhi->set_rely(((homesRegion->draw_y() * REGIONSIDELEN) + teamsHome->home_y()) - worldinfo.robot(i).y());
+									  }
+									}
 								}
 								c->queue.push(MSG_CLAIMTEAM, claimteam);
 								c->set_writing(true);
