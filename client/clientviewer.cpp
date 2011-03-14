@@ -44,12 +44,11 @@ void quitButtonDestroy(GtkWidget *window, gpointer data) {
 void mainDestroy(GtkWidget *window, gpointer data) {
 	gtk_widget_hide_all(window);
 	*((int*)data)=-1;
-	cout<<"called mainDestroy"<<endl;
 }
 
 gboolean mainDeleteEvent(GtkWidget *window, GdkEvent *event, gpointer data) {
 	mainDestroy(window, data);
-	cout<<"called mainDeleteEvent"<<endl;
+
 	return FALSE;
 }
 
@@ -341,8 +340,8 @@ void ClientViewer::initClientViewer(int numberOfRobots, int myTeam, int _drawFac
 
 	g_signal_connect(gtk_builder_get_object(builder, "Exit"), "clicked", G_CALLBACK(quitButtonDestroy), (gpointer)new passToQuit(&viewedRobot, mainWindow));
 
-	g_signal_connect(mainWindow, "destroy", G_CALLBACK(gtk_widget_hide_on_delete), (gpointer) &viewedRobot);
-	g_signal_connect(mainWindow, "delete-event", G_CALLBACK(gtk_widget_hide_on_delete), (gpointer) &viewedRobot);
+	g_signal_connect(mainWindow, "destroy", G_CALLBACK(mainDestroy), (gpointer) &viewedRobot);
+	g_signal_connect(mainWindow, "delete-event", G_CALLBACK(mainDeleteEvent), (gpointer) &viewedRobot);
 
 	g_signal_connect(infoWindow, "destroy", G_CALLBACK(infoDestroy), (gpointer) info);
 	g_signal_connect(infoWindow, "delete-event", G_CALLBACK(infoDeleteEvent), (gpointer) info);
