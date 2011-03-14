@@ -135,7 +135,7 @@ gboolean drawingAreaExpose(GtkWidget *widgetDrawingArea, GdkEventExpose *event, 
 		int imageHeight = (viewDistance + robotDiameter) * (*drawFactor) * 2;
 
 		//origin is the middle point where our viewed robot is located
-		int origin[] = { viewDistance * (*drawFactor), viewDistance * (*drawFactor) };
+		int origin[] = { imageWidth/2, imageHeight/2 };
 
 		cairo_t *cr = gdk_cairo_create(GTK_DRAWING_AREA(widgetDrawingArea)->widget.window);
 		cairo_set_line_width(cr, 3);
@@ -143,7 +143,7 @@ gboolean drawingAreaExpose(GtkWidget *widgetDrawingArea, GdkEventExpose *event, 
 		ColorObject color = colorFromTeam(myTeam);
 
 		cairo_set_source_rgb(cr, 1, 1, 1);
-		cairo_arc(cr, origin[0], origin[1], robotDiameter * *drawFactor / 2, 0, 2 * M_PI);
+		cairo_arc(cr, origin[0], origin[1], robotDiameter * *drawFactor / 4, 0, 2 * M_PI);
 		cairo_stroke_preserve(cr);
 		cairo_set_source_rgb(cr, color.r, color.g, color.b);
 		cairo_fill(cr);
@@ -152,7 +152,7 @@ gboolean drawingAreaExpose(GtkWidget *widgetDrawingArea, GdkEventExpose *event, 
 		//draw the line showing the angle that the robot is moving at
 		/*
 		 cairo_move_to(cr, origin[0], origin[1]);
-		 cairo_line_to(cr, origin[0], origin[1]+robotDiameter * *drawFactor / 2);
+		 cairo_line_to(cr, origin[0], origin[1]+robotDiameter * *drawFactor / 4);
 		 cairo_stroke(cr);*/
 
 		for (unsigned int i = 0; i < ownRobotDraw->seenRobots.size(); i++) {
@@ -160,7 +160,7 @@ gboolean drawingAreaExpose(GtkWidget *widgetDrawingArea, GdkEventExpose *event, 
 				cairo_set_source_rgb(cr, 1, 1, 1);
 				cairo_arc(cr, origin[0] + (ownRobotDraw->seenRobots.at(i)->relx * *drawFactor),
 						(origin[1] + ownRobotDraw->seenRobots.at(i)->rely * *drawFactor),
-						robotDiameter * *drawFactor / 2, 0, 2 * M_PI);
+						robotDiameter * *drawFactor / 4, 0, 2 * M_PI);
 				cairo_stroke_preserve(cr);
 
 				cairo_set_source_rgb(cr, color.r, color.g, color.b);
@@ -171,7 +171,7 @@ gboolean drawingAreaExpose(GtkWidget *widgetDrawingArea, GdkEventExpose *event, 
 		cairo_set_source_rgb(cr, 0, 0, 0);
 		for (unsigned int i = 0; i < ownRobotDraw->seenPucks.size(); i++) {
 				cairo_arc(cr, origin[0] + ownRobotDraw->seenPucks.at(i)->relx * *drawFactor,
-						origin[1] + ownRobotDraw->seenPucks.at(i)->rely * *drawFactor, puckDiameter * *drawFactor / 2, 0, 2 * M_PI);
+						origin[1] + ownRobotDraw->seenPucks.at(i)->rely * *drawFactor, puckDiameter * *drawFactor / 4, 0, 2 * M_PI);
 				cairo_fill(cr);
 		}
 
