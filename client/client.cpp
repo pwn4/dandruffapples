@@ -442,13 +442,7 @@ gboolean run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 		timestep.ParseFromArray(buffer, len);
 		currentTimestep = timestep.timestep();
 
-		if (simulationStarted) {
-		  //give the robots initial velocity in the first timestep
-		  if(currentTimestep == 2)
-		  {
-				initializeRobots(controller);
-				break;
-		  }
+		if (simulationStarted && timestep.timestep() % 2 == 0) {
 
 			// Update all current positions.
 			for (int i = 0; i < robotsPerTeam; i++) {
