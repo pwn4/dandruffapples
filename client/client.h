@@ -134,7 +134,7 @@ private:
 	OwnRobot ownRobotDraw;
 
 public:
-	void initClientViewer(int, int, int, int, int, int);
+	void initClientViewer(int, int, int);
 	void updateViewer(OwnRobot* ownRobot);
 	int getViewedRobot() {
 		return viewedRobot;
@@ -160,33 +160,28 @@ struct passToDrawingAreaExpose {
 	int myTeam;
 	int numberOfRobots;
 	int *drawFactor;
-	int robotDiameter;
-	int puckDiameter;
-	int viewDistance;
 	bool *draw;
 	OwnRobot* ownRobotDraw;
 	GtkToggleToolButton *info;
 	GtkBuilder *builder;
 
-	passToDrawingAreaExpose(int _myTeam, int _numberOfRobots, int *_drawFactor, int _robotDiameter, int _puckDiameter, int _viewDistance, bool* _draw,
+	passToDrawingAreaExpose(int _myTeam, int _numberOfRobots, int *_drawFactor,  bool* _draw,
 			OwnRobot* _ownRobotDraw, GtkToggleToolButton *_info,	GtkBuilder *_builder) :
-		myTeam(_myTeam), numberOfRobots(_numberOfRobots), drawFactor(_drawFactor), robotDiameter(_robotDiameter), puckDiameter(_puckDiameter), viewDistance(_viewDistance),
+		myTeam(_myTeam), numberOfRobots(_numberOfRobots), drawFactor(_drawFactor),
 				draw(_draw), ownRobotDraw(_ownRobotDraw), info(_info), builder(_builder) {
 	}
 	;
 };
 
 struct passToZoom {
-	int viewDistance;
-	int robotDiameter;
 	int *drawFactor;
 	GtkWidget *mainWindow;
 	GtkDrawingArea *drawingArea;
 	GtkToolButton *zoomIn;
 	GtkToolButton *zoomOut;
 
-	passToZoom( int _viewDistance, int _robotDiameter, int *_drawFactor, GtkWidget *_mainWindow, GtkDrawingArea *_drawingArea, GtkToolButton *_zoomIn, GtkToolButton *_zoomOut) :
-		viewDistance(_viewDistance), robotDiameter(_robotDiameter), drawFactor(_drawFactor),  mainWindow(_mainWindow), drawingArea(_drawingArea), zoomIn(_zoomIn), zoomOut(_zoomOut)  {
+	passToZoom( int *_drawFactor, GtkWidget *_mainWindow, GtkDrawingArea *_drawingArea, GtkToolButton *_zoomIn, GtkToolButton *_zoomOut) :
+		 drawFactor(_drawFactor),  mainWindow(_mainWindow), drawingArea(_drawingArea), zoomIn(_zoomIn), zoomOut(_zoomOut)  {
 	}
 	;
 };

@@ -18,6 +18,11 @@ string getNewName(string base) {
 	return name;
 }
 
+//distance between two points
+float distanceBetween(float x1, float x2, float y1, float y2) {
+	return sqrt((x1 - x2)*(x1 - x2) + (y1 - y2)*(y1 - y2));
+}
+
 CmdLine::CmdLine(int argc, char* argv[]) {
 	//loop through the arguments and parse them into a map
 	for (int i = 1; i < argc; i++) {

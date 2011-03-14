@@ -4,6 +4,7 @@
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <math.h>
 #include <sys/stat.h>
 #include <map>
 
@@ -18,6 +19,7 @@ inline string toString (const T& t){
 	return ss.str();;
 }
 string getNewName(string);
+float distanceBetween(float x1, float x2, float y1, float y2);
 
 class CmdLine {
 public:

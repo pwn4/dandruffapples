@@ -391,7 +391,7 @@ gboolean run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 
 		//create the client viewer GUI
 		if (runClientViewer)
-			viewer->initClientViewer(robotsPerTeam, myTeam, ROBOTDIAMETER, PUCKDIAMETER, VIEWDISTANCE, DRAWFACTOR );
+			viewer->initClientViewer(robotsPerTeam, myTeam, DRAWFACTOR );
 
 		// Claim our team
 		ClaimTeam claimteam;
@@ -408,7 +408,7 @@ gboolean run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 			if (claimteam.granted()) {
 				myTeam = claimteam.id();
 				cout << "ClaimTeam: Success! We control team #" << myTeam << endl;
-				
+
 				ownRobots = new OwnRobot*[robotsPerTeam];
 				for (int i = 0; i < robotsPerTeam; i++) {
 					// We don't have any initial robot data, yet.
@@ -418,21 +418,21 @@ gboolean run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 				//enemyRobots = new vector<EnemyRobot*>[numTeams];
 				// Allow AI thread to commence.
 				simulationStarted = true;
-				
+
 				//get that HOME info!
 				for(int i = 0; i < claimteam.homes_size(); i++)
 				{
 				  int index = robotIdToIndex(claimteam.homes(i).id());
-				  
+
 				  ownRobots[index]->homeRelX = claimteam.homes(i).relx();
 				  ownRobots[index]->homeRelY = claimteam.homes(i).rely();
 				}
-				
+
 			} else { // claimteam.granted() == false
 				myTeam = -1;
 				cout << "Client controls no teams!\n";
 			}
-			
+
 		} else {
 			cout << "Got CLAIMTEAM message after simulation started" << endl;
 		}
@@ -451,7 +451,7 @@ gboolean run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 				initializeRobots(controller);
 				break;
 		  }
-		  
+
 		  if(currentTimestep % 2 == 0)
 		  {
 			  // Update all current positions.

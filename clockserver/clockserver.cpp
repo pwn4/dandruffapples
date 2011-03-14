@@ -4,7 +4,6 @@
 #include <cerrno>
 #include <iostream>
 #include <vector>
-#include <math.h>
 #include <algorithm>
 
 #include <unistd.h>
@@ -167,11 +166,6 @@ void checkNewStep() {
 
 }
 
-//distance between two points
-float distanceBetween(int x1, int x2, int y1, int y2) {
-	return sqrt((x1 - x2)*(x1 - x2) + (y1 - y2)*(y1 - y2));
-}
-
 //handle the drawing of home
 //going to draw the homes to have the minimal impact on the performance of the system
 void handleHomes(int teams, int serverCount) {
@@ -194,11 +188,11 @@ void handleHomes(int teams, int serverCount) {
 
 			//make sure that the new home is at least MINDISTANCEFROMHOME units away from all the other homes in the area
 			for (int k = 0; k < j; k++) {
-				if (distanceBetween(home[i][k].x, coord[0], home[i][k].y, coord[1]) <= MINDISTANCEFROMHOME) {
+				if (helper::distanceBetween((float)home[i][k].x, (float)coord[0], (float)home[i][k].y, (float)coord[1]) <= MINDISTANCEFROMHOME) {
 #ifdef DEBUG
 
 					cerr << "Failed because distance is " + helper::toString(
-							distanceBetween(home[i][k].x, coord[0], home[i][k].y, coord[1])) << endl;
+							helper::distanceBetween(home[i][k].x, coord[0], home[i][k].y, coord[1])) << endl;
 					cerr << "Failed with (" + helper::toString(home[i][k].x) + ", " + helper::toString(home[i][k].y) + "), ("+ helper::toString(coord[0])  + ", "+ helper::toString(coord[1])+")"<<endl;
 #endif
 					//get new coordinates
@@ -243,10 +237,10 @@ void handleHomes(int teams, int serverCount) {
 
 		//make sure that the new home is at least MINDISTANCEFROMHOME units away from all the other homes in the area
 		for (unsigned int j = 0; j < home[i].size(); j++) {
-			if (distanceBetween(home[i][j].x, coord[0], home[i][j].y, coord[1]) <= MINDISTANCEFROMHOME) {
+			if (helper::distanceBetween((float)home[i][j].x, (float)coord[0], (float)home[i][j].y, (float)coord[1]) <= MINDISTANCEFROMHOME) {
 #ifdef DEBUG
 				cerr << "Failed because distance is " + helper::toString(
-						distanceBetween(home[i][j].x, coord[0], home[i][j].y, coord[1])) << endl;
+						helper::distanceBetween(home[i][j].x, coord[0], home[i][j].y, coord[1])) << endl;
 				cerr << "Failed with (" + helper::toString(home[i][j].x) + ", " + helper::toString(home[i][j].y) + "), ("+ helper::toString(coord[0])  + ", "+ helper::toString(coord[1])+")"<<endl;
 #endif
 				//get new coordinates
@@ -532,7 +526,7 @@ int main(int argc, char **argv) {
 									cout << "Team " << id << " has been claimed." << endl;
 									claimteam.set_granted(true);
 									teamclaimed[id] = true;
-									
+
 									//find the team's home
 									const HomeInfo * teamsHome = NULL;
 									for(int i = 0; i < worldinfo.home_size(); i++)
@@ -549,7 +543,7 @@ int main(int argc, char **argv) {
 									    homesRegion = &(worldinfo.region(i));
 									    break;
 								    }
-									
+
 									//now, send the home info for the robots
 									for(int i = 0; i < worldinfo.robot_size(); i++)
 									{
