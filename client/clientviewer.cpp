@@ -107,7 +107,7 @@ void updateInfoWindow(OwnRobot* ownRobotDraw, GtkBuilder* builder) {
 	if (infoTimeCache > infoLastSecond) {
 		string tmp;
 
-		tmp = "Traveling with a speed of " + helper::toString(ownRobotDraw->vx) + ", " + helper::toString(
+		tmp = "Traveling with a velocity of " + helper::toString(ownRobotDraw->vx) + ", " + helper::toString(
 				ownRobotDraw->vy) + "( x, y )";
 		gtk_label_set_text(GTK_LABEL(gtk_builder_get_object( builder, "labSpeed" )), tmp.c_str());
 
@@ -169,9 +169,9 @@ gboolean drawingAreaExpose(GtkWidget *widgetDrawingArea, GdkEventExpose *event, 
 
 		cairo_t *cr = gdk_cairo_create(GTK_DRAWING_AREA(widgetDrawingArea)->widget.window);
 		cairo_set_line_width(cr, 2);
-		
+
 		ColorObject color = colorFromTeam(myTeam);
-		
+
 		//draw our home if it is nearby (FIRST so it goes underneath)
 		if (ownRobotDraw->homeRelX - ((HOMEDIAMETER / 2) + (ROBOTDIAMETER / 2)) < VIEWDISTANCE &&
 				ownRobotDraw->homeRelY - ((HOMEDIAMETER / 2) + (ROBOTDIAMETER / 2)) < VIEWDISTANCE) {
@@ -181,7 +181,7 @@ gboolean drawingAreaExpose(GtkWidget *widgetDrawingArea, GdkEventExpose *event, 
 			cairo_stroke_preserve(cr);
 			cairo_set_source_rgb(cr, color.r, color.g, color.b);
 			cairo_fill(cr);
-		}		
+		}
 
 		cairo_set_source_rgb(cr, 0, 0, 0);
 		cairo_arc(cr, origin[0], origin[1], ROBOTDIAMETER * *drawFactor / 8, 0, 2 * M_PI);
