@@ -31,6 +31,7 @@ message HomeInfo {
   required uint32 team = 1;
   required uint32 home_x = 2;
   required uint32 home_y = 3;
+  required uint32 region_id = 4;
 }
 
 message WorldInfo {

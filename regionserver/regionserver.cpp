@@ -129,6 +129,7 @@ void run() {
 	struct timeval timeCache, microTimeCache;
 	gettimeofday(&microTimeCache, NULL);
 	bool generateImage;
+	vector<HomeInfo*> myHomes;
 
 	//this is only here to generate random numbers for the logging
 	srand(time(NULL));
@@ -337,7 +338,7 @@ void run() {
 										// Inform AreaEngine who our neighbours are.
 										regionarea->SetNeighbour((int) worldinfo.region(i).position(j), newconn);
 
-                    worldinfo.mutable_region(i)->set_id(myId);
+										worldinfo.mutable_region(i)->set_id(myId);
 										// Flip Positions to tell other RegionServers that I am
 										// your new neighbour.
 										switch (worldinfo.region(i).position(j)) {
@@ -377,11 +378,23 @@ void run() {
 								}
 							}
 
+							HomeInfo *homeinfo;
+							//handle the homes
+							for(int i = 0; i < worldinfo.home_size(); i++ )
+							{
+								homeinfo=worldinfo.mutable_home(i);
+								if (homeinfo->region_id() == myId )
+								{
+									myHomes.push_back(homeinfo);
+									cout<<"Tracking home at ("+helper::toString(homeinfo->home_x())+", "+helper::toString(homeinfo->home_y())+")"<<endl;
+								}
+							}
+
 							//send the timestepdone packet to tell the clock server we're ready
-	            writer.init(MSG_TIMESTEPDONE, tsdone);
-	            for (bool complete = false; !complete;) {
-		            complete = writer.doWrite();
-	            }
+							writer.init(MSG_TIMESTEPDONE, tsdone);
+							for (bool complete = false; !complete;) {
+								complete = writer.doWrite();
+							}
 
 							break;
 						}
@@ -406,7 +419,7 @@ void run() {
 								  if (i->region() == myId) {
 									  myRobotIds.push_back(i->id());
 									  myRobotTeams.push_back(i->team());
-									  
+
 									  //and add the robot! It's THAT easy!
 									  regionarea->AddRobot(i->id(), i->x(), i->y(), 0, 0, 0, 0, i->team(), true);
 									  numRobots++;

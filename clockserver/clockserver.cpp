@@ -222,6 +222,7 @@ void handleHomes(int teams, int serverCount) {
 
 #endif
 			HomeInfo *homeInfo=worldinfo.add_home();
+			homeInfo->set_region_id(i);
 			homeInfo->set_home_x(coord[0]);
 			homeInfo->set_home_y(coord[1]);
 			homeInfo->set_team(i * homesPerRegion + j);
@@ -270,6 +271,7 @@ void handleHomes(int teams, int serverCount) {
 #endif
 
 		HomeInfo *homeInfo=worldinfo.add_home();
+		homeInfo->set_region_id(i);
 		homeInfo->set_home_x(coord[0]);
 		homeInfo->set_home_y(coord[1]);
 		homeInfo->set_team(i + home.size() * (home[i].size()-1));
