@@ -407,6 +407,16 @@ gboolean run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 				myTeam = claimteam.id();
 				cout << "ClaimTeam: Success! We control team #" << myTeam << endl;
 				
+				ownRobots = new OwnRobot*[robotsPerTeam];
+				for (int i = 0; i < robotsPerTeam; i++) {
+					// We don't have any initial robot data, yet.
+					ownRobots[i] = new OwnRobot();
+				}
+
+				//enemyRobots = new vector<EnemyRobot*>[numTeams];
+				// Allow AI thread to commence.
+				simulationStarted = true;
+				
 				//get that HOME info!
 				for(int i = 0; i < claimteam.homes_size(); i++)
 				{
@@ -420,20 +430,7 @@ gboolean run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 				myTeam = -1;
 				cout << "Client controls no teams!\n";
 			}
-
-			// Assign teams--can only happen once.
-			if (myTeam > -1) {
-				ownRobots = new OwnRobot*[robotsPerTeam];
-				for (int i = 0; i < robotsPerTeam; i++) {
-					// We don't have any initial robot data, yet.
-					ownRobots[i] = new OwnRobot();
-				}
-
-				//enemyRobots = new vector<EnemyRobot*>[numTeams];
-				// Allow AI thread to commence.
-				simulationStarted = true;
-
-			}
+			
 		} else {
 			cout << "Got CLAIMTEAM message after simulation started" << endl;
 		}
