@@ -19,6 +19,7 @@
 #include "../common/worldinfo.pb.h"
 #include "../common/claimteam.pb.h"
 
+#include "../common/globalconstants.h"
 #include "../common/except.h"
 #include "../common/ports.h"
 #include "../common/net.h"
@@ -194,7 +195,9 @@ int main(int argc, char **argv) {
 	// Note that robot ID 0 is invalid.
 	unsigned id = 1, region = 0;
 	teamclaimed = new bool[teams];
-	for (unsigned team = 0; team < teams; ++team) {
+	for (unsigned team = 0; team < teams; ++team)
+	  teamclaimed[team] = false;
+	/*for (unsigned team = 0; team < teams; ++team) {
 		teamclaimed[team] = false;
 		for (unsigned robot = 0; robot < robots_per_team; ++robot) {
 			RobotInfo *i = worldinfo.add_robot();
@@ -204,7 +207,29 @@ int main(int argc, char **argv) {
 			++id;
 			region = (region + 1) % server_count;
 		}
-	}
+	}*/
+	///////////////new robot generating loop
+	int wantRobots = teams * robots_per_team;
+	int numRobots = 0;
+	
+	for (unsigned int j = (2 * ROBOTDIAMETER)+(4 * MINELEMENTSIZE); j < (REGIONSIDELEN+(1 * MINELEMENTSIZE)) - (2 * (ROBOTDIAMETER)+(4 * MINELEMENTSIZE)) && numRobots	< wantRobots; j += 5 * (ROBOTDIAMETER)) {
+	  for (unsigned int i = (2 * ROBOTDIAMETER)+(4 * MINELEMENTSIZE); i < (REGIONSIDELEN+(1 * MINELEMENTSIZE)) - (2 * (ROBOTDIAMETER)+(4 * MINELEMENTSIZE)) && numRobots	< wantRobots; i += 5 * (ROBOTDIAMETER)){
+      
+      //we repeat this across all regions
+      for(unsigned int k = 0; k < server_count && numRobots < wantRobots; k++){
+
+        RobotInfo *ri = worldinfo.add_robot();
+			  ri->set_id(id);
+			  ri->set_region(k);
+			  ri->set_team((id-1)/robots_per_team);
+			  ri->set_x(i);
+			  ri->set_y(j);
+			  ++id;
+		    numRobots++;
+		  }
+	  }
+  }	
+	///////////////
 
 	// Disregard SIGPIPE so we can handle things normally
 	signal(SIGPIPE, SIG_IGN);
