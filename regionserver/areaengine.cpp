@@ -709,7 +709,7 @@ void AreaEngine::Step(bool generateImage){
                   seesPuckStack->set_viewlostid(false);
                   seesPuckStack->set_seenbyid(curRobot->id);
                   seesPuckStack->set_relx(puckStack->x - curRobot->x);
-                  seesPuckStack->set_rely(puckStack->x - curRobot->y);
+                  seesPuckStack->set_rely(puckStack->y - curRobot->y);
                 }
               }
 
