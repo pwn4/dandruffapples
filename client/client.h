@@ -52,8 +52,8 @@ enum EventType {
 
 class SeenPuck {
 public:
-	float relx;
-	float rely;
+	double relx;
+	double rely;
 	int stackSize;
 
 	SeenPuck() :
@@ -63,9 +63,9 @@ public:
 
 class Robot {
 public:
-	float vx;
-	float vy;
-	float angle;
+	double vx;
+	double vy;
+	double angle;
 	bool hasPuck;
 	bool hasCollided;
 
@@ -79,8 +79,8 @@ public:
 	unsigned int id;
 	int lastTimestepSeen;
 	bool viewable;
-	float relx;
-	float rely;
+	double relx;
+	double rely;
 
 	SeenRobot() :
 		Robot(), id(-1), lastTimestepSeen(-1), viewable(true), relx(0.0), rely(0.0) {
@@ -95,8 +95,8 @@ public:
 	int behaviour;
 	vector<SeenRobot*> seenRobots;
 	vector<SeenPuck*> seenPucks;
-	float homeRelX;
-	float homeRelY;
+	double homeRelX;
+	double homeRelY;
 	vector<EventType> eventQueue;
 
 	OwnRobot() :
@@ -109,11 +109,11 @@ class ClientRobotCommand {
 public:
 	bool sendCommand;
 	bool changeVx;
-	float vx;
+	double vx;
 	bool changeVy;
-	float vy;
+	double vy;
 	bool changeAngle;
-	float angle;
+	double angle;
 	bool changePuckPickup;
 	bool puckPickup;
 
