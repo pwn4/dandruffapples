@@ -135,11 +135,11 @@ gboolean drawingAreaExpose(GtkWidget *widgetDrawingArea, GdkEventExpose *event, 
 		int origin[] = { imageWidth/2, imageHeight/2 };
 
 		cairo_t *cr = gdk_cairo_create(GTK_DRAWING_AREA(widgetDrawingArea)->widget.window);
-		cairo_set_line_width(cr, 3);
+		cairo_set_line_width(cr, 2);
 
 		ColorObject color = colorFromTeam(myTeam);
 
-		cairo_set_source_rgb(cr, 1, 1, 1);
+		cairo_set_source_rgb(cr, 0, 0, 0);
 		cairo_arc(cr, origin[0], origin[1], ROBOTDIAMETER * *drawFactor / 4, 0, 2 * M_PI);
 		cairo_stroke_preserve(cr);
 		cairo_set_source_rgb(cr, color.r, color.g, color.b);
@@ -149,7 +149,7 @@ gboolean drawingAreaExpose(GtkWidget *widgetDrawingArea, GdkEventExpose *event, 
 		//draw our home if it is nearby
 		if( ownRobotDraw->homeRelX < VIEWDISTANCE && ownRobotDraw->homeRelY < VIEWDISTANCE )
 		{
-			cairo_set_source_rgb(cr, 1, 1, 1);
+			cairo_set_source_rgb(cr, 0, 0, 0);
 			cairo_arc(cr, origin[0] + ownRobotDraw->homeRelX * *drawFactor,
 					origin[1] + ownRobotDraw->homeRelY * *drawFactor,
 					HOMEDIAMETER * *drawFactor / 4, 0, 2 * M_PI);
@@ -177,7 +177,7 @@ gboolean drawingAreaExpose(GtkWidget *widgetDrawingArea, GdkEventExpose *event, 
 
 		for (unsigned int i = 0; i < ownRobotDraw->seenRobots.size(); i++) {
 				color = colorFromTeam((ownRobotDraw->seenRobots.at(i)->id-1)/numberOfRobots);
-				cairo_set_source_rgb(cr, 1, 1, 1);
+				cairo_set_source_rgb(cr, 0, 0, 0);
 				cairo_arc(cr, origin[0] + ownRobotDraw->seenRobots.at(i)->relx * *drawFactor,
 						origin[1] + ownRobotDraw->seenRobots.at(i)->rely * *drawFactor,
 						ROBOTDIAMETER * *drawFactor / 4, 0, 2 * M_PI);
