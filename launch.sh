@@ -14,6 +14,8 @@ CLOCKCONF="$OUTPATH/antix-clock-conf"
 HOSTFILE="./hosts"
 # Number of regions to launch on a single machine
 REGIONS_PER_HOST=2
+#Number of clients to launch per host
+CLIENTSPERHOST=10
 
 #link the shared object library here in case
 LD_LIBRARY_PATH='$PROJDIR/sharedlibs'
@@ -107,6 +109,7 @@ then
     CONTROLLERS_LEFT=$CONTROLLERS
 fi
 CONTROLHOSTS=""
+CLIENTS_LEFT=$TEAMS
 echo -n "Launching $CONTROLLERS_LEFT controllers and $REGIONS_LEFT regions"
 for HOST in `grep -hv \`hostname\` "$HOSTFILE"`
 do
@@ -154,6 +157,25 @@ do
             CONFIDX=$[CONFIDX + 1]
             REGIONS_LEFT=$[$REGIONS_LEFT - 1]
         done
+        if [ $REGIONS_LEFT -eq 0 ]
+        then
+            sleep 4
+        fi
+    elif [ $CLIENTS_LEFT -gt 0 ] && [ $CONTROLLERS -gt 0 ]
+    then
+        HOSTNUM=`echo $CONTROLHOSTS |wc -w`
+        for i in {1..$CLIENTSPERHOST}
+        do
+          if [ $CLIENTS_LEFT -gt 0 ]
+          then
+            sleep 0.1
+            CLIENTS_LEFT=$[CLIENTS_LEFT - 1]
+            CTRLHOST=`echo $CONTROLHOSTS |cut -d ' ' -f $[$CLIENTS_LEFT % $HOSTNUM + 1]`
+            CTRLHOST=`host $CTRLHOST|cut -d ' ' -f 4`
+            wrap $SSHCOMMAND $HOST "bash -c \"cd '$PROJDIR/client' && LD_LIBRARY_PATH='$PROJDIR/sharedlibs' $DEBUGGER ./client -l $CTRLHOST -t $CLIENTS_LEFT\"" > /dev/null &
+            SSHPROCS="$SSHPROCS $!"
+          fi
+        done
     else
         echo " done!"
         break
@@ -167,23 +189,23 @@ then
     exit 1
 fi
 
-sleep 10
-if [ $CONTROLLERS ]
-then
-    echo -n "Launching $TEAMS clients across $CONTROLLERS machines"
-    HOSTNUM=`echo $CONTROLHOSTS |wc -w`
-    CLIENTS_LEFT=$TEAMS
-    while [ $CLIENTS_LEFT -gt 0 ]
-    do
-        sleep 0.1
-        CLIENTS_LEFT=$[CLIENTS_LEFT - 1]
-        HOST=`echo $CONTROLHOSTS |cut -d ' ' -f $[$CLIENTS_LEFT % $HOSTNUM + 1]`
-        wrap $SSHCOMMAND $HOST "bash -c \"cd '$PROJDIR/client' && LD_LIBRARY_PATH='$PROJDIR/sharedlibs' $DEBUGGER ./client -t $CLIENTS_LEFT\"" > /dev/null &
-        SSHPROCS="$SSHPROCS $!"
-        echo -n .
-    done
-    echo " done!"
-fi
+#sleep 10
+#if [ $CONTROLLERS ]
+#then
+#    echo -n "Launching $TEAMS clients across $CONTROLLERS machines"
+#    HOSTNUM=`echo $CONTROLHOSTS |wc -w`
+#    CLIENTS_LEFT=$TEAMS
+#    while [ $CLIENTS_LEFT -gt 0 ]
+#    do
+#        sleep 0.1
+#        CLIENTS_LEFT=$[CLIENTS_LEFT - 1]
+#        HOST=`echo $CONTROLHOSTS |cut -d ' ' -f $[$CLIENTS_LEFT % $HOSTNUM + 1]`
+#        wrap $SSHCOMMAND $HOST "bash -c \"cd '$PROJDIR/client' && LD_LIBRARY_PATH='$PROJDIR/sharedlibs' $DEBUGGER ./client -t $CLIENTS_LEFT\"" > /dev/null &
+#        SSHPROCS="$SSHPROCS $!"
+#        echo -n .
+#    done
+#    echo " done!"
+#fi
 
 echo "All done!  Here's the clock server."
 fg 1
