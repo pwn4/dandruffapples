@@ -315,8 +315,10 @@ void initializeRobots(net::connection &controller) {
 	// Initialize robots to some random velocity.
 	for (int i = 0; i < robotsPerTeam; i++) {
 		clientRobot.set_id(indexToRobotId(i));
-		clientRobot.set_velocityx(((rand() % 11) / 10.0) - 0.5);
-		clientRobot.set_velocityy(((rand() % 11) / 10.0) - 0.5);
+		//clientRobot.set_velocityx(((rand() % 11) / 10.0) - 0.5);
+		//clientRobot.set_velocityy(((rand() % 11) / 10.0) - 0.5);
+		clientRobot.set_velocityx(0.0);
+		clientRobot.set_velocityy(0.05);
 		clientRobot.set_angle(0.0);
 		controller.queue.push(MSG_CLIENTROBOT, clientRobot);
 		ownRobots[i]->whenLastSent = currentTimestep;
@@ -528,8 +530,8 @@ gboolean run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 				  //robot AIs SHOULD execute every timestep
 				  if(!ownRobots[i]->pendingCommand){
 					  if(currentTimestep - ownRobots[i]->whenLastSent > 3){
-					    executeAi(ownRobots[i], i, controller);
-					    //initializeRobots(controller);
+					    //executeAi(ownRobots[i], i, controller);
+					    initializeRobots(controller);
 					  }
 				  }
 
