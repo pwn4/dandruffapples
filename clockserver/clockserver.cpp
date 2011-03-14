@@ -175,6 +175,7 @@ float distanceBetween(int x1, int x2, int y1, int y2) {
 //handle the drawing of home
 //going to draw the homes to have the minimal impact on the performance of the system
 void handleHomes(int teams, int serverCount) {
+	srand ( time(NULL) );
 	//int regionid, regionHomeNum, draw co-ordinates
 	map<int, map<int, xyCoord> > home;
 
@@ -463,6 +464,7 @@ int main(int argc, char **argv) {
 								for (vector<RegionConnection*>::const_iterator i = worldviewers.begin(); i
 										!= worldviewers.end(); ++i) {
 									(*i)->queue.push(MSG_REGIONINFO, *region);
+									(*i)->queue.push(MSG_WORLDINFO, worldinfo);
 									(*i)->set_writing(true);
 								}
 

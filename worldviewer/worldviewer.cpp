@@ -62,8 +62,13 @@ uint32 worldServerRows = 0, worldServerColumns = 0;
 map<int, map<int, GtkDrawingArea*> > worldGrid;
 RegionRender renderDraw[3];
 bool draw[3];
+
 //this is the region that the navigation will move the grid around
 regionConnection *pivotRegion = NULL, *pivotRegionBuddy = NULL;
+
+//used to draw the homes
+WorldInfo worldInfo;
+map<int, unsigned int> fdToRegionId;
 
 //used only for calculating images per second for each server
 int timeCache, lastSecond1 = 0, lastSecond2 = 0, messages1 = 0, messages2 = 0;
@@ -98,12 +103,11 @@ void loadConfigFile(const char *configFileName, char* clockip) {
 
 	strcpy(clockip, configuration["CLOCKIP"].c_str());
 
-
 	if (configuration.find("ROBOTSIZE") != configuration.end())
-	  robotSize = atoi(configuration["ROBOTSIZE"].c_str());
+		robotSize = atoi(configuration["ROBOTSIZE"].c_str());
 
 	if (configuration.find("ROBOTALPHA") != configuration.end())
-	  robotAlpha = atof(configuration["ROBOTALPHA"].c_str());
+		robotAlpha = atof(configuration["ROBOTALPHA"].c_str());
 }
 
 //display the worldView that we received from a region server in its worldDrawingArea space
@@ -115,8 +119,8 @@ void displayWorldView(int regionNum, RegionRender render) {
 	else if (horizontalView && regions.at(regionNum) == pivotRegionBuddy)
 		position = TOP_RIGHT;
 
-	renderDraw[position]=render;
-	draw[position]=true;
+	renderDraw[position] = render;
+	draw[position] = true;
 	gtk_widget_queue_draw(GTK_WIDGET(worldDrawingArea.at(position)));
 
 }
@@ -149,8 +153,8 @@ void updateWorldGrid(string color) {
 
 //update the info window
 void updateInfoWindow() {
-	const string frameNumName = "frame_frameNum", frameserverAddName = "frame_serverAdd", frameserverLocName =
-			"frame_serverLoc";
+	const string frameNumName = "frame_frameNum", frameserverAddName = "frame_serverAdd",
+			frameserverLocName = "frame_serverLoc";
 	string tmp, position;
 	regionConnection *pivotPtr = pivotRegion;
 
@@ -158,12 +162,12 @@ void updateInfoWindow() {
 		if (frame == 2)
 			pivotPtr = pivotRegionBuddy;
 
-		GtkLabel *frameNum =
-				GTK_LABEL(gtk_builder_get_object( builder, (frameNumName+helper::toString(frame)).c_str() ));
-		GtkLabel *frameserverAdd =
-				GTK_LABEL(gtk_builder_get_object( builder, (frameserverAddName+helper::toString(frame)).c_str() ));
-		GtkLabel *frameserverLoc =
-				GTK_LABEL(gtk_builder_get_object( builder, (frameserverLocName+helper::toString(frame)).c_str() ));
+		GtkLabel
+				*frameNum = GTK_LABEL(gtk_builder_get_object( builder, (frameNumName+helper::toString(frame)).c_str() ));
+		GtkLabel
+				*frameserverAdd = GTK_LABEL(gtk_builder_get_object( builder, (frameserverAddName+helper::toString(frame)).c_str() ));
+		GtkLabel
+				*frameserverLoc = GTK_LABEL(gtk_builder_get_object( builder, (frameserverLocName+helper::toString(frame)).c_str() ));
 
 		if (frame == 1 || pivotRegionBuddy == pivotRegion)
 			position = "top-left";
@@ -187,8 +191,7 @@ void updateInfoWindow() {
 
 //enable the info/navigation buttons found in the main window's toolbar and do some work to initialize them
 void initializeToolbarButtons() {
-	if(!gtk_toggle_tool_button_get_active(GTK_TOGGLE_TOOL_BUTTON(gtk_builder_get_object( builder, "Fullscreen" ))) )
-	{
+	if (!gtk_toggle_tool_button_get_active(GTK_TOGGLE_TOOL_BUTTON(gtk_builder_get_object( builder, "Fullscreen" )))) {
 		gtk_widget_set_sensitive(GTK_WIDGET(gtk_builder_get_object( builder, "Navigation" )), true);
 		gtk_widget_set_sensitive(GTK_WIDGET(gtk_builder_get_object( builder, "Info" )), true);
 	}
@@ -259,8 +262,8 @@ gboolean regionMessage(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 	int regionNum = 0;
 
 	//get the region number that we are receiving a world view from
-	for (vector<regionConnection*>::const_iterator it = regions.begin(); it != regions.end() && (*it)->fd
-			!= g_io_channel_unix_get_fd(ioch); it++, regionNum++) {
+	for (vector<regionConnection*>::const_iterator it = regions.begin();
+			it != regions.end() && (*it)->fd != g_io_channel_unix_get_fd(ioch); it++, regionNum++) {
 	}
 
 	for (bool complete = false; !complete;)
@@ -281,29 +284,29 @@ gboolean regionMessage(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 		initializeToolbarButtons();
 	}
 
-		switch (type) {
-		case MSG_REGIONVIEW: {
-			RegionRender render;
+	switch (type) {
+	case MSG_REGIONVIEW: {
+		RegionRender render;
 
-      render.ParseFromArray(buffer, len);
+		render.ParseFromArray(buffer, len);
 
 #ifdef DEBUG
-			debug << "Received render update from server fd=" << regions.at(regionNum)->fd << " and the timestep is # "
-					<< render.timestep() << endl;
+		debug << "Received render update from server fd=" << regions.at(regionNum)->fd << " and the timestep is # "
+				<< render.timestep() << endl;
 #endif
-			benchmarkMessages(regions.at(regionNum));
+		benchmarkMessages(regions.at(regionNum));
 
-			displayWorldView(regionNum, render);
+		displayWorldView(regionNum, render);
 
-			break;
-		}
+		break;
+	}
 
-		default: {
+	default: {
 #ifdef DEBUG
-			debug << "Unexpected readable socket from region! Type:" << type << endl;
+		debug << "Unexpected readable socket from region! Type:" << type << endl;
 #endif
-		}
-		}
+	}
+	}
 
 	return TRUE;
 }
@@ -331,6 +334,7 @@ gboolean clockMessage(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 		addr.s_addr = regioninfo.address();
 		int regionFd = net::do_connect(addr, regioninfo.renderport());
 		net::set_blocking(regionFd, false);
+		fdToRegionId[regionFd]=regioninfo.id();
 
 		//when the world viewer starts it only shows a horizontal rectangle of world views from region servers (0,0) and (0,1)
 		if (regioninfo.draw_x() == 0 && regioninfo.draw_y() == 0) {
@@ -370,6 +374,11 @@ gboolean clockMessage(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 		debug << "Connected to region server fd=" << regionFd << " located at ( " << regioninfo.draw_x() << ", "
 				<< regioninfo.draw_y() << " )" << endl;
 #endif
+		break;
+	}
+	case MSG_WORLDINFO: {
+		worldInfo.ParseFromArray(buffer, len);
+
 		break;
 	}
 	default: {
@@ -658,10 +667,9 @@ void onAboutClicked(GtkWidget *widget, gpointer window) {
 	gtk_about_dialog_set_comments(GTK_ABOUT_DIALOG(dialog),
 			"World Viewer is a program to create a real-time visual representation of the 'Antix' simulation.");
 	const gchar
-			*authors[2] =
-					{
-							"Peter Neufeld, Frank Lau, Egor Philippov,\nYouyou Yang, Jianfeng Hu, Roy Chiang,\nWilson Huynh, Gordon Leung, Kevin Fahy,\nBenjamin Saunders",
-							NULL };
+			*authors[2] = {
+					"Peter Neufeld, Frank Lau, Egor Philippov,\nYouyou Yang, Jianfeng Hu, Roy Chiang,\nWilson Huynh, Gordon Leung, Kevin Fahy,\nBenjamin Saunders",
+					NULL };
 
 	gtk_about_dialog_set_authors(GTK_ABOUT_DIALOG(dialog), authors);
 	gtk_dialog_run(GTK_DIALOG (dialog));
@@ -674,13 +682,11 @@ void onWindowToggled(GtkWidget *widget, gpointer window) {
 	gdk_color_parse("black", &bgColor);
 	gtk_widget_modify_bg(GTK_WIDGET(window), GTK_STATE_NORMAL, &bgColor);
 
-	if (gtk_toggle_tool_button_get_active(GTK_TOGGLE_TOOL_BUTTON(widget)))
-	{
+	if (gtk_toggle_tool_button_get_active(GTK_TOGGLE_TOOL_BUTTON(widget))) {
 		//let's update the info window in case we open it
 		updateInfoWindow();
 		gtk_widget_show_all(GTK_WIDGET(window));
-	}
-	else
+	} else
 		gtk_widget_hide_all(GTK_WIDGET(window));
 
 }
@@ -690,38 +696,38 @@ void onFullscreenToggled(GtkWidget *widget, gpointer window) {
 
 	//we will not be able to see any other windows when in fullscreen mode,
 	//so might as well disable the buttons
-	if (gtk_toggle_tool_button_get_active(GTK_TOGGLE_TOOL_BUTTON(widget)))
-	{
+	if (gtk_toggle_tool_button_get_active(GTK_TOGGLE_TOOL_BUTTON(widget))) {
 		gtk_widget_set_sensitive(GTK_WIDGET(gtk_builder_get_object( builder, "Navigation" )), false);
 		gtk_widget_set_sensitive(GTK_WIDGET(gtk_builder_get_object( builder, "Info" )), false);
-		gtk_container_set_border_width (GTK_CONTAINER (window), 0);
+		gtk_container_set_border_width(GTK_CONTAINER (window), 0);
 		gtk_window_fullscreen(GTK_WINDOW(window));
-	}
-	else
-	{
+	} else {
 		gtk_widget_set_sensitive(GTK_WIDGET(gtk_builder_get_object( builder, "Navigation" )), true);
 		gtk_widget_set_sensitive(GTK_WIDGET(gtk_builder_get_object( builder, "Info" )), true);
-		gtk_container_set_border_width (GTK_CONTAINER (window), 10);
+		gtk_container_set_border_width(GTK_CONTAINER (window), 10);
 		gtk_window_unfullscreen(GTK_WINDOW(window));
 	}
 }
 
 //called on the drawingArea's expose event
-gboolean drawingAreaExpose(GtkWidget *widget, GdkEventExpose *event, gpointer data)
-{
-	if( draw[(int)data] )
-	{
-		cairo_t *cr = gdk_cairo_create(worldDrawingArea.at((int)data)->widget.window);
+gboolean drawingAreaExpose(GtkWidget *widget, GdkEventExpose *event, gpointer data) {
+	if (draw[(int) data]) {
+		cairo_t *cr = gdk_cairo_create(worldDrawingArea.at((int) data)->widget.window);
+		unsigned int regionId;
 
-		UnpackImage(cr, &renderDraw[(int)data], robotSize, robotAlpha);
+		if( (int)data == TOP_LEFT )
+			regionId=fdToRegionId.at(pivotRegion->fd);
+		else
+			regionId=fdToRegionId.at(pivotRegionBuddy->fd);
+
+		UnpackImage(cr, &renderDraw[(int) data], robotSize, robotAlpha, &worldInfo, regionId);
 
 		cairo_destroy(cr);
-		draw[(int)data]=false;
+		draw[(int) data] = false;
 	}
 
 	return FALSE;
 }
-
 
 //initializations and simple modifications for the things that will be drawn
 void initWorldViewer() {
@@ -742,9 +748,9 @@ void initWorldViewer() {
 	GtkWidget *rotateButton = GTK_WIDGET(gtk_builder_get_object( builder, "rotate" ));
 	GdkColor color;
 
-	draw[0]=false;
-	draw[1]=false;
-	draw[2]=false;
+	draw[0] = false;
+	draw[1] = false;
+	draw[2] = false;
 	gtk_window_set_keep_above(GTK_WINDOW(infoWindow), true);
 	gtk_window_set_keep_above(GTK_WINDOW(navigationWindow), true);
 

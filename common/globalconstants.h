@@ -22,8 +22,8 @@
 #define VIEWANGLE 360
 #define MAXSPEED 4
 #define MAXROTATE 2
-#define HOMEDIAMETER 20
-#define MINDISTANCEFROMHOME 100
+#define HOMEDIAMETER 40
+#define MINDISTANCEFROMHOME 120
 
 //client viewer constants
 #define DRAWFACTOR 10

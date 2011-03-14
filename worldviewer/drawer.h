@@ -4,8 +4,10 @@
 #include <netinet/in.h>
 #include <cairo.h>
 #include <stdio.h>
+#include <cmath>
 #include "../common/globalconstants.h"
 #include "../common/regionrender.pb.h"
+#include "../common/worldinfo.pb.h"
 
 struct TwoInt{
   int one, two;
@@ -21,7 +23,7 @@ struct ColorObject{
 };
 
 ColorObject colorFromTeam(int teamId);
-void UnpackImage(cairo_t *cr, RegionRender* render, int robotSize, double robotAlpha);
+void UnpackImage(cairo_t *cr, RegionRender* render, int robotSize, double robotAlpha, WorldInfo *worldinfo, unsigned int regionId);
 unsigned int BytePack(int a, int b);
 TwoInt ByteUnpack(unsigned int data);
 
