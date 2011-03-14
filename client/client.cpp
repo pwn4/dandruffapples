@@ -12,7 +12,7 @@ int myTeam;
 int robotsPerTeam;
 
 // World variables
-float sightDistance = 100.0; // TODO: get this from worldinfo packet?
+double sightDistance = 100.0; // TODO: get this from worldinfo packet?
 
 // Stat variables
 time_t lastSecond = time(NULL);
@@ -72,16 +72,16 @@ bool weControlRobot(int robotId) {
 	return (0 <= index && index < robotsPerTeam);
 }
 
-float relDistance(float x1, float y1) {
+double relDistance(double x1, double y1) {
 	return (sqrt(x1 * x1 + y1 * y1));
 }
 
 // Check if the two coordinates are the same, compensating for
-// floating-point errors.
-bool sameCoordinates(float x1, float y1, float x2, float y2) {
-	// From testing, it looks like floating point errors either add or subtract
+// doubleing-point errors.
+bool sameCoordinates(double x1, double y1, double x2, double y2) {
+	// From testing, it looks like doubleing point errors either add or subtract
 	// 0.0001.
-	float maxError = 0.1;
+	double maxError = 0.1;
 	if (abs(x1 - x2) > maxError) {
 		return false;
 	}
@@ -110,8 +110,8 @@ SeenRobot* findClosestRobot(OwnRobot* ownRobot) {
 		return NULL;
 
 	vector<SeenRobot*>::iterator closest;
-	float minDistance = 9000.01; // Over nine thousand!
-	float tempDistance;
+	double minDistance = 9000.01; // Over nine thousand!
+	double tempDistance;
 	for (vector<SeenRobot*>::iterator it = ownRobot->seenRobots.begin(); it != ownRobot->seenRobots.end(); it++) {
 		tempDistance = relDistance((*it)->relx, (*it)->rely);
 		if (tempDistance < minDistance) {
@@ -127,8 +127,8 @@ SeenPuck* findClosestPuck(OwnRobot* ownRobot) {
 		return NULL;
 
 	vector<SeenPuck*>::iterator closest;
-	float minDistance = 9000.01; // Over nine thousand!
-	float tempDistance;
+	double minDistance = 9000.01; // Over nine thousand!
+	double tempDistance;
 	for (vector<SeenPuck*>::iterator it = ownRobot->seenPucks.begin(); it != ownRobot->seenPucks.end(); it++) {
 		tempDistance = relDistance((*it)->relx, (*it)->rely);
 		if (tempDistance < minDistance) {
@@ -184,16 +184,16 @@ ClientRobotCommand userAiCode(OwnRobot* ownRobot) {
 		// Make robot move in direction of the nearest puck.
 		SeenPuck* closest = findClosestPuck(ownRobot);
 		if (closest != NULL) {
-			float ratio = abs(closest->relx / closest->rely);
-			float modx = 1.0;
-			float mody = 1.0;
+			double ratio = abs(closest->relx / closest->rely);
+			double modx = 1.0;
+			double mody = 1.0;
 			if (ratio > 1.0) {
 				mody = 1.0 / ratio;
 			} else {
 				modx = ratio;
 			}
 
-			float velocity = 0.1;
+			double velocity = 0.1;
 			if (relDistance(closest->relx, closest->rely) < 1.0) {
 				velocity = 0.01;
 			}
@@ -249,7 +249,7 @@ ClientRobotCommand userAiCode(OwnRobot* ownRobot) {
 		// Make robot move in opposite direction. TODO: Add trig!
 		SeenRobot* closest = findClosestRobot(ownRobot);
 		if (closest != NULL) {
-			float velocity = 1.0;
+			double velocity = 1.0;
 			command.sendCommand = true;
 			if (closest->relx <= 0.0) {
 				// Move right!
@@ -470,8 +470,8 @@ gboolean run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
           ownRobots[i]->homeRelY -= ownRobots[i]->vy;
 
 				  // Update rel distance of seenRobots.
-				  float minDistance = 9000.01;
-				  float tempDistance;
+				  double minDistance = 9000.01;
+				  double tempDistance;
 				  int newClosestRobotId = -1;
 				  for (vector<SeenRobot*>::iterator it = ownRobots[i]->seenRobots.begin(); it
 						  != ownRobots[i]->seenRobots.end(); it++) {
