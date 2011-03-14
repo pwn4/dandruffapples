@@ -596,8 +596,8 @@ gboolean run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 								// it can't see it anymore.
 								//cout << "Our #" << index << " lost see "
 								//     << serverrobot.id() << endl;
-								delete *it;
 								ownRobots[index]->seenRobots.erase(it);
+								delete *it;
 								break;
 							}
 						}
