@@ -137,6 +137,12 @@ do
 done < $clockConfig
 
 if [ $clockserver ]; then
+  killall clockserver
+  killall controller
+  killall worldviewer
+  killall regionserver
+  killall client
+
   if [ $memcheck ] || [ $callgrind ]; then 
     cmdArgs="clockserver.%p "
   fi
