@@ -8,5 +8,5 @@ message ClaimTeam {
    required fixed32 id = 1;
    optional fixed32 clientid = 2;
    optional bool granted = 3;
-   repeated RobotHomeInfo = 4;
+   repeated RobotHomeInfo homes = 4;
 }
