@@ -35,15 +35,15 @@ gboolean infoDeleteEvent(GtkWidget *window, GdkEvent *event, gpointer widget) {
 
 //quit button handler
 void quitButtonDestroy(GtkWidget *window, gpointer data) {
-	passToQuit* passed = (passToQuit*)data;
+	passToQuit* passed = (passToQuit*) data;
 	gtk_widget_hide_all(GTK_WIDGET(passed->mainWindow));
-	*(passed->viewedRobot)=-1;
+	*(passed->viewedRobot) = -1;
 }
 
 //window destruction methods for the main window
 void mainDestroy(GtkWidget *window, gpointer data) {
 	gtk_widget_hide_all(window);
-	*((int*)data)=-1;
+	*((int*) data) = -1;
 }
 
 gboolean mainDeleteEvent(GtkWidget *window, GdkEvent *event, gpointer data) {
@@ -111,7 +111,8 @@ void updateInfoWindow(OwnRobot* ownRobotDraw, GtkBuilder* builder) {
 				ownRobotDraw->vy) + "( x, y )";
 		gtk_label_set_text(GTK_LABEL(gtk_builder_get_object( builder, "labSpeed" )), tmp.c_str());
 
-		tmp = "Located at "+ helper::toString(ownRobotDraw->homeRelX) + ", "+ helper::toString(ownRobotDraw->homeRelY) +" (x,y) relative to its home";
+		tmp = "Located at " + helper::toString(ownRobotDraw->homeRelX) + ", "
+				+ helper::toString(ownRobotDraw->homeRelY) + " (x,y) relative to its home";
 		gtk_label_set_text(GTK_LABEL(gtk_builder_get_object( builder, "labHome" )), tmp.c_str());
 
 		tmp = "Traveling with at an angle of " + helper::toString(ownRobotDraw->angle);
@@ -135,6 +136,20 @@ void updateInfoWindow(OwnRobot* ownRobotDraw, GtkBuilder* builder) {
 		infoLastSecond = infoTimeCache;
 	}
 }
+
+const float arrowLength=0.15, arrowDegrees=0.35;
+//calculate arrow vertexes
+//taken from: http://kapo-cpp.blogspot.com/2008/10/drawing-arrows-with-cairo.html
+void calcVertexes(int start_x, int start_y, int end_x, int end_y, int drawFactor, double& x1, double& y1, double& x2,
+		double& y2) {
+	double angle = atan2(end_y - start_y, end_x - start_x) + M_PI;
+
+	x1 = end_x + arrowLength*drawFactor * cos(angle - arrowDegrees);
+	y1 = end_y + arrowLength*drawFactor * sin(angle - arrowDegrees);
+	x2 = end_x + arrowLength*drawFactor * cos(angle + arrowDegrees);
+	y2 = end_y + arrowLength*drawFactor * sin(angle + arrowDegrees);
+}
+
 
 //called on the drawingArea's expose event
 gboolean drawingAreaExpose(GtkWidget *widgetDrawingArea, GdkEventExpose *event, gpointer data) {
@@ -185,10 +200,22 @@ gboolean drawingAreaExpose(GtkWidget *widgetDrawingArea, GdkEventExpose *event, 
 
 		//ownRobot->angle does not provide a valid angle ( it's always zero )!
 		//draw the line showing the angle that the robot is moving at
-		/*
-		 cairo_move_to(cr, origin[0], origin[1]);
-		 cairo_line_to(cr, origin[0], origin[1]+robotDiameter * *drawFactor / 4);
-		 cairo_stroke(cr);*/
+		if( !(ownRobotDraw->vx == 0 && ownRobotDraw->vy == 0 ))
+		{
+			int endX=origin[0] + ownRobotDraw->vx * *drawFactor, endY=origin[0] + ownRobotDraw->vx * *drawFactor;
+
+			double x1, y1, x2, y2;
+			calcVertexes(origin[0], origin[1], endX, endY, *drawFactor, x1, y1, x2, y2);
+
+			cairo_set_source_rgb(cr, 0, 0, 0);
+			cairo_move_to(cr, origin[0], origin[1]);
+			cairo_line_to(cr, endX, endY);
+			cairo_line_to(cr, x1, y1);
+			cairo_move_to(cr, x2, y2);
+			cairo_line_to(cr, endX, endY);
+
+			cairo_stroke(cr);
+		}
 
 		for (unsigned int i = 0; i < ownRobotDraw->seenRobots.size(); i++) {
 			color = colorFromTeam((ownRobotDraw->seenRobots.at(i)->id - 1) / numberOfRobots);
@@ -329,7 +356,6 @@ void ClientViewer::initClientViewer(int numberOfRobots, int myTeam, int _drawFac
 	gtk_widget_modify_fg(GTK_WIDGET(gtk_builder_get_object(builder, "labPuck")), GTK_STATE_NORMAL, &color);
 	gtk_widget_modify_fg(GTK_WIDGET(gtk_builder_get_object(builder, "labHome")), GTK_STATE_NORMAL, &color);
 	gtk_widget_modify_bg(GTK_WIDGET(drawingArea), GTK_STATE_NORMAL, &color);
-
 
 	g_signal_connect(robotId, "value-changed", G_CALLBACK(onRobotIdChanged), (gpointer) & viewedRobot);
 
