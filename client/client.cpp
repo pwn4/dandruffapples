@@ -365,7 +365,7 @@ gboolean run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 		puckPickupMessages = 0;
 	}
 
-	if(!(cond & G_IO_IN && controller.reader.doRead(&type, &len, &buffer))) {
+	if(!((cond & G_IO_IN) && controller.reader.doRead(&type, &len, &buffer))) {
     return true;
   }
 
@@ -729,6 +729,7 @@ gboolean run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 	}
 	default:
 		cerr << "Unknown message!" << endl;
+		break;
 	}
 
   if(!writing && controller.queue.remaining()) {

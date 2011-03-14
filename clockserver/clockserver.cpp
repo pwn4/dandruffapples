@@ -483,6 +483,7 @@ int main(int argc, char **argv) {
 
 							default:
 								cerr << "Unexpected message from region!" << endl;
+								break;
 							}
 						}
 					} catch (EOFError e) {
@@ -578,6 +579,7 @@ int main(int argc, char **argv) {
 
 							default:
 								cerr << "Unexpected message from controller!" << endl;
+								break;
 							}
 
 						}

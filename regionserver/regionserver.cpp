@@ -212,8 +212,8 @@ void run() {
 			MAXSPEED, MAXROTATE);
 	//create robots for benchmarking!
 	int numRobots = 0;
-	int wantRobots = 1000;
-  int serverByPosition[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+	//int wantRobots = 1000;
+	int serverByPosition[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 
 	MessageWriter writer(clockfd);
 	MessageReader reader(clockfd);
@@ -504,6 +504,7 @@ void run() {
 						}
 						default:
 							cerr << "Unexpected readable socket!" << endl;
+							break;
 						}
 					}
 					break;
@@ -666,6 +667,7 @@ void run() {
 							}
 							default:
 								cerr << "Unexpected readable message from WorldViewer\n";
+								break;
 							}
 
 						}
@@ -744,6 +746,7 @@ void run() {
 				}
 				default:
 					cerr << "Internal error: Got unhandled readable connection type " << c->type << endl;
+					break;
 
 				}
 			} else if (events[i].events & EPOLLOUT) {

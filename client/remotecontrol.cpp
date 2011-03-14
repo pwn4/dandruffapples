@@ -523,7 +523,7 @@ void run() {
                   if (robotId == myRobotId) {
                     cout << "Got our own ServerRobot!" << endl;
                     // The serverrobot is from our team.
-                    unsigned index = robotId;
+                   // unsigned index = robotId;
                     ownRobot->pendingCommand = false;
                     if (serverrobot.has_velocityx())
                       ownRobot->vx = serverrobot.velocityx();

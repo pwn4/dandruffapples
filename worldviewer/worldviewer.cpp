@@ -311,6 +311,7 @@ gboolean regionMessage(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 #ifdef DEBUG
 		debug << "Unexpected readable socket from region! Type:" << type << endl;
 #endif
+		break;
 	}
 	}
 
@@ -338,27 +339,27 @@ gboolean clockMessage(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 		//connect to the server
 		struct in_addr addr;
 		addr.s_addr = regioninfo.address();
-		
+
 		int regionFd;
 		//setup an ssh tunnel first
 		if(tunnelPort != -1)
 		{
 		  char * stringAddr = inet_ntoa(addr);
 		  stringstream tunnelcmd;
-		  
+
 		  tunnelcmd << sshkeyloc << "ssh -f -N -p" << tunnelPort << " -L " << lastTunnelPort << ":127.0.0.1:" << regioninfo.renderport() << " " << userAddon << stringAddr;
 
       //setup the tunnel
       if(system(tunnelcmd.str().c_str()) != 0)
         throw runtime_error("Unable to establish ssh connection");
 
-		  addr.s_addr = inet_addr("127.0.0.1"); 
+		  addr.s_addr = inet_addr("127.0.0.1");
 		  regionFd = net::do_connect(addr, lastTunnelPort);
 		  lastTunnelPort++;
 		  //cout << tunnelcmd.str() << endl;
-		}else		
+		}else
 		  regionFd = net::do_connect(addr, regioninfo.renderport());
-		  
+
 		net::set_blocking(regionFd, false);
 		fdToRegionId[regionFd]=regioninfo.id();
 
@@ -411,6 +412,7 @@ gboolean clockMessage(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 #ifdef DEBUG
 		debug << "Unexpected readable message type from clock! Type:" << type << endl;
 #endif
+		break;
 	}
 	}
 
@@ -855,7 +857,7 @@ int main(int argc, char* argv[]) {
 	if(userAddon != "")
 	{
 	  userAddon = userAddon + "@";
-	  
+
 	  //sshkeyloc = "exec ssh-agent $BASH >> /dev/null; ssh-add " + sshkeyloc + "; ";
 	  sshpid = cmdline.getArg("-p", "");
 	  if(sshpid == "")
@@ -865,7 +867,7 @@ int main(int argc, char* argv[]) {
 	    throw runtime_error("Tunnel used, but no auth sock");
 	  sshkeyloc = "SSH_AGENT_PID=" + sshpid + "; SSH_AUTH_SOCK=" + sshsock + "; ";
 	}
-	  
+
 	//for triggering an ssh tunnel
 	tunnelPort = atoi(cmdline.getArg("-t", "-1").c_str());
 #ifdef DEBUG

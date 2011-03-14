@@ -319,6 +319,7 @@ int main(int argc, char** argv)
 
             default:
               cerr << "Unexpected readable socket!" << endl;
+              break;
             }
           }
           break;
@@ -543,6 +544,7 @@ int main(int argc, char** argv)
         }
         default:
           cerr << "Unexpected readable socket!" << endl;
+          break;
         }
       } else if(events[i].events & EPOLLOUT) {
 				//ready to write
