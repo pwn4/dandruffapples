@@ -1,6 +1,6 @@
 #!/bin/bash
 
-DEBUG=1
+#DEBUG=1
 
 # Port remote hosts' sshds are listening on
 SSHPORT=24
