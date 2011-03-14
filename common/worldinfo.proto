@@ -23,6 +23,8 @@ message RobotInfo {
   required fixed32 id = 1;
   required uint32 region = 2;
   required uint32 team = 3;
+  required uint32 x = 4;
+  required uint32 y = 5;
 }
 
 message HomeInfo {
