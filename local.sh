@@ -106,8 +106,8 @@ if [ $debug ]; then
   fi
 fi
 
-if [ $valgrindvalgrind ]; then
-    gdbCmd="valgrind --tool=callgrind --auto=yes "
+if [ $valgrind ]; then
+    gdbCmd="valgrind --tool=callgrind "
 fi
 
 if [ $gnomeTerminal ]; then
