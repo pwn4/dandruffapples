@@ -626,7 +626,7 @@ void AreaEngine::Step(bool generateImage){
           seesPuckStack->set_viewlostid(true);
           seesPuckStack->set_seenbyid(curRobot->id);
           seesPuckStack->set_relx(puckStack->x - curRobot->x);
-          seesPuckStack->set_rely(puckStack->x - curRobot->y);
+          seesPuckStack->set_rely(puckStack->y - curRobot->y);
                     
           pucksNowSeen->erase(pSightCheck++);
           continue;
@@ -645,7 +645,7 @@ void AreaEngine::Step(bool generateImage){
           seesPuckStack->set_viewlostid(true);
           seesPuckStack->set_seenbyid(curRobot->id);
           seesPuckStack->set_relx(puckStack->x - curRobot->x);
-          seesPuckStack->set_rely(puckStack->x - curRobot->y);
+          seesPuckStack->set_rely(puckStack->y - curRobot->y);
         
           pucksNowSeen->erase(pSightCheck++);
           continue;
