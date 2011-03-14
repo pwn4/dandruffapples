@@ -100,8 +100,8 @@ public:
 	vector<EventType> eventQueue;
 
 	OwnRobot() :
-		Robot(), pendingCommand(false), whenLastSent(-1), closestRobotId(-1), behaviour(-1), homeRelX(0.0), homeRelY(
-				0.0) {
+		Robot(), pendingCommand(false), whenLastSent(-1), closestRobotId(-1), behaviour(-1), homeRelX(0.0),
+				homeRelY(0.0) {
 	}
 };
 
@@ -165,10 +165,10 @@ struct passToDrawingAreaExpose {
 	GtkToggleToolButton *info;
 	GtkBuilder *builder;
 
-	passToDrawingAreaExpose(int _myTeam, int _numberOfRobots, int *_drawFactor,  bool* _draw,
-			OwnRobot* _ownRobotDraw, GtkToggleToolButton *_info,	GtkBuilder *_builder) :
-		myTeam(_myTeam), numberOfRobots(_numberOfRobots), drawFactor(_drawFactor),
-				draw(_draw), ownRobotDraw(_ownRobotDraw), info(_info), builder(_builder) {
+	passToDrawingAreaExpose(int _myTeam, int _numberOfRobots, int *_drawFactor, bool* _draw, OwnRobot* _ownRobotDraw,
+			GtkToggleToolButton *_info, GtkBuilder *_builder) :
+		myTeam(_myTeam), numberOfRobots(_numberOfRobots), drawFactor(_drawFactor), draw(_draw),
+				ownRobotDraw(_ownRobotDraw), info(_info), builder(_builder) {
 	}
 	;
 };
@@ -180,8 +180,19 @@ struct passToZoom {
 	GtkToolButton *zoomIn;
 	GtkToolButton *zoomOut;
 
-	passToZoom( int *_drawFactor, GtkWidget *_mainWindow, GtkDrawingArea *_drawingArea, GtkToolButton *_zoomIn, GtkToolButton *_zoomOut) :
-		 drawFactor(_drawFactor),  mainWindow(_mainWindow), drawingArea(_drawingArea), zoomIn(_zoomIn), zoomOut(_zoomOut)  {
+	passToZoom(int *_drawFactor, GtkWidget *_mainWindow, GtkDrawingArea *_drawingArea, GtkToolButton *_zoomIn,
+			GtkToolButton *_zoomOut) :
+		drawFactor(_drawFactor), mainWindow(_mainWindow), drawingArea(_drawingArea), zoomIn(_zoomIn), zoomOut(_zoomOut) {
+	}
+	;
+};
+
+struct passToQuit {
+	int *viewedRobot;
+	GtkWidget *mainWindow;
+
+	passToQuit(int *_viewedRobot, GtkWidget *_mainWindow) :
+		viewedRobot(_viewedRobot), mainWindow(_mainWindow) {
 	}
 	;
 };

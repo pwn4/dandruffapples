@@ -21,7 +21,7 @@ void onAboutClicked(GtkWidget *widget, gpointer window) {
 	gtk_widget_destroy(dialog);
 }
 
-//window destruction methods for the info window
+//window destruction methods for the info
 void infoDestroy(GtkWidget *window, gpointer widget) {
 	gtk_widget_hide_all(GTK_WIDGET(window));
 	gtk_toggle_tool_button_set_active(GTK_TOGGLE_TOOL_BUTTON(widget), FALSE);
@@ -31,6 +31,26 @@ gboolean infoDeleteEvent(GtkWidget *window, GdkEvent *event, gpointer widget) {
 	infoDestroy(window, widget);
 
 	return TRUE;
+}
+
+//quit button handler
+void quitButtonDestroy(GtkWidget *window, gpointer data) {
+	passToQuit* passed = (passToQuit*)data;
+	gtk_widget_hide_all(GTK_WIDGET(passed->mainWindow));
+	*(passed->viewedRobot)=-1;
+}
+
+//window destruction methods for the main window
+void mainDestroy(GtkWidget *window, gpointer data) {
+	gtk_widget_hide_all(window);
+	*((int*)data)=-1;
+	cout<<"called mainDestroy"<<endl;
+}
+
+gboolean mainDeleteEvent(GtkWidget *window, GdkEvent *event, gpointer data) {
+	mainDestroy(window, data);
+	cout<<"called mainDeleteEvent"<<endl;
+	return FALSE;
 }
 
 //"Info" toolbar button handler
@@ -64,12 +84,12 @@ void ClientViewer::updateViewer(OwnRobot* ownRobot) {
 	debug << "Drawing robot: " << viewedRobot/*<<", moving at angle of: "<<ownRobot->angle*/<< endl;
 	for (unsigned int i = 0; i < ownRobot->seenRobots.size(); i++) {
 		debug << "See robot: " << ownRobot->seenRobots.at(i)->id <<" relatively at (" << ownRobot->seenRobots.at(i)->relx << ", "
-				<< ownRobot->seenRobots.at(i)->rely << " )" << endl;
+		<< ownRobot->seenRobots.at(i)->rely << " )" << endl;
 	}
 
 	for (unsigned int i = 0; i < ownRobot->seenPucks.size(); i++) {
 		debug << "See puck relatively at ( " << ownRobot->seenPucks.at(i)->relx << ", "
-				<< ownRobot->seenPucks.at(i)->rely << " )" << endl;
+		<< ownRobot->seenPucks.at(i)->rely << " )" << endl;
 	}
 
 	debug << endl;
@@ -86,18 +106,17 @@ void updateInfoWindow(OwnRobot* ownRobotDraw, GtkBuilder* builder) {
 	infoMessages++;
 
 	if (infoTimeCache > infoLastSecond) {
-		GtkLabel *labSpeed = GTK_LABEL(gtk_builder_get_object( builder, "labSpeed" ));
-		GtkLabel *labAngle = GTK_LABEL(gtk_builder_get_object( builder, "labAngle" ));
-		GtkLabel *labPuck = GTK_LABEL(gtk_builder_get_object( builder, "labPuck" ));
-		GtkLabel *labFrames = GTK_LABEL(gtk_builder_get_object( builder, "labFrames" ));
 		string tmp;
 
 		tmp = "Traveling with a speed of " + helper::toString(ownRobotDraw->vx) + ", " + helper::toString(
 				ownRobotDraw->vy) + "( x, y )";
-		gtk_label_set_text(labSpeed, tmp.c_str());
+		gtk_label_set_text(GTK_LABEL(gtk_builder_get_object( builder, "labSpeed" )), tmp.c_str());
+
+		tmp = "Located at "+ helper::toString(ownRobotDraw->homeRelX) + ", "+ helper::toString(ownRobotDraw->homeRelY) +" (x,y) relative to its home";
+		gtk_label_set_text(GTK_LABEL(gtk_builder_get_object( builder, "labHome" )), tmp.c_str());
 
 		tmp = "Traveling with at an angle of " + helper::toString(ownRobotDraw->angle);
-		gtk_label_set_text(labAngle, tmp.c_str());
+		gtk_label_set_text(GTK_LABEL(gtk_builder_get_object( builder, "labAngle" )), tmp.c_str());
 
 		if (ownRobotDraw->hasPuck)
 			tmp = "Carrying a puck";
@@ -108,10 +127,10 @@ void updateInfoWindow(OwnRobot* ownRobotDraw, GtkBuilder* builder) {
 			tmp += " and colliding";
 		else
 			tmp += " and NOT colliding";
-		gtk_label_set_text(labPuck, tmp.c_str());
+		gtk_label_set_text(GTK_LABEL(gtk_builder_get_object( builder, "labPuck" )), tmp.c_str());
 
 		tmp = helper::toString(infoMessages) + " updates per second";
-		gtk_label_set_text(labFrames, tmp.c_str());
+		gtk_label_set_text(GTK_LABEL(gtk_builder_get_object( builder, "labFrames" )), tmp.c_str());
 
 		infoMessages = 0;
 		infoLastSecond = infoTimeCache;
@@ -128,11 +147,11 @@ gboolean drawingAreaExpose(GtkWidget *widgetDrawingArea, GdkEventExpose *event, 
 		int myTeam = passed->myTeam;
 		int numberOfRobots = passed->numberOfRobots;
 		int *drawFactor = passed->drawFactor;
-		int imageWidth = (VIEWDISTANCE * 2 + ROBOTDIAMETER) * (*drawFactor) /4;
-		int imageHeight = (VIEWDISTANCE * 2 + ROBOTDIAMETER) * (*drawFactor) /4;
+		int imageWidth = (VIEWDISTANCE * 2 + ROBOTDIAMETER) * (*drawFactor) / 4;
+		int imageHeight = (VIEWDISTANCE * 2 + ROBOTDIAMETER) * (*drawFactor) / 4;
 
 		//origin is the middle point where our viewed robot is located
-		int origin[] = { imageWidth/2 , imageHeight/2 };
+		int origin[] = { imageWidth / 2, imageHeight / 2 };
 
 		cairo_t *cr = gdk_cairo_create(GTK_DRAWING_AREA(widgetDrawingArea)->widget.window);
 		cairo_set_line_width(cr, 2);
@@ -145,14 +164,12 @@ gboolean drawingAreaExpose(GtkWidget *widgetDrawingArea, GdkEventExpose *event, 
 		cairo_set_source_rgb(cr, color.r, color.g, color.b);
 		cairo_fill(cr);
 
-
 		//draw our home if it is nearby
-		if( ownRobotDraw->homeRelX - ((HOMEDIAMETER/2) + (ROBOTDIAMETER/2))  < VIEWDISTANCE && ownRobotDraw->homeRelY  - ((HOMEDIAMETER/2) + (ROBOTDIAMETER/2)) < VIEWDISTANCE )
-		{
+		if (ownRobotDraw->homeRelX - ((HOMEDIAMETER / 2) + (ROBOTDIAMETER / 2)) < VIEWDISTANCE &&
+				ownRobotDraw->homeRelY - ((HOMEDIAMETER / 2) + (ROBOTDIAMETER / 2)) < VIEWDISTANCE) {
 			cairo_set_source_rgb(cr, 0, 0, 0);
 			cairo_arc(cr, origin[0] + ownRobotDraw->homeRelX * *drawFactor,
-					origin[1] + ownRobotDraw->homeRelY * *drawFactor,
-					HOMEDIAMETER * *drawFactor / 8, 0, 2 * M_PI);
+					origin[1] + ownRobotDraw->homeRelY * *drawFactor, HOMEDIAMETER * *drawFactor / 8, 0, 2 * M_PI);
 			cairo_stroke_preserve(cr);
 			cairo_set_source_rgb(cr, color.r, color.g, color.b);
 			cairo_fill(cr);
@@ -160,8 +177,7 @@ gboolean drawingAreaExpose(GtkWidget *widgetDrawingArea, GdkEventExpose *event, 
 
 		//if the robot has a puck then actually draw the puck in its center
 		//WARNING: if a robot has a puck, does it still see the puck?
-		if(ownRobotDraw->hasPuck)
-		{
+		if (ownRobotDraw->hasPuck) {
 			cairo_set_source_rgb(cr, 0, 0, 0);
 
 			cairo_arc(cr, origin[0], origin[1], PUCKDIAMETER * *drawFactor / 6, 0, 2 * M_PI);
@@ -176,23 +192,24 @@ gboolean drawingAreaExpose(GtkWidget *widgetDrawingArea, GdkEventExpose *event, 
 		 cairo_stroke(cr);*/
 
 		for (unsigned int i = 0; i < ownRobotDraw->seenRobots.size(); i++) {
-				color = colorFromTeam((ownRobotDraw->seenRobots.at(i)->id-1)/numberOfRobots);
-				cairo_set_source_rgb(cr, 0, 0, 0);
-				cairo_arc(cr, origin[0] + ownRobotDraw->seenRobots.at(i)->relx * *drawFactor,
-						origin[1] + ownRobotDraw->seenRobots.at(i)->rely * *drawFactor,
-						ROBOTDIAMETER * *drawFactor / 8, 0, 2 * M_PI);
-				cairo_stroke_preserve(cr);
+			color = colorFromTeam((ownRobotDraw->seenRobots.at(i)->id - 1) / numberOfRobots);
+			cairo_set_source_rgb(cr, 0, 0, 0);
+			cairo_arc(cr, origin[0] + ownRobotDraw->seenRobots.at(i)->relx * *drawFactor,
+					origin[1] + ownRobotDraw->seenRobots.at(i)->rely * *drawFactor, ROBOTDIAMETER * *drawFactor / 8, 0,
+					2 * M_PI);
+			cairo_stroke_preserve(cr);
 
-				cairo_set_source_rgb(cr, color.r, color.g, color.b);
-				cairo_fill(cr);
+			cairo_set_source_rgb(cr, color.r, color.g, color.b);
+			cairo_fill(cr);
 		}
 
 		//draw seen pucks
 		cairo_set_source_rgb(cr, 0, 0, 0);
 		for (unsigned int i = 0; i < ownRobotDraw->seenPucks.size(); i++) {
-				cairo_arc(cr, origin[0] + ownRobotDraw->seenPucks.at(i)->relx * *drawFactor,
-						origin[1] + ownRobotDraw->seenPucks.at(i)->rely * *drawFactor, PUCKDIAMETER * *drawFactor / 8, 0, 2 * M_PI);
-				cairo_fill(cr);
+			cairo_arc(cr, origin[0] + ownRobotDraw->seenPucks.at(i)->relx * *drawFactor,
+					origin[1] + ownRobotDraw->seenPucks.at(i)->rely * *drawFactor, PUCKDIAMETER * *drawFactor / 8, 0,
+					2 * M_PI);
+			cairo_fill(cr);
 		}
 
 		//draw a rectangle around the drawing area
@@ -210,11 +227,10 @@ gboolean drawingAreaExpose(GtkWidget *widgetDrawingArea, GdkEventExpose *event, 
 }
 
 //resize the drawing area based on the drawFactor
-void resizeByDrawFactor(int drawFactor, GtkDrawingArea *drawingArea,
-		GtkWidget *mainWindow) {
+void resizeByDrawFactor(int drawFactor, GtkDrawingArea *drawingArea, GtkWidget *mainWindow) {
 	//drawing related variables
-	int imageWidth = (VIEWDISTANCE * 2 + ROBOTDIAMETER) * (drawFactor) /4;
-	int imageHeight = (VIEWDISTANCE * 2 + ROBOTDIAMETER) * (drawFactor) /4;
+	int imageWidth = (VIEWDISTANCE * 2 + ROBOTDIAMETER) * (drawFactor) / 4;
+	int imageHeight = (VIEWDISTANCE * 2 + ROBOTDIAMETER) * (drawFactor) / 4;
 
 #ifdef DEBUG
 	cout << "imageWidth is " << imageWidth << " and the imageHeight is " << imageHeight << endl;
@@ -271,7 +287,6 @@ void ClientViewer::initClientViewer(int numberOfRobots, int myTeam, int _drawFac
 
 	//load the builder file
 	gtk_builder_add_from_file(builder, builderPath.c_str(), NULL);
-	gtk_builder_connect_signals(builder, NULL);
 
 	GtkWidget *mainWindow = GTK_WIDGET(gtk_builder_get_object(builder, "window"));
 	GtkToggleToolButton *info = GTK_TOGGLE_TOOL_BUTTON(gtk_builder_get_object(builder, "Info"));
@@ -285,7 +300,8 @@ void ClientViewer::initClientViewer(int numberOfRobots, int myTeam, int _drawFac
 	//drawing related variables
 	drawFactor = new int();
 	*drawFactor = _drawFactor;
-	int imageWidth = (VIEWDISTANCE * 2 + ROBOTDIAMETER) * (*drawFactor) /4, imageHeight = (VIEWDISTANCE * 2 + ROBOTDIAMETER) * (*drawFactor) /4;
+	int imageWidth = (VIEWDISTANCE * 2 + ROBOTDIAMETER) * (*drawFactor) / 4, imageHeight = (VIEWDISTANCE * 2
+			+ ROBOTDIAMETER) * (*drawFactor) / 4;
 
 #ifdef DEBUG
 	debug << "imageWidth is " << imageWidth << " and the imageHeight is " << imageHeight << endl;
@@ -305,16 +321,28 @@ void ClientViewer::initClientViewer(int numberOfRobots, int myTeam, int _drawFac
 	//change the color of the main window's background to black
 	gdk_color_parse("black", &color);
 	gtk_widget_modify_bg(GTK_WIDGET(mainWindow), GTK_STATE_NORMAL, &color);
+
+	//change the color of the info window text
 	gdk_color_parse("white", &color);
-	gtk_widget_modify_bg(GTK_WIDGET(drawingArea), GTK_STATE_NORMAL, &color);
+	gtk_widget_modify_fg(GTK_WIDGET(gtk_builder_get_object(builder, "labSpeed")), GTK_STATE_NORMAL, &color);
+	gtk_widget_modify_fg(GTK_WIDGET(gtk_builder_get_object(builder, "labAngle")), GTK_STATE_NORMAL, &color);
+	gtk_widget_modify_fg(GTK_WIDGET(gtk_builder_get_object(builder, "labFrames")), GTK_STATE_NORMAL, &color);
+	gtk_widget_modify_fg(GTK_WIDGET(gtk_builder_get_object(builder, "labPuck")), GTK_STATE_NORMAL, &color);
+	gtk_widget_modify_fg(GTK_WIDGET(gtk_builder_get_object(builder, "labHome")), GTK_STATE_NORMAL, &color);
+
 
 	g_signal_connect(robotId, "value-changed", G_CALLBACK(onRobotIdChanged), (gpointer) & viewedRobot);
 
 	g_signal_connect(info, "toggled", G_CALLBACK(onWindowToggled), (gpointer) infoWindow);
 	g_signal_connect(about, "clicked", G_CALLBACK(onAboutClicked), (gpointer) mainWindow);
 
-	g_signal_connect(zoomIn, "clicked", G_CALLBACK(onZoomInClicked), (gpointer)(new passToZoom(	drawFactor, mainWindow, drawingArea, zoomIn, zoomOut)));
+	g_signal_connect(zoomIn, "clicked", G_CALLBACK(onZoomInClicked), (gpointer)(new passToZoom( drawFactor, mainWindow, drawingArea, zoomIn, zoomOut)));
 	g_signal_connect(zoomOut, "clicked", G_CALLBACK(onZoomOutClicked), (gpointer)(new passToZoom(drawFactor, mainWindow, drawingArea, zoomIn, zoomOut)));
+
+	g_signal_connect(gtk_builder_get_object(builder, "Exit"), "clicked", G_CALLBACK(quitButtonDestroy), (gpointer)new passToQuit(&viewedRobot, mainWindow));
+
+	g_signal_connect(mainWindow, "destroy", G_CALLBACK(gtk_widget_hide_on_delete), (gpointer) &viewedRobot);
+	g_signal_connect(mainWindow, "delete-event", G_CALLBACK(gtk_widget_hide_on_delete), (gpointer) &viewedRobot);
 
 	g_signal_connect(infoWindow, "destroy", G_CALLBACK(infoDestroy), (gpointer) info);
 	g_signal_connect(infoWindow, "delete-event", G_CALLBACK(infoDeleteEvent), (gpointer) info);
