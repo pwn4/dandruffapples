@@ -406,6 +406,16 @@ gboolean run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 			if (claimteam.granted()) {
 				myTeam = claimteam.id();
 				cout << "ClaimTeam: Success! We control team #" << myTeam << endl;
+				
+				//get that HOME info!
+				for(int i = 0; i < claimteam.homes_size(); i++)
+				{
+				  int index = robotIdToIndex(claimteam.homes(i).id());
+				  
+				  ownRobots[index]->homeRelX = claimteam.homes(i).relx();
+				  ownRobots[index]->homeRelY = claimteam.homes(i).rely();
+				}
+				
 			} else { // claimteam.granted() == false
 				myTeam = -1;
 				cout << "Client controls no teams!\n";
@@ -559,12 +569,6 @@ gboolean run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 				// The serverrobot is from our team.
 				int index = robotIdToIndex(robotId);
 				ownRobots[index]->pendingCommand = false;
-
-        // If x/y exists, this is the relative distance from our home!
-        if (serverrobot.has_x())
-          ownRobots[index]->homeRelX = serverrobot.x();
-        if (serverrobot.has_y())
-          ownRobots[index]->homeRelY = serverrobot.y();
 
 				if (serverrobot.has_velocityx())
 					ownRobots[index]->vx = serverrobot.velocityx();
