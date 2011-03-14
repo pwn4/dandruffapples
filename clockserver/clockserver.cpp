@@ -551,8 +551,8 @@ int main(int argc, char **argv) {
 									  {
 							  			RobotHomeInfo *rhi = claimteam.add_homes();
 							  			rhi->set_id(worldinfo.robot(i).id());
-							  			rhi->set_relx((float) ( (homesRegion->draw_y() * REGIONSIDELEN) + teamsHome->home_y() ) - worldinfo.robot(i).y());
-							  			rhi->set_rely((float) ( (homesRegion->draw_x() * REGIONSIDELEN) + teamsHome->home_x() ) - worldinfo.robot(i).x());
+							  			rhi->set_relx((float) ( (homesRegion->draw_x() * REGIONSIDELEN) + teamsHome->home_x() ) - worldinfo.robot(i).x());
+							  			rhi->set_rely((float) ( (homesRegion->draw_y() * REGIONSIDELEN) + teamsHome->home_y() ) - worldinfo.robot(i).y());
 									  }
 									}
 								}

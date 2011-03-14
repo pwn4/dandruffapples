@@ -66,6 +66,8 @@ int tunnelPort = -1;
 int lastTunnelPort = 12345;
 string userAddon;
 string sshkeyloc;
+string sshpid;
+string sshsock;
 
 //this is the region that the navigation will move the grid around
 regionConnection *pivotRegion = NULL, *pivotRegionBuddy = NULL;
@@ -851,11 +853,18 @@ int main(int argc, char* argv[]) {
 
 	userAddon = cmdline.getArg("-u", "");
 	if(userAddon != "")
+	{
 	  userAddon = userAddon + "@";
 	  
-	sshkeyloc = cmdline.getArg("-k", "");
-	if(sshkeyloc != "")
-	  sshkeyloc = "ssh-agent $BASH >> /dev/null; ssh-add " + sshkeyloc + "; ";
+	  //sshkeyloc = "exec ssh-agent $BASH >> /dev/null; ssh-add " + sshkeyloc + "; ";
+	  sshpid = cmdline.getArg("-p", "");
+	  if(sshpid == "")
+	    throw runtime_error("Tunnel used, but no auth pid");
+	  sshsock = cmdline.getArg("-s", "");
+	  if(sshsock == "")
+	    throw runtime_error("Tunnel used, but no auth sock");
+	  sshkeyloc = "SSH_AGENT_PID=" + sshpid + "; SSH_AUTH_SOCK=" + sshsock + "; ";
+	}
 	  
 	//for triggering an ssh tunnel
 	tunnelPort = atoi(cmdline.getArg("-t", "-1").c_str());

@@ -8,7 +8,10 @@
 #include "messagereader.h"
 
 namespace net {
+  // Not actually socket-exclusive
   void set_blocking(int fd, bool state);
+  bool get_blocking(int fd);
+  
   int do_connect(const char *address, int port);
   int do_connect(struct in_addr address, int port);
   int do_listen(int port);
