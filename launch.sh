@@ -110,8 +110,20 @@ CONTROLHOSTS=""
 echo -n "Launching $CONTROLLERS_LEFT controllers and $REGIONS_LEFT regions"
 for HOST in `grep -hv \`hostname\` "$HOSTFILE"`
 do
+    #check for host being up
     if (! host "$HOST" >/dev/null) || (! nc -z "$HOST" $SSHPORT)
     then
+        continue
+    fi
+
+    #check for host being used
+    INUSE=$($SSHCOMMAND $HOST "bash -c \"who\"")
+    INUSE=${INUSE//[[:space:]]}
+    OTHERS=$(echo $INUSE | awk '{ if($1!=wai) print $0} ' wai=$(whoami))
+    OTHERS=${OTHERS//[[:space:]]}
+    if [ "$OTHERS" != "" ]
+    then
+        echo "Skipping in-use host $HOST"
         continue
     fi
     
