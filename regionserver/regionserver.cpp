@@ -400,43 +400,17 @@ void run() {
 								// Find our robots, and add to the simulation
 							  vector<int> myRobotIds;
 							  vector<int> myRobotTeams;
+							  numRobots = 0;
 							  for (google::protobuf::RepeatedPtrField<const RobotInfo>::const_iterator i =
 									  worldinfo.robot().begin(); i != worldinfo.robot().end(); i++) {
 								  if (i->region() == myId) {
 									  myRobotIds.push_back(i->id());
 									  myRobotTeams.push_back(i->team());
-								  }
-							  }
-
-							  wantRobots = myRobotIds.size();
-							  numRobots = 0;
-							  int rowCounter = 0;
-							  bool firstrow = true;
-
-							  //add some test pucks for now
-							//  regionarea->AddPuck((2 * robotDiameter)+minElementSize+104, (2 * robotDiameter)+minElementSize+110);
-							//  regionarea->AddPuck((2 * robotDiameter)+minElementSize+204, (2 * robotDiameter)+minElementSize+130);
-							//  regionarea->AddPuck((2 * robotDiameter)+minElementSize+304, (2 * robotDiameter)+minElementSize+150);
-							  //j is the y, i is the x
-
-							  for (int j = (2 * ROBOTDIAMETER)+(4 * MINELEMENTSIZE); j < (REGIONSIDELEN+(1 * MINELEMENTSIZE)) - (2 * (ROBOTDIAMETER)+(4 * MINELEMENTSIZE)) && numRobots	< wantRobots; j += 5 * (ROBOTDIAMETER)) {
-								  for (int i = (2 * ROBOTDIAMETER)+(4 * MINELEMENTSIZE); i < (REGIONSIDELEN+(1 * MINELEMENTSIZE)) - (2 * (ROBOTDIAMETER)+(4 * MINELEMENTSIZE)) && numRobots	< wantRobots; i += 5 * (ROBOTDIAMETER)){
-
-								  //regionarea->AddRobot(myRobotIds[numRobots], i, j, 0, 0, 0, 0, myRobotTeams[numRobots], true);
-
-									  if(rowCounter == 0)
-									    regionarea->AddRobot(myRobotIds[numRobots], i, j, 0, 0, -.5, 0, myRobotTeams[numRobots], true);
-									  else if(rowCounter == 1)
-									    regionarea->AddRobot(myRobotIds[numRobots], i, j, 0, 0, .5, 0, myRobotTeams[numRobots], true);
-									  else if(firstrow){
-									    regionarea->AddRobot(myRobotIds[numRobots], i, j, 0, 0, (double)((rand() % 101)-50.0)/100.0, 0, myRobotTeams[numRobots], true);
-									  }
-
+									  
+									  //and add the robot! It's THAT easy!
+									  regionarea->AddRobot(i->id(), i->x(), i->y(), 0, 0, 0, 0, i->team(), true);
 									  numRobots++;
-									  rowCounter = (rowCounter+1) % 3;
 								  }
-								  firstrow = true;
-								  rowCounter = 0;
 							  }
 
 							  cout << numRobots << " robots created." << endl;
