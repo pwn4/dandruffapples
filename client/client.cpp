@@ -442,91 +442,100 @@ gboolean run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 		timestep.ParseFromArray(buffer, len);
 		currentTimestep = timestep.timestep();
 
-		if (simulationStarted && timestep.timestep() % 2 == 0) {
+		if (simulationStarted) {
+		  //give the robots initial velocity in the first timestep
+		  if(currentTimestep == 2)
+		  {
+				initializeRobots(controller);
+				break;
+		  }
+		  
+		  if(currentTimestep % 2 == 0)
+		  {
+			  // Update all current positions.
+			  for (int i = 0; i < robotsPerTeam; i++) {
+			    //so far the simulation can handle actions up to every 2 sim steps smoothly. This probably doesn't scale.
+			    //We'll need to implement the optimizations we talked about to improve this
 
-			// Update all current positions.
-			for (int i = 0; i < robotsPerTeam; i++) {
-			  //so far the simulation can handle actions up to every 2 sim steps smoothly. This probably doesn't scale.
-			  //We'll need to implement the optimizations we talked about to improve this
+				  if (ownRobots[i]->pendingCommand) {
+					  // If we've waited too long for an update, send
+					  // new ClientRobot messages.
+					  // TODO: Lower from 100.
+					  ownRobots[i]->pendingCommand = false;
+					  timeoutMessages++;
+				  }
 
-				if (ownRobots[i]->pendingCommand) {
-					// If we've waited too long for an update, send
-					// new ClientRobot messages.
-					// TODO: Lower from 100.
-					ownRobots[i]->pendingCommand = false;
-					timeoutMessages++;
-				}
+          // Update rel distance of our home.
+          ownRobots[i]->homeRelX -= ownRobots[i]->vx;
+          ownRobots[i]->homeRelY -= ownRobots[i]->vy;
 
-        // Update rel distance of our home.
-        ownRobots[i]->homeRelX -= ownRobots[i]->vx;
-        ownRobots[i]->homeRelY -= ownRobots[i]->vy;
+				  // Update rel distance of seenRobots.
+				  float minDistance = 9000.01;
+				  float tempDistance;
+				  int newClosestRobotId = -1;
+				  for (vector<SeenRobot*>::iterator it = ownRobots[i]->seenRobots.begin(); it
+						  != ownRobots[i]->seenRobots.end(); it++) {
+					  (*it)->relx += (*it)->vx - ownRobots[i]->vx;
+					  (*it)->rely += (*it)->vy - ownRobots[i]->vy;
+					  tempDistance = relDistance((*it)->relx, (*it)->rely);
+					  if (tempDistance > sightDistance) {
+						  // We can't see the robot anymore. Delete.
+						  delete *it;
+						  it = ownRobots[i]->seenRobots.erase(it);
+						  it--; // Compensates for it++ in for loop.
+					  } else if (tempDistance < minDistance) {
+						  // Keep trying to find the closest robot!
+						  minDistance = tempDistance;
+						  newClosestRobotId = (*it)->id;
+					  }
+				  }
+				  if (newClosestRobotId != ownRobots[i]->closestRobotId) {
+					  ownRobots[i]->closestRobotId = newClosestRobotId;
+					  ownRobots[i]->eventQueue.push_back(EVENT_NEW_CLOSEST_ROBOT);
+				  }
 
-				// Update rel distance of seenRobots.
-				float minDistance = 9000.01;
-				float tempDistance;
-				int newClosestRobotId = -1;
-				for (vector<SeenRobot*>::iterator it = ownRobots[i]->seenRobots.begin(); it
-						!= ownRobots[i]->seenRobots.end(); it++) {
-					(*it)->relx += (*it)->vx - ownRobots[i]->vx;
-					(*it)->rely += (*it)->vy - ownRobots[i]->vy;
-					tempDistance = relDistance((*it)->relx, (*it)->rely);
-					if (tempDistance > sightDistance) {
-						// We can't see the robot anymore. Delete.
-						delete *it;
-						it = ownRobots[i]->seenRobots.erase(it);
-						it--; // Compensates for it++ in for loop.
-					} else if (tempDistance < minDistance) {
-						// Keep trying to find the closest robot!
-						minDistance = tempDistance;
-						newClosestRobotId = (*it)->id;
-					}
-				}
-				if (newClosestRobotId != ownRobots[i]->closestRobotId) {
-					ownRobots[i]->closestRobotId = newClosestRobotId;
-					ownRobots[i]->eventQueue.push_back(EVENT_NEW_CLOSEST_ROBOT);
-				}
+				  // Update rel distance of seenPucks.
+				  for (vector<SeenPuck*>::iterator it = ownRobots[i]->seenPucks.begin(); it
+						  != ownRobots[i]->seenPucks.end(); it++) {
+					  (*it)->relx -= ownRobots[i]->vx;
+					  (*it)->rely -= ownRobots[i]->vy;
+					  tempDistance = relDistance((*it)->relx, (*it)->rely);
 
-				// Update rel distance of seenPucks.
-				for (vector<SeenPuck*>::iterator it = ownRobots[i]->seenPucks.begin(); it
-						!= ownRobots[i]->seenPucks.end(); it++) {
-					(*it)->relx -= ownRobots[i]->vx;
-					(*it)->rely -= ownRobots[i]->vy;
-					tempDistance = relDistance((*it)->relx, (*it)->rely);
+					  if (tempDistance > sightDistance) {
+						  // We can't see the puck anymore. Delete.
+						  delete *it;
+						  it = ownRobots[i]->seenPucks.erase(it);
+						  it--; // Compensates for it++ in for loop.
+					  } else if (sameCoordinates((*it)->relx, (*it)->rely, 0.0, 0.0)) {
+						  // If we can pickup this puck, throw event.
+						  //cout << "#" << i << " sees puck at relx="
+						  //     << (*it)->relx << ", rely=" <<(*it)->rely << endl;
 
-					if (tempDistance > sightDistance) {
-						// We can't see the puck anymore. Delete.
-						delete *it;
-						it = ownRobots[i]->seenPucks.erase(it);
-						it--; // Compensates for it++ in for loop.
-					} else if (sameCoordinates((*it)->relx, (*it)->rely, 0.0, 0.0)) {
-						// If we can pickup this puck, throw event.
-						//cout << "#" << i << " sees puck at relx="
-						//     << (*it)->relx << ", rely=" <<(*it)->rely << endl;
+						  ownRobots[i]->eventQueue.push_back(EVENT_CAN_PICKUP_PUCK);
+					  } else if (tempDistance < 1.0) {
+						  // Close to puck, let AI refine velocities continuously.
+						  ownRobots[i]->eventQueue.push_back(EVENT_NEAR_PUCK);
+					  }
+				  }
 
-						ownRobots[i]->eventQueue.push_back(EVENT_CAN_PICKUP_PUCK);
-					} else if (tempDistance < 1.0) {
-						// Close to puck, let AI refine velocities continuously.
-						ownRobots[i]->eventQueue.push_back(EVENT_NEAR_PUCK);
-					}
-				}
+				  // Check if we're not moving
+				  if (ownRobots[i]->vx == 0.0 && ownRobots[i]->vy == 0.0) {
+					  ownRobots[i]->eventQueue.push_back(EVENT_NOT_MOVING);
+				  }
 
-				// Check if we're not moving
-				if (ownRobots[i]->vx == 0.0 && ownRobots[i]->vy == 0.0) {
-					ownRobots[i]->eventQueue.push_back(EVENT_NOT_MOVING);
-				}
+				  // Check if any events exist; if so, call AI.
+				  //if (ownRobots[i]->eventQueue.size() > 0 && !ownRobots[i]->pendingCommand) {
+				  //robot AIs SHOULD execute every timestep
+				  if(!ownRobots[i]->pendingCommand){
+					  if(currentTimestep - ownRobots[i]->whenLastSent > 3){
+					    executeAi(ownRobots[i], i, controller);
+					    //initializeRobots(controller);
+					  }
+				  }
 
-				// Check if any events exist; if so, call AI.
-				//if (ownRobots[i]->eventQueue.size() > 0 && !ownRobots[i]->pendingCommand) {
-				//robot AIs SHOULD execute every timestep
-				if(!ownRobots[i]->pendingCommand){
-					if(currentTimestep - ownRobots[i]->whenLastSent > 3){
-					  executeAi(ownRobots[i], i, controller);
-					  //initializeRobots(controller);
-					}
-				}
-
-				// Clear the queue, wait for new events.
-				ownRobots[i]->eventQueue.clear();
+				  // Clear the queue, wait for new events.
+				  ownRobots[i]->eventQueue.clear();
+			  }
 			}
 
 	    //update the view of the viewed robot
