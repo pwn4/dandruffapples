@@ -115,10 +115,13 @@ do
     then
         continue
     fi
-    
+
     #check for host being used
     INUSE=$($SSHCOMMAND $HOST "bash -c \"who\"")
-    if [ $(echo $INUSE | awk '{ if($1!=wai) print $0} ' wai=$(whoami)) != "" ]
+    INUSE=${INUSE//[[:space:]]}
+    OTHERS=$(echo $INUSE | awk '{ if($1!=wai) print $0} ' wai=$(whoami))
+    OTHERS=${OTHERS//[[:space:]]}
+    if [ "$OTHERS" != "" ]
     then
         echo "Skipping in-use host $HOST"
         continue
