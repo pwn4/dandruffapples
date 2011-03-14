@@ -17,7 +17,8 @@
 #-run: works ONLY if -debug has been passed somewhere prior to it. Will tell gdb to auto-run all the servers
 #-gnomeTerminal: if passed then all the servers will be open using the "gnome-terminal" ( default: xterm )
 #-sleepTime: time in seconds to wait before launching a new server ( default: 0 )
-#-valgrind: launch the servers in vallgrind with the callgrind tool
+#-callgrind: launch the servers in vallgrind with the callgrind tool
+#-memcheck: launch the servers in vallgrind with the memcheck tool
 
 #EXAMPLES:
 #./local.sh -clockserver -worldivewer -regionserver
@@ -87,8 +88,10 @@ echo "Found \"${1,,}\" argument"
     fi
   elif [ "${1,,}" == "-gnometerminal" ]; then
     gnomeTerminal=true
-  elif [ "${1,,}" == "-valgrind" ]; then
-    valgrind=true
+  elif [ "${1,,}" == "-callgrind" ]; then
+    callgrind=true
+  elif [ "${1,,}" == "-memcheck" ]; then
+    memcheck=true
   elif [ "${1,,}" == "-sleeptime" ]; then
     shift
     sleepTime=$1
@@ -100,14 +103,21 @@ echo "Found \"${1,,}\" argument"
 done
 
 if [ $debug ]; then
-    gdbCmd="gdb -quiet --args "
+    cmd="gdb -quiet --args "
+    
   if [ $run ]; then
-    gdbCmd="gdb -quiet -ex run --args "    
+    cmd="gdb -quiet -ex run --args "    
   fi
 fi
 
-if [ $valgrind ]; then
-    gdbCmd="valgrind --tool=callgrind --auto=yes "
+if [ $callgrind ]; then
+  cmd="valgrind --tool=callgrind --callgrind-out-file=/tmp/antix_callgrind_logs/callgrind.out."
+  mkdir /tmp/antix_callgrind_logs/
+fi
+
+if [ $memcheck ]; then
+  cmd="valgrind --tool=memcheck --leak-check=full --log-file=/tmp/antix_memcheck_logs/"
+  mkdir /tmp/antix_memcheck_logs/
 fi
 
 if [ $gnomeTerminal ]; then
@@ -126,51 +136,67 @@ do
   fi 
 done < $clockConfig
 
-if [ $regionserver ]; then
-  regionServers=`expr $serverRows \* $serverColumns`
-fi
-
 if [ $clockserver ]; then
-  echo -e "Starting the clock server with command:\n$terminal \"Clockserver\" -e \"$gdbCmd$directory/clockserver/clockserver -c $directory/clockserver/config\" & \n"
-  $terminal "Clockserver" -e "$gdbCmd$directory/clockserver/clockserver -c $directory/clockserver/config" &
+  if [ $memcheck ] || [ $callgrind ]; then 
+    cmdArgs="clockserver.%p "
+  fi
+
+  echo -e "Starting the clock server with command:\n$terminal \"Clockserver\" -e \"$cmd$cmdArgs$directory/clockserver/clockserver -c $directory/clockserver/config\" & \n"
+  $terminal "Clockserver" -e "$cmd$cmdArgs$directory/clockserver/clockserver -c $directory/clockserver/config" &
   sleep $sleepTime
 fi
 
 if [ $controller ]; then
-  echo -e "Starting the controller with command:\n$terminal \"Controller\" -e \"$gdbCmd$directory/controller/controller -c $directory/controller/config\" & \n"
-  $terminal "Controller" -e "$gdbCmd$directory/controller/controller -c $directory/controller/config" &
+  if [ $memcheck ] || [ $callgrind ]; then 
+    cmdArgs="controller.%p "
+  fi
+
+  echo -e "Starting the controller with command:\n$terminal \"Controller\" -e \"$cmd$cmdArgs$directory/controller/controller -c $directory/controller/config\" & \n"
+  $terminal "Controller" -e "$cmd$cmdArgs$directory/controller/controller -c $directory/controller/config" &
   sleep $sleepTime
 fi
 
 if [ $worldviewer ]; then
-  echo -e "Starting the world viewer with command:\n$terminal \"World Viewer\" -e \"$gdbCmd$directory/worldviewer/worldviewer -c $directory/worldviewer/config\" & \n"
-  $terminal "World Viewer" -e "$gdbCmd$directory/worldviewer/worldviewer -c $directory/worldviewer/config" &
+  if [ $memcheck ] || [ $callgrind ]; then 
+    cmdArgs="worldviewer.%p "
+  fi
+
+  echo -e "Starting the world viewer with command:\n$terminal \"World Viewer\" -e \"$cmd$cmdArgs$directory/worldviewer/worldviewer -c $directory/worldviewer/config\" & \n"
+  $terminal "World Viewer" -e "$cmd$cmdArgs$directory/worldviewer/worldviewer -c $directory/worldviewer/config" &
   sleep $sleepTime
 fi
 
 if [ $regionserver ]; then
   config="$directory/regionserver/config"
+  regionServers=`expr $serverRows \* $serverColumns`
 
   for((i=1; i<=$regionServers; i++ ));do
+
+  if [ $memcheck ] || [ $callgrind ]; then 
+    cmdArgs="regionserver$i.%p "
+  fi
+
     if [ $i -eq 1 ]; then
-      echo -e "Starting the region server $i with command:\n$terminal \"Region Server: #$i\" -e \"$gdbCmd$directory/regionserver/regionserver -c $config\" & \n"
-      $terminal "Region Server #$i" -e "$gdbCmd$directory/regionserver/regionserver -c $config" &
+      echo -e "Starting the region server $i with command:\n$terminal \"Region Server: #$i\" -e \"$cmd$cmdArgs$directory/regionserver/regionserver -c $config\" & \n"
+      $terminal "Region Server #$i" -e "$cmd$cmdArgs$directory/regionserver/regionserver -c $config" &
       sleep $sleepTime
     else
-      echo -e "Starting the region server $i with command:\n$terminal \"Region Server: #$i\" -e \"$gdbCmd$directory/regionserver/regionserver -c $config$i\" & \n"
-      $terminal "Region Server #$i" -e "$gdbCmd$directory/regionserver/regionserver -c $config$i" &
+      echo -e "Starting the region server $i with command:\n$terminal \"Region Server: #$i\" -e \"$cmd$cmdArgs$directory/regionserver/regionserver -c $config$i\" & \n"
+      $terminal "Region Server #$i" -e "$cmd$cmdArgs$directory/regionserver/regionserver -c $config$i" &
       sleep $sleepTime
     fi
   done
 fi
 
-#only testing with one client for now
-#teams=1
-
 if [ $client ]; then
   for((i=0; i<$teams; i++ ));do
-    echo -e "Starting the client with command:\n$terminal \"Client controlling team  #$i\" -e \"$gdbCmd$directory/client/client -c $directory/client/config\ -t $i $clientViewer\" & \n"
-    $terminal "Client controlling team #$i" -e "$gdbCmd$directory/client/client -c $directory/client/config -t $i $clientViewer" &
+
+  if [ $memcheck ] || [ $callgrind ]; then 
+    cmdArgs="client$i.%p "
+  fi
+
+    echo -e "Starting the client with command:\n$terminal \"Client controlling team  #$i\" -e \"$cmd$cmdArgs$directory/client/client -c $directory/client/config -t $i $clientViewer\" & \n"
+    $terminal "Client controlling team #$i" -e "$cmd$cmdArgs$directory/client/client -c $directory/client/config -t $i $clientViewer" &
     sleep $sleepTime
   done
 fi
