@@ -65,6 +65,7 @@ bool draw[3];
 int tunnelPort = -1;
 int lastTunnelPort = 12345;
 string userAddon;
+string sshkeyloc;
 
 //this is the region that the navigation will move the grid around
 regionConnection *pivotRegion = NULL, *pivotRegionBuddy = NULL;
@@ -342,6 +343,16 @@ gboolean clockMessage(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 		{
 		  char * stringAddr = inet_ntoa(addr);
 		  stringstream tunnelcmd;
+		  
+		  //setup the ssh agent to handle auth for us
+		  if(sshkeyloc != ""){
+		    if(system("ssh-agent $BASH > /dev/null") != 0)
+          throw runtime_error("Unable to establish ssh agent");
+      
+		    if(system(sshkeyloc.c_str()) != 0)
+          throw runtime_error("Unable to establish ssh key");
+      }
+		  
 		  tunnelcmd << "ssh -f -N -p" << tunnelPort << " -L " << lastTunnelPort << ":127.0.0.1:" << regioninfo.renderport() << " " <<
 		    userAddon << stringAddr;
 
@@ -851,7 +862,11 @@ int main(int argc, char* argv[]) {
 	userAddon = cmdline.getArg("-u", "");
 	if(userAddon != "")
 	  userAddon = userAddon + "@";
-	
+	  
+	sshkeyloc = cmdline.getArg("-k", "");
+	if(sshkeyloc != "")
+	  sshkeyloc = "ssh-add " + sshkeyloc;
+	  
 	//for triggering an ssh tunnel
 	tunnelPort = atoi(cmdline.getArg("-t", "-1").c_str());
 #ifdef DEBUG
