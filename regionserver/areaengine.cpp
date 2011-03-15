@@ -178,7 +178,7 @@ void AreaEngine::Step(bool generateImage){
         //serverrobot.set_haspuck(robots[robotId]->holdingPuck); 
 
         // Inform robots that can see this one of state change.
-        map<int, bool> *nowSeenBy = &robots[newCommand->robotId]->lastSeenBy;
+        map<int, bool> *nowSeenBy = &(curRobot->lastSeenBy);
         if ((*nowSeenBy).size() > 0) {
           map<int, bool>::iterator sightCheck;
           map<int, bool>::iterator sightEnd = (*nowSeenBy).end();
@@ -199,7 +199,7 @@ void AreaEngine::Step(bool generateImage){
         }
 
         // Broadcast velocity change to other servers - BroadcastRobot checks if robot is in border cell
-        BroadcastRobot(robots[newCommand->robotId], Index(regionBounds/2, regionBounds/2), robots[newCommand->robotId]->arrayLocation, curStep);
+        BroadcastRobot(curRobot, Index(regionBounds/2, regionBounds/2), curRobot->arrayLocation, curStep);
         
         delete newCommand;
         clientChangeQueue.pop();
