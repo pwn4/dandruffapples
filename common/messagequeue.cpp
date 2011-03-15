@@ -3,6 +3,7 @@
 #include <cstring>
 
 #include "except.h"
+#include "net.h"
 
 MessageQueue::MessageQueue(int fd, size_t prealloc) : _fd(fd), _bufsize(prealloc), _appendpt(0), _writept(0), _buffer(new uint8_t[_bufsize]) {}
 
@@ -101,4 +102,11 @@ bool MessageQueue::doWrite() {
   }
   
   return false;
+}
+
+void MessageQueue::flush() {
+  bool oldstate = net::get_blocking(_fd);
+  net::set_blocking(_fd, true);
+  doWrite();
+  net::set_blocking(_fd, oldstate);
 }
