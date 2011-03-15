@@ -241,7 +241,7 @@ ClientRobotCommand userAiCode(OwnRobot* ownRobot) {
 
 		// Check if we are on a puck. If so, just pick it up.
 		//DONT for now.
-		if (pickupPuck && false) {
+		if (pickupPuck) {
 			SeenPuck* pickup = findPickUpablePuck(ownRobot);
 			if (pickup != NULL) {
 				command.sendCommand = true;
@@ -785,7 +785,7 @@ gboolean run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 								puckstack.seespuckstack(i).rely())) {
 							(*it)->stackSize = puckstack.stacksize();
 							foundPuck = true;
-							if ((*it)->stackSize <= 0) {
+							if ((*it)->stackSize <= 0 || puckstack.seespuckstack(i).viewlostid()) {
 								delete *it;
 								it = ownRobots[index]->seenPucks.erase(it);
 							}
