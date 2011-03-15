@@ -197,6 +197,7 @@ void handleHomes(int teams, int serverCount) {
 #endif
 					//get new coordinates
 					coord[0] = MINDISTANCEFROMHOME / 2 + rand() % (REGIONSIDELEN - MINDISTANCEFROMHOME);
+					
 					coord[1] = MINDISTANCEFROMHOME / 2 + rand() % (REGIONSIDELEN - MINDISTANCEFROMHOME);
 #ifdef DEBUG
 					cerr << "New house at (" + helper::toString(coord[0]) + ", " + helper::toString(coord[1]) + ")"
@@ -334,8 +335,9 @@ int main(int argc, char **argv) {
 			  ri->set_id(id);
 			  ri->set_region(k);
 			  ri->set_team((id-1)/robots_per_team);
+
 			  ri->set_x(i);
-			  ri->set_y(j);
+			  ri->set_y(j); 
 			  ++id;
 		    numRobots++;
 		  }
@@ -560,7 +562,7 @@ int main(int argc, char **argv) {
 						  			    }
 							  			rhi->set_id(worldinfo.robot(i).id());
 							  			rhi->set_relx((float) ( (homesRegion->draw_x() * REGIONSIDELEN) + teamsHome->home_x() ) - ((robotRegion.draw_x() * REGIONSIDELEN) + worldinfo.robot(i).x()));
-							  			rhi->set_rely((float) ( (homesRegion->draw_y() * REGIONSIDELEN) + teamsHome->home_y() ) + ((robotRegion.draw_y() * REGIONSIDELEN) + worldinfo.robot(i).y()));
+							  			rhi->set_rely((float) ( (homesRegion->draw_y() * REGIONSIDELEN) + teamsHome->home_y() ) - ((robotRegion.draw_y() * REGIONSIDELEN) + worldinfo.robot(i).y()));
 									  }
 									}
 								}
