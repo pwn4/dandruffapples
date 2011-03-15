@@ -133,11 +133,13 @@ int main(int argc, char** argv)
   TimestepUpdate timestep;
   WorldInfo worldinfo;
   RegionInfo regioninfo;
+  TimestepDone tsdone;
+  tsdone.set_done(true);
   vector<ClientConnection*> clients;	//can access by client id
   vector<ServerConnection*> servers;
 	set<net::EpollConnection*> seenbyidset;		//to determine who to forward serverrobot msg to
 	pair<set<net::EpollConnection*>::iterator,bool> ret; //return value of insertion
-
+  bool flushing = false;
 
   #define MAX_EVENTS 128
   struct epoll_event events[MAX_EVENTS];
@@ -254,33 +256,26 @@ int main(int argc, char** argv)
 
             case MSG_TIMESTEPUPDATE:
             {
+              // Parsing this is strictly a waste of CPU.
               timestep.ParseFromArray(buffer, len);
+
+              // Begin output buffer flush
+              flushing = true;
 
               // Enqueue update to all clients
               for(vector<ClientConnection*>::iterator i = clients.begin();
                   i != clients.end(); ++i) {
                 (*i)->queue.push(MSG_TIMESTEPUPDATE, timestep);
                 (*i)->set_writing(true);
+                // No more reading until we've finished flushing
+                (*i)->set_reading(false);
               }
 
-              //force all updates to everyone, before saying I am finished for the timestep
+              // No more reading until we've finished flushing
               for(vector<ServerConnection*>::iterator i = servers.begin();
                   i != servers.end(); ++i) {
-                (*i)->queue.flush();
-                (*i)->set_writing(false);
+                (*i)->set_reading(false);
               }
-              for(vector<ClientConnection*>::iterator i = clients.begin();
-                  i != clients.end(); ++i) {
-                (*i)->queue.flush();
-                (*i)->set_writing(false);
-              }
-
-              //tell the clock we're done
-              TimestepDone tsdone;
-	            tsdone.set_done(true);
-              clockconn.queue.push(MSG_TIMESTEPDONE, tsdone);
-              clockconn.set_writing(true);
-
               break;
             }
 
@@ -557,6 +552,40 @@ int main(int argc, char** argv)
         case net::connection::REGION:
           if(c->queue.doWrite()) {
           	c->set_writing(false);
+          }
+          if(flushing) {
+            bool incomplete = false;
+
+            // Check for remaining data to write
+            for(vector<ServerConnection*>::iterator i = servers.begin();
+                i != servers.end(); ++i) {
+              if(incomplete) {
+                break;
+              }
+              incomplete = (*i)->queue.remaining();
+            }
+            for(vector<ClientConnection*>::iterator i = clients.begin();
+                i != clients.end(); ++i) {
+              if(incomplete) {
+                break;
+              }
+              incomplete = (*i)->queue.remaining();
+            }
+            if(incomplete) {
+              break;
+            }
+            // Flush completed; Tell the clock we're done and resume reading
+            flushing = false;
+            clockconn.queue.push(MSG_TIMESTEPDONE, tsdone);
+            clockconn.set_writing(true);
+            for(vector<ServerConnection*>::iterator i = servers.begin();
+                i != servers.end(); ++i) {
+              (*i)->set_reading(true);
+            }
+            for(vector<ClientConnection*>::iterator i = clients.begin();
+                i != clients.end(); ++i) {
+              (*i)->set_reading(true);
+            }
           }
           break;
         default:
