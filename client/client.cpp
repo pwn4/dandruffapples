@@ -467,9 +467,9 @@ gboolean run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 					  timeoutMessages++;
 				  }
 
-          // Update rel distance of our home.
-          ownRobots[i]->homeRelX -= ownRobots[i]->vx;
-          ownRobots[i]->homeRelY -= ownRobots[i]->vy;
+				  // Update rel distance of our home.
+				  ownRobots[i]->homeRelX -= ownRobots[i]->vx;
+				  ownRobots[i]->homeRelY -= ownRobots[i]->vy;
 
 				  // Update rel distance of seenRobots.
 				  double minDistance = 9000.01;
