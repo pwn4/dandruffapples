@@ -71,7 +71,7 @@ void UnpackImage(cairo_t *cr, RegionRender* render, int robotSize, double robotA
 		if (homeInfo->region_id() == regionId) {
 			color=colorFromTeam(homeInfo->team());
 			cairo_set_source_rgb(cr, color.r, color.g, color.b);
-			cairo_arc(cr, IMAGEWIDTH*((double)homeInfo->home_x()/(double)REGIONSIDELEN), IMAGEHEIGHT*((double)homeInfo->home_y()/(double)REGIONSIDELEN), HOMEDIAMETER/ 4, 0, 2 * M_PI);
+			cairo_arc(cr, IMAGEWIDTH*((double)homeInfo->home_x()/(double)REGIONSIDELEN), IMAGEHEIGHT*((double)homeInfo->home_y()/(double)REGIONSIDELEN), HOMEDIAMETER/ 8, 0, 2 * M_PI);
 			cairo_stroke(cr);
 		}
 	}
