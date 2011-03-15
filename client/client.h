@@ -98,6 +98,8 @@ public:
 	double homeRelX;
 	double homeRelY;
 	vector<EventType> eventQueue;
+	
+	int index; // this is for AI memory
 
 	OwnRobot() :
 		Robot(), pendingCommand(false), whenLastSent(-1), closestRobotId(-1), behaviour(-1), homeRelX(0.0),
