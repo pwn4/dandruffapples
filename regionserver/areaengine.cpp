@@ -483,8 +483,8 @@ void AreaEngine::Step(bool generateImage){
           drawX = INT_MAX;
           drawY = INT_MAX;
         }else{
-          drawX = ((paintRobot->x-(regionRatio/regionBounds)) / regionRatio)*IMAGEWIDTH;
-          drawY = ((paintRobot->y-(regionRatio/regionBounds)) / regionRatio)*IMAGEHEIGHT;
+          drawX = ((paintRobot->x-elementSize) / regionRatio)*IMAGEWIDTH;
+          drawY = ((paintRobot->y-elementSize) / regionRatio)*IMAGEHEIGHT;
         }
         
         if(puckIt == puckEnd){
@@ -492,8 +492,8 @@ void AreaEngine::Step(bool generateImage){
           pdrawX = INT_MAX;
           pdrawY = INT_MAX;
         }else{
-          pdrawX = (((double)(paintPuck->x)-(regionRatio/regionBounds)) / regionRatio)*IMAGEWIDTH;
-          pdrawY = (((double)(paintPuck->y)-(regionRatio/regionBounds)) / regionRatio)*IMAGEHEIGHT;
+          pdrawX = (((double)(paintPuck->x)-elementSize) / regionRatio)*IMAGEWIDTH;
+          pdrawY = (((double)(paintPuck->y)-elementSize) / regionRatio)*IMAGEHEIGHT;
         }
         
         if(paintRobot == NULL && paintPuck == NULL)
