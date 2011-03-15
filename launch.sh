@@ -120,14 +120,13 @@ do
     fi
 
     #check for host being used
-    INUSE=$($SSHCOMMAND $HOST "bash -c \"w | awk ' {if(NR>2 && $1!=wai && !($5 ~ /.*m/ || $5 ~ /.*days/)) print $0} ' wai=$(whoami)\"")
-    echo $INUSE
+    INUSE=$($SSHCOMMAND $HOST "set USERNAME=$(whoami); w | awk ' {if(NR>2 && \$1!=wai && !(\$5 ~ /.*m/ || \$5 ~ /.*days/)) print \$5} ' wai=$USERNAME")
     INUSE=${INUSE//[[:space:]]}
     OTHERS=$INUSE #old artifact left in for the time being
     OTHERS=${OTHERS//[[:space:]]}
     if [ "$OTHERS" != "" ]
     then
-        echo "Skipping in-use host $HOST"
+        echo "Skipping in-use host $HOST, user only idle for $OTHERS"
         continue
     fi
     
