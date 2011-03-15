@@ -266,13 +266,13 @@ int main(int argc, char** argv)
               //force all updates to everyone, before saying I am finished for the timestep
               for(vector<ServerConnection*>::iterator i = servers.begin();
                   i != servers.end(); ++i) {
-                  while((*i)->queue.remaining() != 0)
-                    (*i)->queue.doWrite();
+                (*i)->queue.flush();
+                (*i)->set_writing(false);
               }
               for(vector<ClientConnection*>::iterator i = clients.begin();
                   i != clients.end(); ++i) {
-                  while((*i)->queue.remaining() != 0)
-                    (*i)->queue.doWrite();
+                (*i)->queue.flush();
+                (*i)->set_writing(false);
               }
 
               //tell the clock we're done
