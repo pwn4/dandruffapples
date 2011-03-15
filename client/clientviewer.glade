@@ -6,8 +6,6 @@
     <property name="visible">True</property>
     <property name="border_width">10</property>
     <property name="title" translatable="yes">Client Viewer</property>
-    <signal name="destroy" handler="gtk_main_quit"/>
-    <signal name="delete_event" handler="gtk_main_quit"/>
     <child>
       <object class="GtkVBox" id="vbox">
         <property name="visible">True</property>
@@ -116,7 +114,6 @@
                 <property name="label" translatable="yes">Quit</property>
                 <property name="use_underline">True</property>
                 <property name="stock_id">gtk-quit</property>
-                <signal name="clicked" handler="gtk_main_quit"/>
               </object>
               <packing>
                 <property name="expand">False</property>
@@ -162,7 +159,7 @@
           </packing>
         </child>
         <child>
-          <object class="GtkLabel" id="labPuck">
+          <object class="GtkLabel" id="labHome">
             <property name="visible">True</property>
           </object>
           <packing>
@@ -170,11 +167,19 @@
           </packing>
         </child>
         <child>
-          <object class="GtkLabel" id="labFrames">
+          <object class="GtkLabel" id="labPuck">
             <property name="visible">True</property>
           </object>
           <packing>
             <property name="position">3</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkLabel" id="labFrames">
+            <property name="visible">True</property>
+          </object>
+          <packing>
+            <property name="position">4</property>
           </packing>
         </child>
       </object>
