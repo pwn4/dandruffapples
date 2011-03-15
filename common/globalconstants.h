@@ -26,10 +26,10 @@
 #define MINDISTANCEFROMHOME 120
 
 //client viewer constants
-#define DRAWFACTOR 10
-#define ZOOMSPEED 1
+#define DRAWFACTOR 40
+#define ZOOMSPEED 5
 #define MINZOOMED 5
-#define MAXZOOMED 20
+#define MAXZOOMED 80
 //draw every DRAWTIME microseconds
 #define DRAWTIME 100000
 
