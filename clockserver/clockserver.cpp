@@ -550,9 +550,16 @@ int main(int argc, char **argv) {
 									  if(worldinfo.robot(i).team() == id)
 									  {
 							  			RobotHomeInfo *rhi = claimteam.add_homes();
+							  			RegionInfo *robotRegion;  //we need the robot's region as well
+							  			for(int j = 0; j < worldinfo.region_size(); j++)
+							  			  if(worldinfo.region(j).id() == worldinfo.robot(i).region())
+							  			  {
+							  			    robotRegion = &(worldinfo.region(j));
+							  			    break;
+						  			    }
 							  			rhi->set_id(worldinfo.robot(i).id());
-							  			rhi->set_relx((float) ( (homesRegion->draw_x() * REGIONSIDELEN) + teamsHome->home_x() ) - worldinfo.robot(i).x());
-							  			rhi->set_rely((float) ( (homesRegion->draw_y() * REGIONSIDELEN) + teamsHome->home_y() ) - worldinfo.robot(i).y());
+							  			rhi->set_relx((float) ( (homesRegion->draw_x() * REGIONSIDELEN) + teamsHome->home_x() ) - ((robotRegion->draw_x() * REGIONSIDELEN) + worldinfo.robot(i).x()));
+							  			rhi->set_rely((float) ( (homesRegion->draw_y() * REGIONSIDELEN) + teamsHome->home_y() ) - ((robotRegion->draw_y() * REGIONSIDELEN) + worldinfo.robot(i).y()));
 									  }
 									}
 								}
