@@ -617,7 +617,7 @@ void AreaEngine::Step(bool generateImage){
           //check if this is the first seen by for the stack
           if(puckUpdates.find(puckStack) == puckUpdates.end()){
             PuckStack *newStack = new PuckStack;
-            newStack->set_stacksize(puckStack->count);
+            newStack->set_stacksize(0);
             puckUpdates.insert(pair<PuckStackObject*, PuckStack*>(puckStack, newStack));
           }
         
@@ -636,7 +636,7 @@ void AreaEngine::Step(bool generateImage){
           //check if this is the first seen by for the stack
           if(puckUpdates.find(puckStack) == puckUpdates.end()){
             PuckStack *newStack = new PuckStack;
-            newStack->set_stacksize(puckStack->count);
+            newStack->set_stacksize(0);
             puckUpdates.insert(pair<PuckStackObject*, PuckStack*>(puckStack, newStack));
           }
           
@@ -743,7 +743,7 @@ void AreaEngine::Step(bool generateImage){
   
   flushNeighbours();
   
-  flushControllers();
+  //flushControllers();
 
   //ZOMFG we're done
 
@@ -818,12 +818,12 @@ void AreaEngine::PickUpPuck(int robotId){
   
   if(curRobot->holdingPuck) //already have a puck
     return;
- 
+
   if(RemovePuck(curRobot->x, curRobot->y))  //can pick up a puck
   {
     curRobot->holdingPuck = true;
   }
-   
+
 }
 
 void AreaEngine::DropPuck(int robotId){
