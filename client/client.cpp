@@ -550,10 +550,6 @@ gboolean run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 			    microTimeCache = timeCache;
 		    }
 	    }
-
-	    while(controller.queue.remaining() > 0)
-	      controller.queue.doWrite();
-
 	  }else
 	    throw runtime_error("Simulation started before I was ready");
 
