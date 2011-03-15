@@ -128,11 +128,11 @@ gboolean drawingAreaExpose(GtkWidget *widgetDrawingArea, GdkEventExpose *event, 
 		int myTeam = passed->myTeam;
 		int numberOfRobots = passed->numberOfRobots;
 		int *drawFactor = passed->drawFactor;
-		int imageWidth = (VIEWDISTANCE + ROBOTDIAMETER) * (*drawFactor) * 2;
-		int imageHeight = (VIEWDISTANCE + ROBOTDIAMETER) * (*drawFactor) * 2;
+		int imageWidth = (VIEWDISTANCE * 2 + ROBOTDIAMETER) * (*drawFactor) /4;
+		int imageHeight = (VIEWDISTANCE * 2 + ROBOTDIAMETER) * (*drawFactor) /4;
 
 		//origin is the middle point where our viewed robot is located
-		int origin[] = { imageWidth/2, imageHeight/2 };
+		int origin[] = { imageWidth/2 , imageHeight/2 };
 
 		cairo_t *cr = gdk_cairo_create(GTK_DRAWING_AREA(widgetDrawingArea)->widget.window);
 		cairo_set_line_width(cr, 2);
@@ -140,19 +140,19 @@ gboolean drawingAreaExpose(GtkWidget *widgetDrawingArea, GdkEventExpose *event, 
 		ColorObject color = colorFromTeam(myTeam);
 
 		cairo_set_source_rgb(cr, 0, 0, 0);
-		cairo_arc(cr, origin[0], origin[1], ROBOTDIAMETER * *drawFactor / 4, 0, 2 * M_PI);
+		cairo_arc(cr, origin[0], origin[1], ROBOTDIAMETER * *drawFactor / 8, 0, 2 * M_PI);
 		cairo_stroke_preserve(cr);
 		cairo_set_source_rgb(cr, color.r, color.g, color.b);
 		cairo_fill(cr);
 
 
 		//draw our home if it is nearby
-		if( ownRobotDraw->homeRelX < VIEWDISTANCE && ownRobotDraw->homeRelY < VIEWDISTANCE )
+		if( ownRobotDraw->homeRelX - ((HOMEDIAMETER/2) + (ROBOTDIAMETER/2))  < VIEWDISTANCE && ownRobotDraw->homeRelY  - ((HOMEDIAMETER/2) + (ROBOTDIAMETER/2)) < VIEWDISTANCE )
 		{
 			cairo_set_source_rgb(cr, 0, 0, 0);
 			cairo_arc(cr, origin[0] + ownRobotDraw->homeRelX * *drawFactor,
 					origin[1] + ownRobotDraw->homeRelY * *drawFactor,
-					HOMEDIAMETER * *drawFactor / 4, 0, 2 * M_PI);
+					HOMEDIAMETER * *drawFactor / 8, 0, 2 * M_PI);
 			cairo_stroke_preserve(cr);
 			cairo_set_source_rgb(cr, color.r, color.g, color.b);
 			cairo_fill(cr);
@@ -164,8 +164,8 @@ gboolean drawingAreaExpose(GtkWidget *widgetDrawingArea, GdkEventExpose *event, 
 		{
 			cairo_set_source_rgb(cr, 0, 0, 0);
 
-			cairo_arc(cr, origin[0], origin[1], PUCKDIAMETER * *drawFactor / 4, 0, 2 * M_PI);
-			cairo_fill(cr);
+			cairo_arc(cr, origin[0], origin[1], PUCKDIAMETER * *drawFactor / 6, 0, 2 * M_PI);
+			cairo_stroke(cr);
 		}
 
 		//ownRobot->angle does not provide a valid angle ( it's always zero )!
@@ -180,7 +180,7 @@ gboolean drawingAreaExpose(GtkWidget *widgetDrawingArea, GdkEventExpose *event, 
 				cairo_set_source_rgb(cr, 0, 0, 0);
 				cairo_arc(cr, origin[0] + ownRobotDraw->seenRobots.at(i)->relx * *drawFactor,
 						origin[1] + ownRobotDraw->seenRobots.at(i)->rely * *drawFactor,
-						ROBOTDIAMETER * *drawFactor / 4, 0, 2 * M_PI);
+						ROBOTDIAMETER * *drawFactor / 8, 0, 2 * M_PI);
 				cairo_stroke_preserve(cr);
 
 				cairo_set_source_rgb(cr, color.r, color.g, color.b);
@@ -191,7 +191,7 @@ gboolean drawingAreaExpose(GtkWidget *widgetDrawingArea, GdkEventExpose *event, 
 		cairo_set_source_rgb(cr, 0, 0, 0);
 		for (unsigned int i = 0; i < ownRobotDraw->seenPucks.size(); i++) {
 				cairo_arc(cr, origin[0] + ownRobotDraw->seenPucks.at(i)->relx * *drawFactor,
-						origin[1] + ownRobotDraw->seenPucks.at(i)->rely * *drawFactor, PUCKDIAMETER * *drawFactor / 4, 0, 2 * M_PI);
+						origin[1] + ownRobotDraw->seenPucks.at(i)->rely * *drawFactor, PUCKDIAMETER * *drawFactor / 8, 0, 2 * M_PI);
 				cairo_fill(cr);
 		}
 
@@ -213,8 +213,8 @@ gboolean drawingAreaExpose(GtkWidget *widgetDrawingArea, GdkEventExpose *event, 
 void resizeByDrawFactor(int drawFactor, GtkDrawingArea *drawingArea,
 		GtkWidget *mainWindow) {
 	//drawing related variables
-	int imageWidth = (VIEWDISTANCE + ROBOTDIAMETER) * drawFactor * 2;
-	int imageHeight = (VIEWDISTANCE + ROBOTDIAMETER) * drawFactor * 2;
+	int imageWidth = (VIEWDISTANCE * 2 + ROBOTDIAMETER) * (drawFactor) /4;
+	int imageHeight = (VIEWDISTANCE * 2 + ROBOTDIAMETER) * (drawFactor) /4;
 
 #ifdef DEBUG
 	cout << "imageWidth is " << imageWidth << " and the imageHeight is " << imageHeight << endl;
@@ -285,8 +285,7 @@ void ClientViewer::initClientViewer(int numberOfRobots, int myTeam, int _drawFac
 	//drawing related variables
 	drawFactor = new int();
 	*drawFactor = _drawFactor;
-	int imageWidth = (VIEWDISTANCE + ROBOTDIAMETER) * *drawFactor * 2, imageHeight = (VIEWDISTANCE + ROBOTDIAMETER)
-			* *drawFactor * 2;
+	int imageWidth = (VIEWDISTANCE * 2 + ROBOTDIAMETER) * (*drawFactor) /4, imageHeight = (VIEWDISTANCE * 2 + ROBOTDIAMETER) * (*drawFactor) /4;
 
 #ifdef DEBUG
 	debug << "imageWidth is " << imageWidth << " and the imageHeight is " << imageHeight << endl;
