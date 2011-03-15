@@ -139,8 +139,94 @@ SeenPuck* findClosestPuck(OwnRobot* ownRobot) {
 	return *closest;
 }
 
+int * state = NULL;
 ClientRobotCommand userAiCode(OwnRobot* ownRobot) {
 	ClientRobotCommand command;
+	
+	//init
+	/*if(state == NULL){
+	  state = new int[robotsPerTeam];
+	}
+	
+	if(state[ownRobot->index] == 1){	  
+	  //go closer and slow down
+	  SeenPuck* closest = findClosestPuck(ownRobot);
+		if (closest != NULL)
+	  {
+	    command.sendCommand = true;
+			
+			double vecLength = sqrt(closest->relx*closest->relx+ closest->rely*closest->rely);
+			//watch that divide by zero
+			if(vecLength > 0.0000000001)
+			{
+			  command.changeVx = true;
+			  command.vx = closest->relx / (vecLength * vecLength);
+			  command.changeVy = true;
+			  command.vy = closest->rely / (vecLength * vecLength);
+		  }
+	  }
+	  
+	  //watch out for pucks
+	  if(ownRobot->hasPuck)
+	  {
+	    state[ownRobot->index] = 2;
+	    command.sendCommand = true;
+			
+			//normalize
+			double vecLength = sqrt(ownRobot->homeRelX*ownRobot->homeRelX + ownRobot->homeRelY*ownRobot->homeRelY);
+			//watch that divide by zero
+			if(vecLength > 0.0000000001)
+			{
+			  command.changeVx = true;
+			  command.vx = ownRobot->homeRelX / vecLength;
+			  command.changeVy = true;
+			  command.vy = ownRobot->homeRelY / vecLength;
+		  }
+			
+	    return command;
+    }
+	  
+	  //pick it up
+	  SeenPuck* pickup = findPickUpablePuck(ownRobot);
+		if (pickup != NULL) {
+			command.sendCommand = true;
+			command.changePuckPickup = true;
+			command.puckPickup = true;
+		}
+		
+		return command;
+	}
+	
+	if(state[ownRobot->index] == 0 && (ownRobot->vx == 0 && ownRobot->vy == 0)){
+	  //go in a random direction
+		command.sendCommand = true;
+		command.changeVx = true;
+		command.vx = (((rand() % 11) / 10.0) - 0.5);
+		command.changeVy = true;
+		command.vy = (((rand() % 11) / 10.0) - 0.5);
+		
+		state[ownRobot->index] = 1;
+		
+		return command;
+	}
+	
+	if(state[ownRobot->index] == 2){
+	  //if we're here but not holding a puck, that's a problem. Go back to state 1
+	  if(ownRobot->hasPuck == false)
+	    state[ownRobot->index] = 0;
+	    
+	  //if we're home, drop it.
+	  if(ownRobot->homeRelX < HOMEDIAMETER/2 && ownRobot->homeRelY < HOMEDIAMETER/2)
+	  {
+			command.sendCommand = true;
+			command.changePuckPickup = true;
+			command.puckPickup = false;
+	  }
+	  
+	  return command;
+	}*/
+	
+	
 	switch (ownRobot->behaviour) {
 	case 0: {
 		// Forager robot. Pick up any pucks we can. Don't worry about enemy robots.
@@ -184,6 +270,8 @@ ClientRobotCommand userAiCode(OwnRobot* ownRobot) {
 		// Make robot move in direction of the nearest puck.
 		SeenPuck* closest = findClosestPuck(ownRobot);
 		if (closest != NULL) {
+		  if(closest->rely == 0)  //prevent NaN
+		    closest->rely = 0.000001;
 			double ratio = abs(closest->relx / closest->rely);
 			double modx = 1.0;
 			double mody = 1.0;
@@ -274,6 +362,7 @@ ClientRobotCommand userAiCode(OwnRobot* ownRobot) {
 		cerr << "You defined a robot behaviour number that you are not checking!" << endl;
 		break;
 	}
+	
 	return command;
 }
 
@@ -318,7 +407,7 @@ void initializeRobots(net::connection &controller) {
 		//clientRobot.set_velocityx(((rand() % 11) / 10.0) - 0.5);
 		//clientRobot.set_velocityy(((rand() % 11) / 10.0) - 0.5);
 		clientRobot.set_velocityx(0.0);
-		clientRobot.set_velocityy(0.05);
+		clientRobot.set_velocityy(0.0);
 		clientRobot.set_angle(0.0);
 		controller.queue.push(MSG_CLIENTROBOT, clientRobot);
 		ownRobots[i]->whenLastSent = currentTimestep;
@@ -413,6 +502,7 @@ gboolean run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 				for (int i = 0; i < robotsPerTeam; i++) {
 					// We don't have any initial robot data, yet.
 					ownRobots[i] = new OwnRobot();
+					ownRobots[i]->index = i;
 				}
 
 				//enemyRobots = new vector<EnemyRobot*>[numTeams];
