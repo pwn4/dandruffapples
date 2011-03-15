@@ -560,7 +560,7 @@ int main(int argc, char **argv) {
 						  			    }
 							  			rhi->set_id(worldinfo.robot(i).id());
 							  			rhi->set_relx((float) ( (homesRegion->draw_x() * REGIONSIDELEN) + teamsHome->home_x() ) - ((robotRegion.draw_x() * REGIONSIDELEN) + worldinfo.robot(i).x()));
-							  			rhi->set_rely((float) ( (homesRegion->draw_y() * REGIONSIDELEN) + teamsHome->home_y() ) - ((robotRegion.draw_y() * REGIONSIDELEN) + worldinfo.robot(i).y()));
+							  			rhi->set_rely((float) ( (homesRegion->draw_y() * REGIONSIDELEN) + teamsHome->home_y() ) + ((robotRegion.draw_y() * REGIONSIDELEN) + worldinfo.robot(i).y()));
 									  }
 									}
 								}
