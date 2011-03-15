@@ -22,7 +22,6 @@
 #include <string>
 #include <stdlib.h>
 #include <math.h>
-#include <cairo.h>
 
 #include <google/protobuf/message_lite.h>
 
@@ -459,11 +458,6 @@ void run() {
 							timeSteps++; //Note: only use this for this temp stat taking. use regionarea->curStep for syncing
 
 							if (generateImage) {
-								/*unsigned char *surfaceData = cairo_image_surface_get_data(surface);
-								size_t surfaceLength = cairo_image_surface_get_height(surface)
-										* cairo_format_stride_for_width(cairo_image_surface_get_format(surface),
-												cairo_image_surface_get_width(surface));*/
-
 								for (vector<net::EpollConnection*>::const_iterator it = worldviewers.begin(); it
 										!= worldviewers.end(); ++it) {
 									if (sendMoreWorldViews[(*it)->fd].initialized
