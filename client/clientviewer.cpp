@@ -169,16 +169,10 @@ gboolean drawingAreaExpose(GtkWidget *widgetDrawingArea, GdkEventExpose *event, 
 
 		cairo_t *cr = gdk_cairo_create(GTK_DRAWING_AREA(widgetDrawingArea)->widget.window);
 		cairo_set_line_width(cr, 2);
-
+		
 		ColorObject color = colorFromTeam(myTeam);
-
-		cairo_set_source_rgb(cr, 0, 0, 0);
-		cairo_arc(cr, origin[0], origin[1], ROBOTDIAMETER * *drawFactor / 8, 0, 2 * M_PI);
-		cairo_stroke_preserve(cr);
-		cairo_set_source_rgb(cr, color.r, color.g, color.b);
-		cairo_fill(cr);
-
-		//draw our home if it is nearby
+		
+		//draw our home if it is nearby (FIRST so it goes underneath)
 		if (ownRobotDraw->homeRelX - ((HOMEDIAMETER / 2) + (ROBOTDIAMETER / 2)) < VIEWDISTANCE &&
 				ownRobotDraw->homeRelY - ((HOMEDIAMETER / 2) + (ROBOTDIAMETER / 2)) < VIEWDISTANCE) {
 			cairo_set_source_rgb(cr, 0, 0, 0);
@@ -187,7 +181,13 @@ gboolean drawingAreaExpose(GtkWidget *widgetDrawingArea, GdkEventExpose *event, 
 			cairo_stroke_preserve(cr);
 			cairo_set_source_rgb(cr, color.r, color.g, color.b);
 			cairo_fill(cr);
-		}
+		}		
+
+		cairo_set_source_rgb(cr, 0, 0, 0);
+		cairo_arc(cr, origin[0], origin[1], ROBOTDIAMETER * *drawFactor / 8, 0, 2 * M_PI);
+		cairo_stroke_preserve(cr);
+		cairo_set_source_rgb(cr, color.r, color.g, color.b);
+		cairo_fill(cr);
 
 		//if the robot has a puck then actually draw the puck in its center
 		//WARNING: if a robot has a puck, does it still see the puck?
