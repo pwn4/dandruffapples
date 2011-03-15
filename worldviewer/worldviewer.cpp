@@ -62,6 +62,9 @@ uint32 worldServerRows = 0, worldServerColumns = 0;
 map<int, map<int, GtkDrawingArea*> > worldGrid;
 RegionRender renderDraw[3];
 bool draw[3];
+int tunnelPort = -1;
+int lastTunnelPort = 12345;
+string userAddon;
 
 //this is the region that the navigation will move the grid around
 regionConnection *pivotRegion = NULL, *pivotRegionBuddy = NULL;
@@ -332,7 +335,27 @@ gboolean clockMessage(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 		//connect to the server
 		struct in_addr addr;
 		addr.s_addr = regioninfo.address();
-		int regionFd = net::do_connect(addr, regioninfo.renderport());
+		
+		int regionFd;
+		//setup an ssh tunnel first
+		if(tunnelPort != -1)
+		{
+		  char * stringAddr = inet_ntoa(addr);
+		  stringstream tunnelcmd;
+		  tunnelcmd << "ssh -f -N -p" << tunnelPort << " -L " << lastTunnelPort << ":127.0.0.1:" << regioninfo.renderport() << " " <<
+		    userAddon << stringAddr;
+
+      //setup the tunnel
+      if(system(tunnelcmd.str().c_str()) != 0)
+        throw runtime_error("Unable to establish ssh connection");
+
+		  addr.s_addr = inet_addr("127.0.0.1"); 
+		  regionFd = net::do_connect(addr, lastTunnelPort);
+		  lastTunnelPort++;
+		  //cout << tunnelcmd.str() << endl;
+		}else		
+		  regionFd = net::do_connect(addr, regioninfo.renderport());
+		  
 		net::set_blocking(regionFd, false);
 		fdToRegionId[regionFd]=regioninfo.id();
 
@@ -822,11 +845,19 @@ int main(int argc, char* argv[]) {
 	gtk_builder_add_from_file(builder, builderPath.c_str(), NULL);
 	gtk_builder_connect_signals(builder, NULL);
 
-	const char *configFileName = cmdline.getArg("-c", "config").c_str();
+  //for the config filename
+	string configFileName = cmdline.getArg("-c", "config");
+
+	userAddon = cmdline.getArg("-u", "");
+	if(userAddon != "")
+	  userAddon = userAddon + "@";
+	
+	//for triggering an ssh tunnel
+	tunnelPort = atoi(cmdline.getArg("-t", "-1").c_str());
 #ifdef DEBUG
 	debug.open(helper::worldViewerDebugLogName.c_str(), ios::out);
 #endif
-	loadConfigFile(configFileName, clockip);
+	loadConfigFile(configFileName.c_str(), clockip);
 
 	//connect to the clock server
 	int clockfd = net::do_connect(clockip, WORLD_VIEWER_PORT);
