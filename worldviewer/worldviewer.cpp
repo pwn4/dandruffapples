@@ -853,11 +853,9 @@ int main(int argc, char* argv[]) {
 
 	userAddon = cmdline.getArg("-u", "");
 	if(userAddon != "")
+	{
 	  userAddon = userAddon + "@";
 	  
-	sshkeyloc = cmdline.getArg("-k", "");
-	if(sshkeyloc != "")
-	{
 	  //sshkeyloc = "exec ssh-agent $BASH >> /dev/null; ssh-add " + sshkeyloc + "; ";
 	  sshpid = cmdline.getArg("-p", "");
 	  if(sshpid == "")
