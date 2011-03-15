@@ -860,7 +860,7 @@ void AreaEngine::SetPuckStack(double newx, double newy, int newc){
     curStack = curStack->nextStack;
   }
   
-  if(newc == 0){
+  if(newc == 0 && curStack != NULL){
   
     if(lastStack == NULL) //its the first one
       element->pucks = curStack->nextStack;
@@ -871,7 +871,7 @@ void AreaEngine::SetPuckStack(double newx, double newy, int newc){
     puckq.erase(curStack);
     delete curStack;
     
-  }else{
+  }else if(newc != 0){
   
     if(curStack == NULL)
     {
