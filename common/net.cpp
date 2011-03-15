@@ -37,6 +37,14 @@ namespace net {
       throw SystemError("Failed to set blocking state on FD");
     }
   }
+
+  bool get_blocking(int fd) {
+    int flags;
+    if(0 > (flags = fcntl(fd, F_GETFL, 0))) {
+      throw SystemError("Failed to read existing flags on FD");
+    }
+    return flags & O_NONBLOCK;
+  }
   
     int do_listen(int port) {
 

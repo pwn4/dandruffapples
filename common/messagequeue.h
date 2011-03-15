@@ -25,11 +25,16 @@ public:
   MessageQueue(const MessageQueue&);
   ~MessageQueue();
 
-  void push(MessageType typeTag, const google::protobuf::MessageLite &message);
-
-  bool doWrite();
   inline int remaining() const { return _appendpt - _writept; }
   inline bool writing() const { return remaining(); }
+
+
+  void push(MessageType typeTag, const google::protobuf::MessageLite &message);
+
+  // Write as much data as possible; return true if none remains.
+  bool doWrite();
+  // Write out all buffered data.  MAY BLOCK INDEFINITELY!
+  void flush();
 };
 
 #endif
