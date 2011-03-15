@@ -344,17 +344,7 @@ gboolean clockMessage(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 		  char * stringAddr = inet_ntoa(addr);
 		  stringstream tunnelcmd;
 		  
-		  //setup the ssh agent to handle auth for us
-		  if(sshkeyloc != ""){
-		    if(system("ssh-agent $BASH > /dev/null") != 0)
-          throw runtime_error("Unable to establish ssh agent");
-      
-		    if(system(sshkeyloc.c_str()) != 0)
-          throw runtime_error("Unable to establish ssh key");
-      }
-		  
-		  tunnelcmd << "ssh -f -N -p" << tunnelPort << " -L " << lastTunnelPort << ":127.0.0.1:" << regioninfo.renderport() << " " <<
-		    userAddon << stringAddr;
+		  tunnelcmd << sshkeyloc << "ssh -f -N -p" << tunnelPort << " -L " << lastTunnelPort << ":127.0.0.1:" << regioninfo.renderport() << " " << userAddon << stringAddr;
 
       //setup the tunnel
       if(system(tunnelcmd.str().c_str()) != 0)
@@ -865,7 +855,7 @@ int main(int argc, char* argv[]) {
 	  
 	sshkeyloc = cmdline.getArg("-k", "");
 	if(sshkeyloc != "")
-	  sshkeyloc = "ssh-add " + sshkeyloc;
+	  sshkeyloc = "ssh-agent $BASH >> /dev/null; ssh-add " + sshkeyloc + "; ";
 	  
 	//for triggering an ssh tunnel
 	tunnelPort = atoi(cmdline.getArg("-t", "-1").c_str());
