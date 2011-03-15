@@ -202,7 +202,7 @@ gboolean drawingAreaExpose(GtkWidget *widgetDrawingArea, GdkEventExpose *event, 
 		//draw the line showing the angle that the robot is moving at
 		if( !(ownRobotDraw->vx == 0 && ownRobotDraw->vy == 0 ))
 		{
-			int endX=origin[0] + ownRobotDraw->vx * *drawFactor, endY=origin[0] + ownRobotDraw->vx * *drawFactor;
+			int endX=origin[0] + ownRobotDraw->vx * *drawFactor, endY=origin[1] + ownRobotDraw->vy * *drawFactor;
 
 			double x1, y1, x2, y2;
 			calcVertexes(origin[0], origin[1], endX, endY, *drawFactor, x1, y1, x2, y2);
