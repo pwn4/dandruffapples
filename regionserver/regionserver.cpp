@@ -360,7 +360,7 @@ void run() {
 									  }
 									if(!exists)
 									{
-									  uniqueRegions.push_back(pair <int, int> (c->fd, 0));
+									  uniqueRegions.push_back(pair <int, int> (c->fd, -1));
 								  }
 
 									// Reverse all the positions. If we are connecting to the
@@ -459,7 +459,6 @@ void run() {
 									  numRobots++;
 								  }
 							  }
-                regionarea->curStep++;
 
                 //tell the engine to send its buffer contents
                 regionarea->flushBuffers();
