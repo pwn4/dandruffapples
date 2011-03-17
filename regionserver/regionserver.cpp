@@ -27,7 +27,7 @@
 
 #include "../common/claim.pb.h"
 #include "../common/clientrobot.pb.h"
-#include "../common/puckstack.pb.h"
+#include "../common/regionupdate.pb.h"
 #include "../common/worldinfo.pb.h"
 #include "../common/regionrender.pb.h"
 #include "../common/timestep.pb.h"
@@ -206,6 +206,11 @@ void run() {
 	WorldInfo worldinfo;
 	RegionInfo regioninfo;
 	unsigned myId = 0; //region id
+	
+	//for synchronization
+	int round = 0;
+	int roundReceived = 0;
+	bool sendTsdone = false;
 
 	AreaEngine* regionarea = new AreaEngine(ROBOTDIAMETER,REGIONSIDELEN, MINELEMENTSIZE, VIEWDISTANCE, VIEWANGLE,
 			MAXSPEED, MAXROTATE);
@@ -249,6 +254,14 @@ void run() {
 			timeSteps = 0;
 			lastSecond = timeCache.tv_sec;
 		}
+		
+		//if we've gotten our neighbours info for the round and we want to send a tsdone, then
+    if(round * borderRegions.size() == roundReceived && sendTsdone){
+      //Respond with done message
+	    clockconn.queue.push(MSG_TIMESTEPDONE, tsdone);
+	    clockconn.set_writing(true);
+	    sendTsdone = false;
+    }
 
 		//wait on epoll
 		int eventcount;
@@ -408,7 +421,9 @@ void run() {
 							//do our initializations here in the init step
 							if(!initialized)
 							{
-
+                //ready the engine buffers
+                regionarea->clearBuffers();
+      
 								// Find our robots, and add to the simulation
 							  vector<int> myRobotIds;
 							  vector<int> myRobotTeams;
@@ -425,15 +440,16 @@ void run() {
 								  }
 							  }
 
+                //tell the engine to send its buffer contents
+                regionarea->flushBuffers();
+
 							  cout << numRobots << " robots created." << endl;
 
-							  regionarea->flushNeighbours();
+							  //regionarea->flushNeighbours();
+							  round++;  //this is the async replacement
+							  sendTsdone = true;
 
 							  initialized = true;
-
-							  //Respond with done message
-							  c->queue.push(MSG_TIMESTEPDONE, tsdone);
-							  c->set_writing(true);
 
 							  break;
 						  }
@@ -455,6 +471,10 @@ void run() {
 
 							regionarea->Step(generateImage);
 
+              //async 'flush'
+              round++;  //we need to ensure we get all neighbour data before continuing
+              sendTsdone = true;
+              
 							timeSteps++; //Note: only use this for this temp stat taking. use regionarea->curStep for syncing
 
 							if (generateImage) {
@@ -491,9 +511,6 @@ void run() {
 								}
 							}
 #endif
-							//Respond with done message
-							c->queue.push(MSG_TIMESTEPDONE, tsdone);
-							c->set_writing(true);
 							break;
 						}
 						default:
@@ -595,14 +612,36 @@ void run() {
 					const void *buffer;
 					if (c->reader.doRead(&type, &len, &buffer)) {
 						switch (type) {
-						case MSG_SERVERROBOT: {
-							throw SystemError("Server robot read by Epoll.");
-							break;
-						}
-						case MSG_PUCKSTACK: {
-						  throw SystemError("Puck stack read by Epoll.");
-							break;
-						}
+			        case MSG_REGIONUPDATE: {
+			          RegionUpdate newUpdate;
+			          newUpdate.ParseFromArray(buffer, len);
+			          for(int i = 0; i < newUpdate.serverrobot_size(); i++)
+  			          regionarea->GotServerRobot(newUpdate.serverrobot(i));
+  			          
+  			        if(newUpdate.timestep() >= regionarea->curStep)
+    			        roundReceived++;
+  			        
+  			        //bind the receiveds to round*region neighbours. There may be desyncs with fewer than 9 region servers, but that's only because the neighbour settings are weird and annoying. One server should not be 6 of the other's neighbours, and the other 2 neighbours of the former.
+  			        if(roundReceived > round*borderRegions.size())
+  			          roundReceived = round*borderRegions.size();
+  			        
+  			        //cout << roundReceived << "|" << round << "|" << regionarea->curStep << endl;
+  			          
+		            if(round * borderRegions.size() == roundReceived && sendTsdone){
+                  //Respond with done message
+	                clockconn.queue.push(MSG_TIMESTEPDONE, tsdone);
+	                clockconn.set_writing(true);
+	                sendTsdone = false;
+                }
+ 
+			          break;
+			        }
+			        case MSG_PUCKSTACK: {
+			          PuckStack puckstack;
+			          puckstack.ParseFromArray(buffer, len);
+			          regionarea->GotPuckStack(puckstack);
+			          break;
+			        }
 						case MSG_REGIONINFO: {
 							regioninfo.ParseFromArray(buffer, len);
 							cout << "Found new neighbour, server #" << regioninfo.id() << endl;
@@ -626,10 +665,9 @@ void run() {
                    << " | " << std::setw(2) << std::setfill('0')
                    << serverByPosition[4] << endl;
 
-              //disable epoll for the neighbour now that we'd initialized with it, so that
-              //the engine can handle writing / reading
-              c->set_reading(false);
-              c->set_writing(false);
+              //we're going to do this shit asynchronously, dammit!
+              //c->set_reading(false);
+              //c->set_writing(false);
 
 							break;
 						}
@@ -767,7 +805,7 @@ void run() {
 				case net::connection::CLOCK:
 					if (c->queue.doWrite()) {
 						c->set_writing(false);
-					}
+					}		
 					break;
 				default:
 					cerr << "Unexpected writable socket!" << endl;
