@@ -146,14 +146,17 @@ public:
 	~ClientViewer();
 };
 
+class Client;
+
 struct passToRun {
 	bool runClientViewer;
 
 	net::connection controller;
 	ClientViewer* viewer;
+	Client* client;
 
-	passToRun(bool _runClientViewer, net::connection _controller, ClientViewer* _viewer) :
-		runClientViewer(_runClientViewer), controller(_controller), viewer(_viewer) {
+	passToRun(bool _runClientViewer, net::connection _controller, ClientViewer* _viewer, Client* _client) :
+		runClientViewer(_runClientViewer), controller(_controller), viewer(_viewer), client(_client) {
 	}
 	;
 };
@@ -197,6 +200,56 @@ struct passToQuit {
 		viewedRobot(_viewedRobot), mainWindow(_mainWindow) {
 	}
 	;
+};
+
+class Client {
+private:
+	// For Client viewer update
+	struct timeval timeCache, microTimeCache;
+	//Config variables
+	vector<string> controllerips; //controller IPs
+	// my team id
+	int myTeam;
+	void executeAi(OwnRobot* ownRobot, int index, net::connection &controller);
+	void initializeRobots(net::connection & controller);
+	guint gwatch;
+	bool writing;
+protected:
+	// Stat variables
+	time_t lastSecond;
+	int sentMessages;
+	int receivedMessages;
+	int pendingMessages;
+	int timeoutMessages;
+	int puckPickupMessages;
+	// Robots
+	OwnRobot** ownRobots;
+	// Helper functions
+	int indexToRobotId(int index);
+	int robotIdToIndex(int robotId);
+	bool weControlRobot(int robotId);
+	double relDistance(double x1, double y1);
+	bool sameCoordinates(double x1, double y1, double x2, double y2);
+	// Pucks, Robots
+	SeenPuck* findPickUpablePuck(OwnRobot* ownRobot);
+	SeenRobot* findClosestRobot(OwnRobot* ownRobot);
+	SeenPuck* findClosestPuck(OwnRobot* ownRobot);
+public:
+	Client() : writing(false),
+			   lastSecond(time(NULL)),
+			   sentMessages(0),
+			   receivedMessages(0),
+			   pendingMessages(0),
+			   timeoutMessages(0),
+			   puckPickupMessages(0) {};
+	void initClient(int argc, char* argv[], bool runClientViewer);
+	void loadConfigFile(const char* configFileName);
+	void setControllerIp(string newcontrollerip);
+	void setMyTeam(int myTeam);
+	gboolean run(GIOChannel *ioch, GIOCondition cond, gpointer data);
+	//TODO: user-defined AI code
+	ClientRobotCommand userAiCode(OwnRobot* ownrobot);
+
 };
 
 #endif

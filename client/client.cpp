@@ -1,36 +1,19 @@
 #include "client.h"
 
 /////////////////Variables and Declarations/////////////////
-const char *configFileName;
 //Game world variables
 // TODO: organize/move variables out of client.cpp
 bool simulationStarted = false;
 bool simulationEnded = false;
 int currentTimestep = 0;
 int lastTimestep = 0;
-int myTeam;
 int robotsPerTeam;
 
 // World variables
 double sightDistance = 100.0; // TODO: get this from worldinfo packet?
 
-// Stat variables
-time_t lastSecond = time(NULL);
-int sentMessages = 0;
-int receivedMessages = 0;
-int pendingMessages = 0;
-int timeoutMessages = 0;
-int puckPickupMessages = 0;
-
-OwnRobot** ownRobots;
-struct timeval timeCache, microTimeCache;
-
-//Config variables
-vector<string> controllerips; //controller IPs
-////////////////////////////////////////////////////////////
-
 //this function loads the config file so that the server parameters don't need to be added every time
-void loadConfigFile() {
+void Client::loadConfigFile(const char* configFileName) {
 	//open the config file
 	FILE * fileHandle;
 	fileHandle = fopen(configFileName, "r");
@@ -59,26 +42,35 @@ void loadConfigFile() {
 	}
 }
 
-int indexToRobotId(int index) {
+void Client::setControllerIp(string newControllerIp) {
+	controllerips.clear();
+	controllerips.push_back(newControllerIp);
+}
+
+void Client::setMyTeam(int myTeam) {
+	this->myTeam = myTeam;
+}
+
+int Client::indexToRobotId(int index) {
 	return (index + 1 + myTeam * robotsPerTeam);
 }
 
-int robotIdToIndex(int robotId) {
+int Client::robotIdToIndex(int robotId) {
 	return (robotId - 1 - myTeam * robotsPerTeam);
 }
 
-bool weControlRobot(int robotId) {
+bool Client::weControlRobot(int robotId) {
 	int index = robotIdToIndex(robotId);
 	return (0 <= index && index < robotsPerTeam);
 }
 
-double relDistance(double x1, double y1) {
+double Client::relDistance(double x1, double y1) {
 	return (sqrt(x1 * x1 + y1 * y1));
 }
 
 // Check if the two coordinates are the same, compensating for
 // doubleing-point errors.
-bool sameCoordinates(double x1, double y1, double x2, double y2) {
+bool Client::sameCoordinates(double x1, double y1, double x2, double y2) {
 	// From testing, it looks like doubleing point errors either add or subtract
 	// 0.0001.
 	double maxError = 0.1;
@@ -91,7 +83,7 @@ bool sameCoordinates(double x1, double y1, double x2, double y2) {
 	return true;
 }
 
-SeenPuck* findPickUpablePuck(OwnRobot* ownRobot) {
+SeenPuck* Client::findPickUpablePuck(OwnRobot* ownRobot) {
 	if (ownRobot->seenPucks.size() == 0)
 		return NULL;
 
@@ -105,7 +97,7 @@ SeenPuck* findPickUpablePuck(OwnRobot* ownRobot) {
 	return NULL; // Found nothing in the for loop.
 }
 
-SeenRobot* findClosestRobot(OwnRobot* ownRobot) {
+SeenRobot* Client::findClosestRobot(OwnRobot* ownRobot) {
 	if (ownRobot->seenRobots.size() == 0)
 		return NULL;
 
@@ -122,7 +114,7 @@ SeenRobot* findClosestRobot(OwnRobot* ownRobot) {
 	return *closest;
 }
 
-SeenPuck* findClosestPuck(OwnRobot* ownRobot) {
+SeenPuck* Client::findClosestPuck(OwnRobot* ownRobot) {
 	if (ownRobot->seenPucks.size() == 0)
 		return NULL;
 
@@ -140,7 +132,7 @@ SeenPuck* findClosestPuck(OwnRobot* ownRobot) {
 }
 
 int * state = NULL;
-ClientRobotCommand userAiCode(OwnRobot* ownRobot) {
+ClientRobotCommand Client::userAiCode(OwnRobot* ownRobot) {
 	ClientRobotCommand command;
 	
 	//init
@@ -366,7 +358,7 @@ ClientRobotCommand userAiCode(OwnRobot* ownRobot) {
 	return command;
 }
 
-void executeAi(OwnRobot* ownRobot, int index, net::connection &controller) {
+void Client::executeAi(OwnRobot* ownRobot, int index, net::connection &controller) {
 	if (ownRobot->pendingCommand)
 		return;
 
@@ -398,7 +390,7 @@ void executeAi(OwnRobot* ownRobot, int index, net::connection &controller) {
 	}
 }
 
-void initializeRobots(net::connection &controller) {
+void Client::initializeRobots(net::connection &controller) {
 	ClientRobot clientRobot;
 
 	// Initialize robots to some random velocity.
@@ -416,9 +408,12 @@ void initializeRobots(net::connection &controller) {
 	}
 }
 
-guint gwatch;
-bool writing = false;
-gboolean run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
+gboolean runner(GIOChannel *ioch, GIOCondition cond, gpointer data) {
+	passToRun *passer = (passToRun*)data;
+	return passer->client->run(ioch, cond, data);
+}
+
+gboolean Client::run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 	MessageType type;
 	int len;
 	const void *buffer;
@@ -432,7 +427,7 @@ gboolean run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
     if(controller.queue.doWrite()) {
       // We don't need to check writability for now
       g_source_remove(gwatch);
-      gwatch = g_io_add_watch(ioch, G_IO_IN, run, data);
+      gwatch = g_io_add_watch(ioch, G_IO_IN, runner, data);
       writing = false;
     }
   }
@@ -821,7 +816,7 @@ gboolean run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
   if(!writing && controller.queue.remaining()) {
     g_source_remove(gwatch);
     // Ensure that we're watching for writability
-    gwatch = g_io_add_watch(ioch, (GIOCondition)(G_IO_IN | G_IO_OUT), run, data);
+    gwatch = g_io_add_watch(ioch, (GIOCondition)(G_IO_IN | G_IO_OUT), runner, data);
     writing = true;
   }
 
@@ -829,7 +824,7 @@ gboolean run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 }
 
 //basic connection initializations for the client
-void initClient(int argc, char* argv[], bool runClientViewer) {
+void Client::initClient(int argc, char* argv[], bool runClientViewer) {
 
 	if( !gtk_init_check(&argc, &argv) ){
 		cerr<<"Unable to initialize the X11 windowing system. Client Viewer will not work!"<<endl;
@@ -863,12 +858,12 @@ void initClient(int argc, char* argv[], bool runClientViewer) {
 	}
 
 	//all the variables that we want to read in the controller message handler ( see bellow ) need to be either passed in this struct or delcared global
-	passToRun passer(runClientViewer, controller, viewer);
+	passToRun passer(runClientViewer, controller, viewer, this);
 
 	//this calls the function "run" everytime we get a message from the
 	//"controllerfd"
 	GIOChannel *ioch = g_io_channel_unix_new(controllerfd);
-	gwatch = g_io_add_watch(ioch, G_IO_IN, run, (gpointer)&passer);
+	gwatch = g_io_add_watch(ioch, G_IO_IN, runner, (gpointer)&passer);
 
 	gtk_main();
 }
@@ -882,28 +877,28 @@ int main(int argc, char* argv[]) {
 
 	////////////////////////////////////////////////////
 	cout << "Client Initializing ..." << endl;
-
+	Client c = Client();
 	helper::CmdLine cmdline(argc, argv);
 
-	configFileName = cmdline.getArg("-c", "config").c_str();
+	const char* configFileName = cmdline.getArg("-c", "config").c_str();
 	cout << "Using config file: " << configFileName << endl;
-	loadConfigFile();
+	c.loadConfigFile(configFileName);
 
 	runClientViewer = cmdline.getArg("-viewer").length() ? true : false;
 	cout << "Started client with the client viewer set to " << runClientViewer << endl;
 
-  if(cmdline.getArg("-l").length()) {
-    string newcontrollerip = cmdline.getArg("-l");
-    controllerips.clear();
-		controllerips.push_back(newcontrollerip);
-  }
+	if(cmdline.getArg("-l").length()) {
+		string newcontrollerip = cmdline.getArg("-l");
+		c.setControllerIp(newcontrollerip);
+	}
 
-	myTeam = strtol(cmdline.getArg("-t", "0").c_str(), NULL, 0);
+	int myTeam = strtol(cmdline.getArg("-t", "0").c_str(), NULL, 0);
 	cout << "Trying to control team #" << myTeam << " (use -t <team> to change)" << endl;
+	c.setMyTeam(myTeam);
 	////////////////////////////////////////////////////
 
 	cout << "Client Running!" << endl;
-	initClient(argc, argv, runClientViewer);
+	c.initClient(argc, argv, runClientViewer);
 
 	cout << "Client Shutting Down ..." << endl;
 
