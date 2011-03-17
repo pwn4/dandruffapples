@@ -129,6 +129,8 @@ void run() {
 	gettimeofday(&microTimeCache, NULL);
 	bool generateImage;
 	vector<HomeInfo*> myHomes;
+	
+	vector<pair <int, int> >uniqueRegions;
 
 	//this is only here to generate random numbers for the logging
 	srand(time(NULL));
@@ -209,7 +211,6 @@ void run() {
 	
 	//for synchronization
 	int round = 0;
-	int roundReceived = 0;
 	bool sendTsdone = false;
 
 	AreaEngine* regionarea = new AreaEngine(ROBOTDIAMETER,REGIONSIDELEN, MINELEMENTSIZE, VIEWDISTANCE, VIEWANGLE,
@@ -256,7 +257,15 @@ void run() {
 		}
 		
 		//if we've gotten our neighbours info for the round and we want to send a tsdone, then
-    if(round * borderRegions.size() == roundReceived && sendTsdone){
+    bool ready = true;
+    for(int i = 0; i < uniqueRegions.size(); i++)
+      if(uniqueRegions.at(i).second != regionarea->curStep)
+      {
+        ready = false;
+        break;
+      }
+		
+    if(ready && sendTsdone){
       //Respond with done message
 	    clockconn.queue.push(MSG_TIMESTEPDONE, tsdone);
 	    clockconn.set_writing(true);
@@ -342,6 +351,17 @@ void run() {
 									net::EpollConnection *newconn = new net::EpollConnection(epoll, EPOLLIN, regionfd,
 											net::connection::REGION);
 									borderRegions.push_back(newconn);
+									bool exists = false;
+									for(int k = 0; k < uniqueRegions.size(); k++)
+									  if(uniqueRegions.at(k).first == worldinfo.region(i).id())
+									  {
+									    exists = true;
+									    break;
+									  }
+									if(!exists)
+									{
+									  uniqueRegions.push_back(pair <int, int> (c->fd, 0));
+								  }
 
 									// Reverse all the positions. If we are connecting to the
 									// server on our left, we want to tell it that we are on
@@ -439,6 +459,7 @@ void run() {
 									  numRobots++;
 								  }
 							  }
+                regionarea->curStep++;
 
                 //tell the engine to send its buffer contents
                 regionarea->flushBuffers();
@@ -618,16 +639,24 @@ void run() {
 			          for(int i = 0; i < newUpdate.serverrobot_size(); i++)
   			          regionarea->GotServerRobot(newUpdate.serverrobot(i));
   			          
-  			        if(newUpdate.timestep() >= regionarea->curStep)
-    			        roundReceived++;
-  			        
-  			        //bind the receiveds to round*region neighbours. There may be desyncs with fewer than 9 region servers, but that's only because the neighbour settings are weird and annoying. One server should not be 6 of the other's neighbours, and the other 2 neighbours of the former.
-  			        if(roundReceived > round*borderRegions.size())
-  			          roundReceived = round*borderRegions.size();
+  			        for(int i = 0; i < uniqueRegions.size(); i++)
+  			          if(uniqueRegions.at(i).first == c->fd)
+  			          {
+  			            uniqueRegions.at(i).second = newUpdate.timestep();
+  			            break;
+  			          }
   			        
   			        //cout << roundReceived << "|" << round << "|" << regionarea->curStep << endl;
-  			          
-		            if(round * borderRegions.size() == roundReceived && sendTsdone){
+  			        
+  			        bool ready = true;
+  			        for(int i = 0; i < uniqueRegions.size(); i++)
+  			          if(uniqueRegions.at(i).second != regionarea->curStep)
+  			          {
+  			            ready = false;
+  			            break;
+			            }
+  			        
+		            if((ready && sendTsdone) || true){
                   //Respond with done message
 	                clockconn.queue.push(MSG_TIMESTEPDONE, tsdone);
 	                clockconn.set_writing(true);
