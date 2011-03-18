@@ -426,7 +426,6 @@ void run() {
 						}
 						case MSG_TIMESTEPUPDATE: {
 							timestep.ParseFromArray(buffer, len);
-
 							//do our initializations here in the init step
 							if(!initialized)
 							{
@@ -519,7 +518,7 @@ void run() {
 									;
 								}
 							}
-							
+#endif
 							bool ready = true;
 			        for(int i = 0; i < uniqueRegions.size(); i++)
 			          if(uniqueRegions.at(i).second != regionarea->curStep)
@@ -527,14 +526,14 @@ void run() {
 			            ready = false;
 			            break;
 		            }
-			        
-	            if((ready && sendTsdone)){cout << "ASDDASD" << endl;
+		            
+	            if((ready && sendTsdone)){
                 //Respond with done message
                 clockconn.queue.push(MSG_TIMESTEPDONE, tsdone);
                 clockconn.set_writing(true);
                 sendTsdone = false;
               }
-#endif
+
 							break;
 						}
 						default:
@@ -658,7 +657,7 @@ void run() {
   			            ready = false;
   			            break;
 			            }
-  			        
+
 		            if((ready && sendTsdone)){
                   //Respond with done message
 	                clockconn.queue.push(MSG_TIMESTEPDONE, tsdone);
