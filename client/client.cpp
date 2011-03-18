@@ -150,6 +150,7 @@ ClientRobotCommand userAiCode(OwnRobot* ownRobot) {
 	    command.sendCommand = true;
 			
 			double vecLength = sqrt(closest->relx*closest->relx+ closest->rely*closest->rely);
+			vecLength = 1;
 			//watch that divide by zero
 			if(vecLength > 0.0000000001)
 			{
@@ -191,7 +192,7 @@ ClientRobotCommand userAiCode(OwnRobot* ownRobot) {
 		return command;
 	}
 	
-	if(state[ownRobot->index] == 0 && (ownRobot->vx == 0 && ownRobot->vy == 0)){
+	if(state[ownRobot->index] == 0 && (abs(ownRobot->vx) <= 0.0001 && abs(ownRobot->vy) <= 0.0001)){
 	  //go in a random direction
 		command.sendCommand = true;
 		command.changeVx = true;
@@ -654,6 +655,12 @@ gboolean Client::run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 							!= ownRobots[index]->seenPucks.end() && !foundPuck; it++) {
 						if (sameCoordinates((*it)->relx, (*it)->rely, puckstack.seespuckstack(i).relx(),
 								puckstack.seespuckstack(i).rely())) {
+						  if((*it)->stackSize > (int)puckstack.stacksize())
+						  {
+						    //check if our robot has picked it up
+						    if(sameCoordinates(puckstack.seespuckstack(i).relx(), puckstack.seespuckstack(i).rely(), 0, 0))
+		              ownRobots[index]->hasPuck = true;			      
+						  }
 							(*it)->stackSize = puckstack.stacksize();
 							foundPuck = true;
 							if ((*it)->stackSize <= 0 || puckstack.seespuckstack(i).viewlostid()) {
