@@ -1,0 +1,44 @@
+message SeesServerRobot {
+  required bool viewLostId = 1; // robot specified by seenById can no 
+                                // longer see this robot
+  required fixed32 seenById = 2; // list of robots now viewing
+  optional float relx = 3; 
+  optional float rely = 4;
+}
+  
+message ServerRobot {  
+  required fixed32 id = 1;
+  optional float velocityx = 2;
+  optional float velocityy = 3;
+  optional float angle = 4; 
+  optional bool hasPuck = 5;
+  optional float x = 6;
+  optional float y = 7;
+  optional bool hasCollided = 8;
+  optional fixed32 controllerIp = 9;
+  optional int32 lastStep = 10;
+  optional fixed32 team = 11;
+  repeated SeesServerRobot seesserverrobot = 12;
+}
+
+message RegionUpdate {
+  required fixed32 timestep = 1;  //send the timestep
+  repeated ServerRobot serverrobot = 2;
+  repeated PuckStack puckstack = 3;
+}
+
+//taken from PuckStack
+message SeesPuckStack {
+  required bool viewLostId = 1; // robot specified by seenById can no 
+                                // longer see this puckStack
+  required fixed32 seenById = 2; // list of robots viewing
+  optional float relx = 3;
+  optional float rely = 4;
+}
+
+message PuckStack {
+  optional fixed64 x = 1; //we don't use absolute positions anymore, so these should be obsolete.
+  optional fixed64 y = 2; //Delete them when we're sure.
+  required fixed32 stackSize = 3;
+  repeated SeesPuckStack seespuckstack = 4;
+}

@@ -41,7 +41,7 @@ clear
 directory=`dirname $0`
 clockConfig="$directory/clockserver/config"
 #default sleep time is one second
-sleepTime=1
+sleepTime=2
 #default terminal is xterm
 terminal="xterm -T"
 

@@ -15,8 +15,7 @@ PROTOBUF_GENERATE_CPP(PROTO_SRCS PROTO_HDRS
   claimteam.proto
   clientrobot.proto
   regionrender.proto
-  puckstack.proto
-  serverrobot.proto
+  regionupdate.proto
   timestep.proto
   worldinfo.proto
   )

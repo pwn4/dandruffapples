@@ -467,14 +467,6 @@ int main(int argc, char **argv) {
 								// Initialization: If all servers connected, and we sent out
 								// WorldInfo packets to all, then send the first timestep out!
 								if (connected == server_count && worldinfoSent == server_count) {
-									// Send initialization timestep.
-									ready = 0;
-									timestep.set_timestep(0);
-									for (vector<RegionConnection*>::const_iterator i = regions.begin(); i
-											!= regions.end(); ++i) {
-										(*i)->queue.push(MSG_TIMESTEPUPDATE, timestep);
-										(*i)->set_writing(true);
-									}
 									cout << "All region servers connected!  Press return to begin simulation: "
 											<< flush;
 									standardinput.set_reading(true);
@@ -626,14 +618,16 @@ int main(int argc, char **argv) {
 				}
 
 				case net::connection::STDIN:
+				  //we need to only send the first timestep when all regions are connected to each other
+					ready = 0;
+					timestep.set_timestep(0);
+				
 					cout << "Running!" << endl;
 					// We don't care about stdin anymore.
 					standardinput.set_reading(false);
 					// Step continuously
 					running = true;
-					// Send first timestep
-					ready = 0;
-					timestep.set_timestep(step++);
+					
 					// Send to regions
 					for (vector<RegionConnection*>::const_iterator i = regions.begin(); i != regions.end(); ++i) {
 						(*i)->queue.push(MSG_TIMESTEPUPDATE, timestep);

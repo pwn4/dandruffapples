@@ -14,6 +14,7 @@ enum MessageType {
   MSG_CLAIMTEAM,
   MSG_CLAIM,
   MSG_BOUNCEDROBOT,
+  MSG_REGIONUPDATE,
   MSG_MAX
 };
 

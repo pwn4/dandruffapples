@@ -133,6 +133,93 @@ ClientRobotCommand Client::userAiCode(OwnRobot* ownRobot) {
 	if (ownRobot->ai) // robots don't have ai at the first timestep?
 		ownRobot->ai->make_command(cmd, ownRobot);
 	return cmd;
+/*
+ClientRobotCommand userAiCode(OwnRobot* ownRobot) {
+	ClientRobotCommand command;
+	
+	//init
+	if(state == NULL){
+	  state = new int[robotsPerTeam];
+	}
+	
+	if(state[ownRobot->index] == 1){	  
+	  //go closer and slow down
+	  SeenPuck* closest = findClosestPuck(ownRobot);
+		if (closest != NULL)
+	  {
+	    command.sendCommand = true;
+			
+			double vecLength = sqrt(closest->relx*closest->relx+ closest->rely*closest->rely);
+			//watch that divide by zero
+			if(vecLength > 0.0000000001)
+			{
+			  command.changeVx = true;
+			  command.vx = closest->relx / (vecLength * vecLength);
+			  command.changeVy = true;
+			  command.vy = closest->rely / (vecLength * vecLength);
+		  }
+	  }
+	  
+	  //watch out for pucks
+	  if(ownRobot->hasPuck)
+	  {
+	    state[ownRobot->index] = 2;
+	    command.sendCommand = true;
+			
+			//normalize
+			double vecLength = sqrt(ownRobot->homeRelX*ownRobot->homeRelX + ownRobot->homeRelY*ownRobot->homeRelY);
+			//watch that divide by zero
+			if(vecLength > 0.0000000001)
+			{
+			  command.changeVx = true;
+			  command.vx = ownRobot->homeRelX / vecLength;
+			  command.changeVy = true;
+			  command.vy = ownRobot->homeRelY / vecLength;
+		  }
+			
+	    return command;
+    }
+	  
+	  //pick it up
+	  SeenPuck* pickup = findPickUpablePuck(ownRobot);
+		if (pickup != NULL) {
+			command.sendCommand = true;
+			command.changePuckPickup = true;
+			command.puckPickup = true;
+		}
+		
+		return command;
+	}
+	
+	if(state[ownRobot->index] == 0 && (ownRobot->vx == 0 && ownRobot->vy == 0)){
+	  //go in a random direction
+		command.sendCommand = true;
+		command.changeVx = true;
+		command.vx = (((rand() % 11) / 10.0) - 0.5);
+		command.changeVy = true;
+		command.vy = (((rand() % 11) / 10.0) - 0.5);
+		
+		state[ownRobot->index] = 1;
+		
+		return command;
+	}
+	
+	if(state[ownRobot->index] == 2){
+	  //if we're here but not holding a puck, that's a problem. Go back to state 1
+	  if(ownRobot->hasPuck == false)
+	    state[ownRobot->index] = 0;
+	    
+	  //if we're home, drop it.
+	  if(ownRobot->homeRelX < HOMEDIAMETER/2 && ownRobot->homeRelY < HOMEDIAMETER/2)
+	  {
+			command.sendCommand = true;
+			command.changePuckPickup = true;
+			command.puckPickup = false;
+	  }
+	  
+	  return command;
+	} */
+	
 }
 
 void Client::executeAi(OwnRobot* ownRobot, int index, net::connection &controller) {
@@ -403,7 +490,7 @@ gboolean Client::run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 				  //if (ownRobots[i]->eventQueue.size() > 0 && !ownRobots[i]->pendingCommand) {
 				  //robot AIs SHOULD execute every timestep
 				  if(!ownRobots[i]->pendingCommand){
-					  if(currentTimestep - ownRobots[i]->whenLastSent > 3){
+					  if(currentTimestep - ownRobots[i]->whenLastSent > 10){
 					    executeAi(ownRobots[i], i, controller);
 					    //initializeRobots(controller);
 					  }

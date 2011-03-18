@@ -21,8 +21,7 @@
 #include <string>
 
 #include "../common/claim.pb.h"
-#include "../common/serverrobot.pb.h"
-#include "../common/puckstack.pb.h"
+#include "../common/regionupdate.pb.h"
 #include "../common/net.h"
 #include "../common/helper.h"
 #include "../worldviewer/drawer.h"
@@ -114,6 +113,7 @@ ArrayObject** robotArray;
 map<int, RobotObject*> robots;
 map<int, ServerRobot*> updates;
 EpollConnection ** neighbours;
+RegionUpdate regionUpdate[8];
 vector<EpollConnection*> controllers;
 priority_queue<Command*, vector<Command*>, CompareCommand> serverChangeQueue;
 priority_queue<Command*, vector<Command*>, CompareCommand> clientChangeQueue;
@@ -122,8 +122,8 @@ map<PuckStackObject*, bool, ComparePuckStackObject> puckq;
 //for collision
 double sightSquare, collisionSquare;
 
-  void BroadcastRobot(RobotObject *curRobot, Index oldIndices, Index newIndices, int step);
-  void BroadcastPuckStack(PuckStackObject *curStack);
+  void BroadcastRobot(RobotObject *curRobot, Index oldIndices, Index newIndices, int step, RegionUpdate * regionHandle);
+  void BroadcastPuckStack(PuckStackObject *curStack, RegionUpdate * regionHandle);
 
 public:
   RegionRender render;
@@ -170,6 +170,11 @@ public:
   void flushControllers();
 
   void forceUpdates();
+  
+  //new async methods
+  void clearBuffers();
+  
+  void flushBuffers();
 
 };
 

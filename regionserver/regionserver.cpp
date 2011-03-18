@@ -27,7 +27,7 @@
 
 #include "../common/claim.pb.h"
 #include "../common/clientrobot.pb.h"
-#include "../common/puckstack.pb.h"
+#include "../common/regionupdate.pb.h"
 #include "../common/worldinfo.pb.h"
 #include "../common/regionrender.pb.h"
 #include "../common/timestep.pb.h"
@@ -129,6 +129,8 @@ void run() {
 	gettimeofday(&microTimeCache, NULL);
 	bool generateImage;
 	vector<HomeInfo*> myHomes;
+	
+	vector<pair <int, int> >uniqueRegions;
 
 	//this is only here to generate random numbers for the logging
 	srand(time(NULL));
@@ -206,6 +208,10 @@ void run() {
 	WorldInfo worldinfo;
 	RegionInfo regioninfo;
 	unsigned myId = 0; //region id
+	
+	//for synchronization
+	int round = 0;
+	bool sendTsdone = false;
 
 	AreaEngine* regionarea = new AreaEngine(ROBOTDIAMETER,REGIONSIDELEN, MINELEMENTSIZE, VIEWDISTANCE, VIEWANGLE,
 			MAXSPEED, MAXROTATE);
@@ -239,16 +245,6 @@ void run() {
 
 	//enter the main loop
 	while (true) {
-		//cache the time, so we don't call it several times
-		gettimeofday(&timeCache, NULL);
-
-		//check if its time to output
-		if (timeCache.tv_sec > lastSecond) {
-			cout << timeSteps/2 << " timesteps/second" << endl;
-
-			timeSteps = 0;
-			lastSecond = timeCache.tv_sec;
-		}
 
 		//wait on epoll
 		int eventcount;
@@ -262,6 +258,18 @@ void run() {
 
 		//check our events that were triggered
 		for (size_t i = 0; i < (unsigned) eventcount; i++) {
+      //timestep outputting
+      //cache the time, so we don't call it several times
+      gettimeofday(&timeCache, NULL);
+
+      //check if its time to output
+      if (timeCache.tv_sec > lastSecond) {
+        cout << timeSteps/2 << " timesteps/second" << endl;
+
+        timeSteps = 0;
+        lastSecond = timeCache.tv_sec;
+      }      
+		
 			net::EpollConnection *c = (net::EpollConnection*) events[i].data.ptr;
 			if (events[i].events & EPOLLIN) {
 				switch (c->type) {
@@ -329,6 +337,17 @@ void run() {
 									net::EpollConnection *newconn = new net::EpollConnection(epoll, EPOLLIN, regionfd,
 											net::connection::REGION);
 									borderRegions.push_back(newconn);
+									bool exists = false;
+									for(int k = 0; k < uniqueRegions.size(); k++)
+									  if(uniqueRegions.at(k).first == worldinfo.region(i).id())
+									  {
+									    exists = true;
+									    break;
+									  }
+									if(!exists)
+									{
+									  uniqueRegions.push_back(pair <int, int> (newconn->fd, -1));
+								  }
 
 									// Reverse all the positions. If we are connecting to the
 									// server on our left, we want to tell it that we are on
@@ -394,6 +413,9 @@ void run() {
 							for (bool complete = false; !complete;) {
 								complete = writer.doWrite();
 							}
+							
+							//NOW you can start the clock
+							cout << "Connected to neighbours! Ready for simulation to begin." << endl;
 
 							break;
 						}
@@ -408,7 +430,9 @@ void run() {
 							//do our initializations here in the init step
 							if(!initialized)
 							{
-
+                //ready the engine buffers
+                regionarea->clearBuffers();
+      
 								// Find our robots, and add to the simulation
 							  vector<int> myRobotIds;
 							  vector<int> myRobotTeams;
@@ -425,15 +449,16 @@ void run() {
 								  }
 							  }
 
+                //tell the engine to send its buffer contents
+                regionarea->flushBuffers();
+
 							  cout << numRobots << " robots created." << endl;
 
-							  regionarea->flushNeighbours();
+							  //regionarea->flushNeighbours();
+							  round++;  //this is the async replacement
+							  sendTsdone = true;
 
 							  initialized = true;
-
-							  //Respond with done message
-							  c->queue.push(MSG_TIMESTEPDONE, tsdone);
-							  c->set_writing(true);
 
 							  break;
 						  }
@@ -455,6 +480,10 @@ void run() {
 
 							regionarea->Step(generateImage);
 
+              //async 'flush'
+              round++;  //we need to ensure we get all neighbour data before continuing
+              sendTsdone = true;
+              
 							timeSteps++; //Note: only use this for this temp stat taking. use regionarea->curStep for syncing
 
 							if (generateImage) {
@@ -490,10 +519,22 @@ void run() {
 									;
 								}
 							}
+							
+							bool ready = true;
+			        for(int i = 0; i < uniqueRegions.size(); i++)
+			          if(uniqueRegions.at(i).second != regionarea->curStep)
+			          {
+			            ready = false;
+			            break;
+		            }
+			        
+	            if((ready && sendTsdone)){cout << "ASDDASD" << endl;
+                //Respond with done message
+                clockconn.queue.push(MSG_TIMESTEPDONE, tsdone);
+                clockconn.set_writing(true);
+                sendTsdone = false;
+              }
 #endif
-							//Respond with done message
-							c->queue.push(MSG_TIMESTEPDONE, tsdone);
-							c->set_writing(true);
 							break;
 						}
 						default:
@@ -595,14 +636,44 @@ void run() {
 					const void *buffer;
 					if (c->reader.doRead(&type, &len, &buffer)) {
 						switch (type) {
-						case MSG_SERVERROBOT: {
-							throw SystemError("Server robot read by Epoll.");
-							break;
-						}
-						case MSG_PUCKSTACK: {
-						  throw SystemError("Puck stack read by Epoll.");
-							break;
-						}
+			        case MSG_REGIONUPDATE: {
+			          RegionUpdate newUpdate;
+			          newUpdate.ParseFromArray(buffer, len);
+			          for(int i = 0; i < newUpdate.serverrobot_size(); i++)
+  			          regionarea->GotServerRobot(newUpdate.serverrobot(i));
+  			          
+  			        for(int i = 0; i < uniqueRegions.size(); i++)
+  			        {  if(uniqueRegions.at(i).first == c->fd)
+  			          {
+  			            uniqueRegions.at(i).second = newUpdate.timestep();
+  			            break;
+  			          }
+  			          cout <<  uniqueRegions.at(i).first << "*" << c->fd << endl;
+			          }
+  			        
+  			        bool ready = true;
+  			        for(int i = 0; i < uniqueRegions.size(); i++)
+  			          if(uniqueRegions.at(i).second != regionarea->curStep)
+  			          {
+  			            ready = false;
+  			            break;
+			            }
+  			        
+		            if((ready && sendTsdone)){
+                  //Respond with done message
+	                clockconn.queue.push(MSG_TIMESTEPDONE, tsdone);
+	                clockconn.set_writing(true);
+	                sendTsdone = false;
+                }
+ 
+			          break;
+			        }
+			        case MSG_PUCKSTACK: {
+			          PuckStack puckstack;
+			          puckstack.ParseFromArray(buffer, len);
+			          regionarea->GotPuckStack(puckstack);
+			          break;
+			        }
 						case MSG_REGIONINFO: {
 							regioninfo.ParseFromArray(buffer, len);
 							cout << "Found new neighbour, server #" << regioninfo.id() << endl;
@@ -612,6 +683,18 @@ void run() {
 								// Inform AreaEngine of our new neighbour.
 								regionarea->SetNeighbour((int) regioninfo.position(i), c);
 							}
+
+              bool exists = false;
+							for(int k = 0; k < uniqueRegions.size(); k++)
+							  if(uniqueRegions.at(k).first == regioninfo.id())
+							  {
+							    exists = true;
+							    break;
+							  }
+							if(!exists)
+							{
+							  uniqueRegions.push_back(pair <int, int> (c->fd, -1));
+						  }
 
               cout << std::setw(2) << std::setfill('0') << serverByPosition[0]
                    << " | " << std::setw(2) << std::setfill('0')
@@ -626,10 +709,9 @@ void run() {
                    << " | " << std::setw(2) << std::setfill('0')
                    << serverByPosition[4] << endl;
 
-              //disable epoll for the neighbour now that we'd initialized with it, so that
-              //the engine can handle writing / reading
-              c->set_reading(false);
-              c->set_writing(false);
+              //we're going to do this shit asynchronously, dammit!
+              //c->set_reading(false);
+              //c->set_writing(false);
 
 							break;
 						}
@@ -767,7 +849,7 @@ void run() {
 				case net::connection::CLOCK:
 					if (c->queue.doWrite()) {
 						c->set_writing(false);
-					}
+					}		
 					break;
 				default:
 					cerr << "Unexpected writable socket!" << endl;

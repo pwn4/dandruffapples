@@ -24,8 +24,7 @@ This program communications with controllers.
 
 #include "../common/claimteam.pb.h"
 #include "../common/clientrobot.pb.h"
-#include "../common/puckstack.pb.h"
-#include "../common/serverrobot.pb.h"
+#include "../common/regionupdate.pb.h"
 #include "../common/timestep.pb.h"
 #include "../common/worldinfo.pb.h"
 
