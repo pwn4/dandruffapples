@@ -82,28 +82,39 @@ void Client::loadConfigFile(const char* configFileName, string& pathToExe) {
 	}
 }
 
+// Adds a new controller address to the client's known list of controllers.
 void Client::setControllerIp(string newControllerIp) {
 	controllerips.clear();
 	controllerips.push_back(newControllerIp);
 }
 
+// Gives the client a teamId. The client controls this team's robots. The 
+// myTeam variable is used to convert robotIds (1-1000000) to indexes in
+// the local ownRobot data structure (0-999).
 void Client::setMyTeam(int myTeam) {
 	this->myTeam = myTeam;
 }
 
+// Input: Index from local ownRobot array.
+// Output: The robotId used by the server. 
 int Client::indexToRobotId(int index) {
 	return (index + 1 + myTeam * robotsPerTeam);
 }
 
+// Input: The robotId used by the server. 
+// Output: Index from local ownRobot array.
 int Client::robotIdToIndex(int robotId) {
 	return (robotId - 1 - myTeam * robotsPerTeam);
 }
 
+// Returns true if the specified robotId is a member of our team.
 bool Client::weControlRobot(int robotId) {
 	int index = robotIdToIndex(robotId);
 	return (0 <= index && index < robotsPerTeam);
 }
 
+// Uses Pythagoras to find the distance of some object to its origin. Useful
+// for calculating the distance from homes, pucks, and other robots.
 double Client::relDistance(double x1, double y1) {
 	return (sqrt(x1 * x1 + y1 * y1));
 }
@@ -113,7 +124,7 @@ double Client::relDistance(double x1, double y1) {
 bool Client::sameCoordinates(double x1, double y1, double x2, double y2) {
 	// From testing, it looks like doubleing point errors either add or subtract
 	// 0.0001.
-	double maxError = 0.1;
+	double maxError = 0.1; // TODO: Lower the error if possible!
 	if (abs(x1 - x2) > maxError) {
 		return false;
 	}
@@ -219,17 +230,27 @@ ClientRobotCommand userAiCode(OwnRobot* ownRobot) {
 
 }
 
+// Provides the framework needed to generate an AI command for a robot. 
+// Handles the ClientRobot message creation. Calls the user's AI code. Sends
+// the ClientRobot message over the network if the AI decided to send a
+// command. Sets pendingCommand to true for the robot, so that no more
+// commands can be executed for this robot until we get a response from
+// the server.
 void Client::executeAi(OwnRobot* ownRobot, int index, net::connection &controller) {
+  // Have we sent a ClientRobot message without receiving a ServerRobot
+  // message for our robot? If so, don't send any commands yet.
 	if (ownRobot->pendingCommand)
 		return;
 
-	// Initialize clientrobot message to current values
+  // Prepare the ClientRobot message. Initialize clientrobot message 
+  // to current values.
 	ClientRobot clientrobot;
 	clientrobot.set_id(indexToRobotId(index));
 	clientrobot.set_velocityx(ownRobot->vx);
 	clientrobot.set_velocityy(ownRobot->vy);
 	clientrobot.set_angle(ownRobot->angle);
 
+  // Allow the user AI code to run.
 	ClientRobotCommand command = userAiCode(ownRobot);
 	if (command.sendCommand) {
 		if (command.changeVx)
@@ -239,18 +260,22 @@ void Client::executeAi(OwnRobot* ownRobot, int index, net::connection &controlle
 		if (command.changeAngle)
 			clientrobot.set_angle(command.angle);
 		if (command.changePuckPickup) {
-			puckPickupMessages++;
+			puckPickupMessages++; // debug message
 			clientrobot.set_puckpickup(command.puckPickup);
 		}
 
+    // Send the ClientRobot message!
 		controller.queue.push(MSG_CLIENTROBOT, clientrobot);
 
 		ownRobot->whenLastSent = currentTimestep;
-		sentMessages++;
-		ownRobot->pendingCommand = true;
+		sentMessages++; // debug message
+		ownRobot->pendingCommand = true; 
 	}
 }
 
+// Sends an initial ClientRobot message for each robot, allowing us to
+// define initial velocities. Assigns robot "behaviours" to our robots
+// based on the AI weights defined in client/config.
 void Client::initializeRobots(net::connection &controller) {
 	ClientRobot clientRobot;
 	int max_weight = clientAiList[clientAiList.size()-1].second;
@@ -286,6 +311,8 @@ gboolean runner(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 	return passer->client->run(ioch, cond, data);
 }
 
+// The main loop of the client program! Handles all network input.
+// Simulates robot updates. Calls the user AI code each timestep.
 gboolean Client::run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 	MessageType type;
 	int len;
@@ -329,7 +356,9 @@ gboolean Client::run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 	// this should be the only type of messages
 	switch (type) {
 	case MSG_WORLDINFO: {
-		// Should be the first message we recieve from the controller
+		// Should be the first message we recieve from the controller.
+    // Let's us calculate the number of robots on each team. We send
+    // our ClaimTeam message here. 
 		WorldInfo worldinfo;
 		worldinfo.ParseFromArray(buffer, len);
 		int robotSize = worldinfo.robot_size();
@@ -359,6 +388,10 @@ gboolean Client::run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 		break;
 	}
 	case MSG_CLAIMTEAM: {
+    // Received a ClaimTeam response message from the controller in response
+    // to our asking for a team. If we got the team, then prepare the local
+    // data structures and set simulationStarted to true. If we didn't get
+    // the team, then die.
 		ClaimTeam claimteam;
 		claimteam.ParseFromArray(buffer, len);
 		if (!simulationStarted) {
@@ -373,8 +406,6 @@ gboolean Client::run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 					ownRobots[i]->index = i;
 				}
 
-				//enemyRobots = new vector<EnemyRobot*>[numTeams];
-				// Allow AI thread to commence.
 				simulationStarted = true;
 
 				//get that HOME info!
@@ -398,6 +429,9 @@ gboolean Client::run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 		break;
 	}
 	case MSG_TIMESTEPUPDATE: {
+    // Simulation is now on a new timestep. Simulate all robot movements.
+    // Allow the user AI code to execute. If we are just starting up, then
+    // run initializeRobots().
 		TimestepUpdate timestep;
 		timestep.ParseFromArray(buffer, len);
 		currentTimestep = timestep.timestep();
@@ -515,6 +549,8 @@ gboolean Client::run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 	}
 
 	case MSG_SERVERROBOT: {
+    // Received a ServerRobot message for either our robot, or an enemy
+    // robot that we can see. Update our local data accordingly.
 		ServerRobot serverrobot;
 		serverrobot.ParseFromArray(buffer, len);
 
@@ -630,6 +666,9 @@ gboolean Client::run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 		break;
 	}
 	case MSG_PUCKSTACK: {
+    // Received a PuckStack message for a puck that has either
+    // newly come into view, or had a stacksize change. Update
+    // the puck lists for our robots.
 		PuckStack puckstack;
 		puckstack.ParseFromArray(buffer, len);
 		if (simulationStarted) {
