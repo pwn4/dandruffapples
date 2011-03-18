@@ -334,7 +334,7 @@ int main(int argc, char **argv) {
         RobotInfo *ri = worldinfo.add_robot();
 			  ri->set_id(id);
 			  ri->set_region(k);
-			  ri->set_team((id-1)/robots_per_team);
+			  ri->set_team(1+((id-1)/robots_per_team)); //team ids start at 1
 
 			  ri->set_x(i);
 			  ri->set_y(j); 
