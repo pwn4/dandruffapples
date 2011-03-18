@@ -338,7 +338,7 @@ void run() {
 											net::connection::REGION);
 									borderRegions.push_back(newconn);
 									bool exists = false;
-									for(int k = 0; k < uniqueRegions.size(); k++)
+									for(unsigned k = 0; k < uniqueRegions.size(); k++)
 									  if(uniqueRegions.at(k).first == worldinfo.region(i).id())
 									  {
 									    exists = true;
@@ -520,7 +520,7 @@ void run() {
 							}
 #endif
 							bool ready = true;
-			        for(int i = 0; i < uniqueRegions.size(); i++)
+			        for(unsigned i = 0; i < uniqueRegions.size(); i++)
 			          if(uniqueRegions.at(i).second != regionarea->curStep)
 			          {
 			            ready = false;
@@ -638,10 +638,10 @@ void run() {
 			        case MSG_REGIONUPDATE: {
 			          RegionUpdate newUpdate;
 			          newUpdate.ParseFromArray(buffer, len);
-			          for(int i = 0; i < newUpdate.serverrobot_size(); i++)
+			          for(unsigned i = 0; i < newUpdate.serverrobot_size(); i++)
   			          regionarea->GotServerRobot(newUpdate.serverrobot(i));
   			          
-  			        for(int i = 0; i < uniqueRegions.size(); i++)
+  			        for(unsigned i = 0; i < uniqueRegions.size(); i++)
   			        {  if(uniqueRegions.at(i).first == c->fd)
   			          {
   			            uniqueRegions.at(i).second = newUpdate.timestep();
@@ -651,7 +651,7 @@ void run() {
 			          }
   			        
   			        bool ready = true;
-  			        for(int i = 0; i < uniqueRegions.size(); i++)
+  			        for(unsigned i = 0; i < uniqueRegions.size(); i++)
   			          if(uniqueRegions.at(i).second != regionarea->curStep)
   			          {
   			            ready = false;
@@ -684,7 +684,7 @@ void run() {
 							}
 
               bool exists = false;
-							for(int k = 0; k < uniqueRegions.size(); k++)
+							for(unsigned k = 0; k < uniqueRegions.size(); k++)
 							  if(uniqueRegions.at(k).first == regioninfo.id())
 							  {
 							    exists = true;
