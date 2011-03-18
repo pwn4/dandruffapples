@@ -1,4 +1,7 @@
 #include "client.h"
+#include <dlfcn.h>
+#include <sstream>
+typedef ClientAi* (*FUNCPTR_AI)();
 
 /////////////////Variables and Declarations/////////////////
 //Game world variables
@@ -23,6 +26,7 @@ void Client::loadConfigFile(const char* configFileName) {
 	char * token;
 
 	if (fileHandle != NULL) {
+		int accumulatedWeight = 0; // for AI loading
 		while (fgets(readBuffer, sizeof(readBuffer), fileHandle) != 0) {
 			token = strtok(readBuffer, " \n");
 
@@ -32,6 +36,46 @@ void Client::loadConfigFile(const char* configFileName) {
 				string newcontrollerip = token;
 				controllerips.push_back(newcontrollerip);
 				cout << "Storing controller IP: " + newcontrollerip << endl;
+			}
+
+			//if it's a Client AI definition, load the shared lib
+			if (strcmp(token, "AI") == 0) {
+				token = strtok(NULL, " \n");
+				string aiLib = token;
+				token = strtok(NULL, " \n");
+				stringstream ss(token);
+				int weight; ss >> weight;
+
+				// Load the library
+				char* err_msg = NULL;
+				void* hndl = dlopen(("./"+aiLib).c_str(), RTLD_NOW);
+				if (hndl == NULL) {
+					// Try another path
+					hndl = dlopen(("./client/"+aiLib).c_str(), RTLD_NOW);
+					if (hndl == NULL) {
+						cerr << dlerror() << endl; exit(-1);
+					} else {
+						cout << "AI loaded from " << "./client/"+aiLib << "...";
+					}
+				} else {
+					cout << "AI loaded from " << aiLib << "...";
+				}
+				cout << " weight: " << weight << "." << endl;
+
+				// get AI code
+				FUNCPTR_AI maker = (FUNCPTR_AI)dlsym(hndl, "maker");
+				err_msg = dlerror();
+				if (err_msg) { cout << err_msg << endl; exit(-1); }
+				// create our AI object
+				ClientAi* ai = (ClientAi*)((*maker)());
+				accumulatedWeight += weight;
+				clientAiList.push_back(make_pair(ai, accumulatedWeight));
+
+				//TODO: put the cleanup code somewhere
+				/*dlclose(hndl);
+				err_msg = dlerror();
+				if (err_msg) { cout << err_msg << endl; exit(-1); }
+				*/
 			}
 		}
 
@@ -83,279 +127,12 @@ bool Client::sameCoordinates(double x1, double y1, double x2, double y2) {
 	return true;
 }
 
-SeenPuck* Client::findPickUpablePuck(OwnRobot* ownRobot) {
-	if (ownRobot->seenPucks.size() == 0)
-		return NULL;
-
-	vector<SeenRobot*>::iterator closest;
-	for (vector<SeenPuck*>::iterator it = ownRobot->seenPucks.begin(); it != ownRobot->seenPucks.end(); it++) {
-		//cout << "relx= " << (*it)->relx << ", rely= " << (*it)->rely << endl;
-		if (sameCoordinates((*it)->relx, (*it)->rely, 0.0, 0.0)) {
-			return *it;
-		}
-	}
-	return NULL; // Found nothing in the for loop.
-}
-
-SeenRobot* Client::findClosestRobot(OwnRobot* ownRobot) {
-	if (ownRobot->seenRobots.size() == 0)
-		return NULL;
-
-	vector<SeenRobot*>::iterator closest;
-	double minDistance = 9000.01; // Over nine thousand!
-	double tempDistance;
-	for (vector<SeenRobot*>::iterator it = ownRobot->seenRobots.begin(); it != ownRobot->seenRobots.end(); it++) {
-		tempDistance = relDistance((*it)->relx, (*it)->rely);
-		if (tempDistance < minDistance) {
-			minDistance = tempDistance;
-			closest = it;
-		}
-	}
-	return *closest;
-}
-
-SeenPuck* Client::findClosestPuck(OwnRobot* ownRobot) {
-	if (ownRobot->seenPucks.size() == 0)
-		return NULL;
-
-	vector<SeenPuck*>::iterator closest;
-	double minDistance = 9000.01; // Over nine thousand!
-	double tempDistance;
-	for (vector<SeenPuck*>::iterator it = ownRobot->seenPucks.begin(); it != ownRobot->seenPucks.end(); it++) {
-		tempDistance = relDistance((*it)->relx, (*it)->rely);
-		if (tempDistance < minDistance) {
-			minDistance = tempDistance;
-			closest = it;
-		}
-	}
-	return *closest;
-}
-
 int * state = NULL;
 ClientRobotCommand Client::userAiCode(OwnRobot* ownRobot) {
-	ClientRobotCommand command;
-	
-	//init
-	/*if(state == NULL){
-	  state = new int[robotsPerTeam];
-	}
-	
-	if(state[ownRobot->index] == 1){	  
-	  //go closer and slow down
-	  SeenPuck* closest = findClosestPuck(ownRobot);
-		if (closest != NULL)
-	  {
-	    command.sendCommand = true;
-			
-			double vecLength = sqrt(closest->relx*closest->relx+ closest->rely*closest->rely);
-			//watch that divide by zero
-			if(vecLength > 0.0000000001)
-			{
-			  command.changeVx = true;
-			  command.vx = closest->relx / (vecLength * vecLength);
-			  command.changeVy = true;
-			  command.vy = closest->rely / (vecLength * vecLength);
-		  }
-	  }
-	  
-	  //watch out for pucks
-	  if(ownRobot->hasPuck)
-	  {
-	    state[ownRobot->index] = 2;
-	    command.sendCommand = true;
-			
-			//normalize
-			double vecLength = sqrt(ownRobot->homeRelX*ownRobot->homeRelX + ownRobot->homeRelY*ownRobot->homeRelY);
-			//watch that divide by zero
-			if(vecLength > 0.0000000001)
-			{
-			  command.changeVx = true;
-			  command.vx = ownRobot->homeRelX / vecLength;
-			  command.changeVy = true;
-			  command.vy = ownRobot->homeRelY / vecLength;
-		  }
-			
-	    return command;
-    }
-	  
-	  //pick it up
-	  SeenPuck* pickup = findPickUpablePuck(ownRobot);
-		if (pickup != NULL) {
-			command.sendCommand = true;
-			command.changePuckPickup = true;
-			command.puckPickup = true;
-		}
-		
-		return command;
-	}
-	
-	if(state[ownRobot->index] == 0 && (ownRobot->vx == 0 && ownRobot->vy == 0)){
-	  //go in a random direction
-		command.sendCommand = true;
-		command.changeVx = true;
-		command.vx = (((rand() % 11) / 10.0) - 0.5);
-		command.changeVy = true;
-		command.vy = (((rand() % 11) / 10.0) - 0.5);
-		
-		state[ownRobot->index] = 1;
-		
-		return command;
-	}
-	
-	if(state[ownRobot->index] == 2){
-	  //if we're here but not holding a puck, that's a problem. Go back to state 1
-	  if(ownRobot->hasPuck == false)
-	    state[ownRobot->index] = 0;
-	    
-	  //if we're home, drop it.
-	  if(ownRobot->homeRelX < HOMEDIAMETER/2 && ownRobot->homeRelY < HOMEDIAMETER/2)
-	  {
-			command.sendCommand = true;
-			command.changePuckPickup = true;
-			command.puckPickup = false;
-	  }
-	  
-	  return command;
-	}*/
-	
-	
-	switch (ownRobot->behaviour) {
-	case 0: {
-		// Forager robot. Pick up any pucks we can. Don't worry about enemy robots.
-
-		// Are we interested in this event?
-		bool pickupPuck = false;
-		for (vector<EventType>::iterator it = ownRobot->eventQueue.begin(); it != ownRobot->eventQueue.end()
-				&& !pickupPuck; it++) {
-			if (*it == EVENT_CAN_PICKUP_PUCK)
-				pickupPuck = true;
-		}
-
-		// Check if we are on a puck. If so, just pick it up.
-		//DONT for now.
-		if (pickupPuck) {
-			SeenPuck* pickup = findPickUpablePuck(ownRobot);
-			if (pickup != NULL) {
-				command.sendCommand = true;
-				command.changePuckPickup = true;
-				command.puckPickup = true;
-				break;
-			}
-		}
-
-		// Check if we are not moving
-		bool notMoving = false;
-		for (vector<EventType>::iterator it = ownRobot->eventQueue.begin(); it != ownRobot->eventQueue.end()
-				&& !notMoving; it++) {
-			if (*it == EVENT_NOT_MOVING)
-				notMoving = true;
-		}
-		if (notMoving) {
-			command.sendCommand = true;
-			command.changeVx = true;
-			command.vx = (((rand() % 11) / 10.0) - 0.5);
-			command.changeVy = true;
-			command.vy = (((rand() % 11) / 10.0) - 0.5);
-			break;
-		}
-
-		// Make robot move in direction of the nearest puck.
-		SeenPuck* closest = findClosestPuck(ownRobot);
-		if (closest != NULL) {
-		  if(closest->rely == 0)  //prevent NaN
-		    closest->rely = 0.000001;
-			double ratio = abs(closest->relx / closest->rely);
-			double modx = 1.0;
-			double mody = 1.0;
-			if (ratio > 1.0) {
-				mody = 1.0 / ratio;
-			} else {
-				modx = ratio;
-			}
-
-			double velocity = 0.1;
-			if (relDistance(closest->relx, closest->rely) < 1.0) {
-				velocity = 0.01;
-			}
-			command.sendCommand = true;
-			if (closest->relx <= 0.0) {
-				// Move left!
-				command.changeVx = true;
-				command.vx = velocity * -1.0 * modx;
-			} else if (closest->relx > 0.0) {
-				command.changeVx = true;
-				command.vx = velocity * modx;
-			}
-			if (closest->rely <= 0.0) {
-				// Move up!
-				command.changeVy = true;
-				command.vy = velocity * -1.0 * mody;
-			} else if (closest->rely > 0.0) {
-				command.changeVy = true;
-				command.vy = velocity * mody;
-			}
-		}
-		break;
-	}
-	case 1: {
-		// Scared robot. Run away from all enemy robots.
-
-		// Check if we are not moving
-		bool notMoving = false;
-		for (vector<EventType>::iterator it = ownRobot->eventQueue.begin(); it != ownRobot->eventQueue.end()
-				&& !notMoving; it++) {
-			if (*it == EVENT_NOT_MOVING)
-				notMoving = true;
-		}
-		if (notMoving) {
-			command.sendCommand = true;
-			command.changeVx = true;
-			command.vx = (((rand() % 11) / 10.0) - 0.5);
-			command.changeVy = true;
-			command.vy = (((rand() % 11) / 10.0) - 0.5);
-			break;
-		}
-
-		// Are we interested in this event?
-		bool robotChange = false;
-		for (vector<EventType>::iterator it = ownRobot->eventQueue.begin(); it != ownRobot->eventQueue.end()
-				&& !robotChange; it++) {
-			if (*it == EVENT_CLOSEST_ROBOT_STATE_CHANGE || *it == EVENT_NEW_CLOSEST_ROBOT)
-				robotChange = true;
-		}
-		if (!robotChange)
-			break;
-
-		// Make robot move in opposite direction. TODO: Add trig!
-		SeenRobot* closest = findClosestRobot(ownRobot);
-		if (closest != NULL) {
-			double velocity = 1.0;
-			command.sendCommand = true;
-			if (closest->relx <= 0.0) {
-				// Move right!
-				command.changeVx = true;
-				command.vx = velocity;
-			} else if (closest->relx > 0.0) {
-				command.changeVx = true;
-				command.vx = velocity * -1.0;
-			}
-			if (closest->rely <= 0.0) {
-				// Move down!
-				command.changeVy = true;
-				command.vy = velocity;
-			} else if (closest->rely > 0.0) {
-				command.changeVy = true;
-				command.vy = velocity * -1.0;
-			}
-		}
-		break;
-	}
-	default:
-		cerr << "You defined a robot behaviour number that you are not checking!" << endl;
-		break;
-	}
-	
-	return command;
+	ClientRobotCommand cmd;
+	if (ownRobot->ai) // robots don't have ai at the first timestep?
+		ownRobot->ai->make_command(cmd, ownRobot);
+	return cmd;
 }
 
 void Client::executeAi(OwnRobot* ownRobot, int index, net::connection &controller) {
@@ -392,6 +169,7 @@ void Client::executeAi(OwnRobot* ownRobot, int index, net::connection &controlle
 
 void Client::initializeRobots(net::connection &controller) {
 	ClientRobot clientRobot;
+	int max_weight = clientAiList[clientAiList.size()-1].second;
 
 	// Initialize robots to some random velocity.
 	for (int i = 0; i < robotsPerTeam; i++) {
@@ -404,7 +182,18 @@ void Client::initializeRobots(net::connection &controller) {
 		controller.queue.push(MSG_CLIENTROBOT, clientRobot);
 		ownRobots[i]->whenLastSent = currentTimestep;
 		sentMessages++;
-		ownRobots[i]->behaviour = i % 2;
+
+		// not used
+		// ownRobots[i]->behaviour = i % 2;
+
+		// set AI for this robot according to weights
+		int randomWeight = rand() % max_weight;
+		for (size_t k = 0; k < clientAiList.size(); k++) {
+			if (randomWeight < clientAiList[k].second) {
+				ownRobots[i]->ai = clientAiList[k].first;
+				break;
+			}
+		}
 	}
 }
 

@@ -39,6 +39,9 @@ using namespace std;
 using namespace google;
 using namespace protobuf;
 
+class Client;
+class ClientAi;
+
 enum EventType {
 	EVENT_CLOSEST_ROBOT_STATE_CHANGE,
 	EVENT_NEW_CLOSEST_ROBOT,
@@ -92,7 +95,7 @@ public:
 	bool pendingCommand;
 	int whenLastSent;
 	int closestRobotId;
-	int behaviour;
+	// int behaviour;
 	vector<SeenRobot*> seenRobots;
 	vector<SeenPuck*> seenPucks;
 	double homeRelX;
@@ -100,10 +103,11 @@ public:
 	vector<EventType> eventQueue;
 	
 	int index; // this is for AI memory
+	ClientAi* ai; // user-defined ai code
 
 	OwnRobot() :
-		Robot(), pendingCommand(false), whenLastSent(-1), closestRobotId(-1), behaviour(-1), homeRelX(0.0),
-				homeRelY(0.0) {
+		Robot(), pendingCommand(false), whenLastSent(-1), closestRobotId(-1), homeRelX(0.0),
+				homeRelY(0.0), ai(NULL) {
 	}
 };
 
@@ -145,8 +149,6 @@ public:
 	ClientViewer(char*);
 	~ClientViewer();
 };
-
-class Client;
 
 struct passToRun {
 	bool runClientViewer;
@@ -214,6 +216,9 @@ private:
 	void initializeRobots(net::connection & controller);
 	guint gwatch;
 	bool writing;
+	double relDistance(double x1, double y1);
+	bool sameCoordinates(double x1, double y1, double x2, double y2);
+	vector< pair<ClientAi*, int> > clientAiList;
 protected:
 	// Stat variables
 	time_t lastSecond;
@@ -228,12 +233,6 @@ protected:
 	int indexToRobotId(int index);
 	int robotIdToIndex(int robotId);
 	bool weControlRobot(int robotId);
-	double relDistance(double x1, double y1);
-	bool sameCoordinates(double x1, double y1, double x2, double y2);
-	// Pucks, Robots
-	SeenPuck* findPickUpablePuck(OwnRobot* ownRobot);
-	SeenRobot* findClosestRobot(OwnRobot* ownRobot);
-	SeenPuck* findClosestPuck(OwnRobot* ownRobot);
 public:
 	Client() : writing(false),
 			   lastSecond(time(NULL)),
@@ -250,6 +249,19 @@ public:
 	//TODO: user-defined AI code
 	ClientRobotCommand userAiCode(OwnRobot* ownrobot);
 
+};
+
+class ClientAi {
+public:
+    virtual void make_command(ClientRobotCommand& command, OwnRobot* ownRobot) = 0;
+    // Helpers
+    SeenPuck* findPickUpablePuck(OwnRobot* ownRobot);
+    SeenPuck* findClosestPuck(OwnRobot* ownRobot);
+    static double relDistance(double x1, double y1);
+    static bool sameCoordinates(double x1, double y1, double x2, double y2);
+    SeenRobot* findClosestRobot(OwnRobot* ownRobot);
+    bool hasCanPickUpPuckEvent(OwnRobot* ownRobot);
+    bool hasNotMovingEvent(OwnRobot* ownRobot);
 };
 
 #endif
