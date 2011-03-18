@@ -218,7 +218,7 @@ gboolean drawingAreaExpose(GtkWidget *widgetDrawingArea, GdkEventExpose *event, 
 		}
 
 		for (unsigned int i = 0; i < ownRobotDraw->seenRobots.size(); i++) {
-			color = colorFromTeam((ownRobotDraw->seenRobots.at(i)->id - 1) / numberOfRobots);
+			color = colorFromTeam((ownRobotDraw->seenRobots.at(i)->id) / numberOfRobots);
 			cairo_set_source_rgb(cr, 0, 0, 0);
 			cairo_arc(cr, origin[0] + ownRobotDraw->seenRobots.at(i)->relx * *drawFactor,
 					origin[1] + ownRobotDraw->seenRobots.at(i)->rely * *drawFactor, ROBOTDIAMETER * *drawFactor / 8, 0,
