@@ -100,7 +100,7 @@ public:
 	double homeRelX;
 	double homeRelY;
 	vector<EventType> eventQueue;
-	
+
 	int index; // this is for AI memory
 	ClientAi* ai; // user-defined ai code
 
@@ -145,7 +145,7 @@ public:
 		return viewedRobot;
 	}
 
-	ClientViewer(char*);
+	ClientViewer(string);
 	~ClientViewer();
 };
 
@@ -240,8 +240,8 @@ public:
 			   pendingMessages(0),
 			   timeoutMessages(0),
 			   puckPickupMessages(0) {};
-	void initClient(int argc, char* argv[], bool runClientViewer);
-	void loadConfigFile(const char* configFileName);
+	void initClient(int argc, char* argv[], string pathToExe, bool runClientViewer);
+	void loadConfigFile(const char* configFileName, string& pathToExe);
 	void setControllerIp(string newcontrollerip);
 	void setMyTeam(int myTeam);
 	gboolean run(GIOChannel *ioch, GIOCondition cond, gpointer data);

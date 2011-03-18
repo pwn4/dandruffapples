@@ -379,12 +379,11 @@ void ClientViewer::initClientViewer(int numberOfRobots, int myTeam, int _drawFac
 	gtk_widget_show_all(mainWindow);
 }
 
-ClientViewer::ClientViewer(char* argv) :
+ClientViewer::ClientViewer(string pathToExe) :
 	viewedRobot(-1), draw(false) {
 
 	//assume that the clientviewer.builder is in the same directory as the executable that we are running
-	builderPath = argv;
-	builderPath = builderPath.substr(0, builderPath.find_last_of("//") + 1) + "clientviewer.glade";
+	builderPath = pathToExe + "clientviewer.glade";
 	builder = gtk_builder_new();
 
 #ifdef DEBUG

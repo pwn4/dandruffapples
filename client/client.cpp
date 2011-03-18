@@ -16,7 +16,7 @@ int robotsPerTeam;
 double sightDistance = 100.0; // TODO: get this from worldinfo packet?
 
 //this function loads the config file so that the server parameters don't need to be added every time
-void Client::loadConfigFile(const char* configFileName) {
+void Client::loadConfigFile(const char* configFileName, string& pathToExe) {
 	//open the config file
 	FILE * fileHandle;
 	fileHandle = fopen(configFileName, "r");
@@ -44,21 +44,17 @@ void Client::loadConfigFile(const char* configFileName) {
 				string aiLib = token;
 				token = strtok(NULL, " \n");
 				stringstream ss(token);
-				int weight; ss >> weight;
+				int weight;
+				ss >> weight;
 
 				// Load the library
 				char* err_msg = NULL;
-				void* hndl = dlopen(("./"+aiLib).c_str(), RTLD_NOW);
+				void* hndl = dlopen((pathToExe+aiLib).c_str(), RTLD_NOW);
 				if (hndl == NULL) {
-					// Try another path
-					hndl = dlopen(("./client/"+aiLib).c_str(), RTLD_NOW);
-					if (hndl == NULL) {
-						cerr << dlerror() << endl; exit(-1);
-					} else {
-						cout << "AI loaded from " << "./client/"+aiLib << "...";
-					}
+					cerr << dlerror() << endl;
+					exit(-1);
 				} else {
-					cout << "AI loaded from " << aiLib << "...";
+					cout << "AI loaded from " << pathToExe+aiLib << "...";
 				}
 				cout << " weight: " << weight << "." << endl;
 
@@ -136,19 +132,19 @@ ClientRobotCommand Client::userAiCode(OwnRobot* ownRobot) {
 /*
 ClientRobotCommand userAiCode(OwnRobot* ownRobot) {
 	ClientRobotCommand command;
-	
+
 	//init
 	if(state == NULL){
 	  state = new int[robotsPerTeam];
 	}
-	
-	if(state[ownRobot->index] == 1){	  
+
+	if(state[ownRobot->index] == 1){
 	  //go closer and slow down
 	  SeenPuck* closest = findClosestPuck(ownRobot);
 		if (closest != NULL)
 	  {
 	    command.sendCommand = true;
-			
+
 			double vecLength = sqrt(closest->relx*closest->relx+ closest->rely*closest->rely);
 			//watch that divide by zero
 			if(vecLength > 0.0000000001)
@@ -159,13 +155,13 @@ ClientRobotCommand userAiCode(OwnRobot* ownRobot) {
 			  command.vy = closest->rely / (vecLength * vecLength);
 		  }
 	  }
-	  
+
 	  //watch out for pucks
 	  if(ownRobot->hasPuck)
 	  {
 	    state[ownRobot->index] = 2;
 	    command.sendCommand = true;
-			
+
 			//normalize
 			double vecLength = sqrt(ownRobot->homeRelX*ownRobot->homeRelX + ownRobot->homeRelY*ownRobot->homeRelY);
 			//watch that divide by zero
@@ -176,10 +172,10 @@ ClientRobotCommand userAiCode(OwnRobot* ownRobot) {
 			  command.changeVy = true;
 			  command.vy = ownRobot->homeRelY / vecLength;
 		  }
-			
+
 	    return command;
     }
-	  
+
 	  //pick it up
 	  SeenPuck* pickup = findPickUpablePuck(ownRobot);
 		if (pickup != NULL) {
@@ -187,10 +183,10 @@ ClientRobotCommand userAiCode(OwnRobot* ownRobot) {
 			command.changePuckPickup = true;
 			command.puckPickup = true;
 		}
-		
+
 		return command;
 	}
-	
+
 	if(state[ownRobot->index] == 0 && (ownRobot->vx == 0 && ownRobot->vy == 0)){
 	  //go in a random direction
 		command.sendCommand = true;
@@ -198,17 +194,17 @@ ClientRobotCommand userAiCode(OwnRobot* ownRobot) {
 		command.vx = (((rand() % 11) / 10.0) - 0.5);
 		command.changeVy = true;
 		command.vy = (((rand() % 11) / 10.0) - 0.5);
-		
+
 		state[ownRobot->index] = 1;
-		
+
 		return command;
 	}
-	
+
 	if(state[ownRobot->index] == 2){
 	  //if we're here but not holding a puck, that's a problem. Go back to state 1
 	  if(ownRobot->hasPuck == false)
 	    state[ownRobot->index] = 0;
-	    
+
 	  //if we're home, drop it.
 	  if(ownRobot->homeRelX < HOMEDIAMETER/2 && ownRobot->homeRelY < HOMEDIAMETER/2)
 	  {
@@ -216,10 +212,10 @@ ClientRobotCommand userAiCode(OwnRobot* ownRobot) {
 			command.changePuckPickup = true;
 			command.puckPickup = false;
 	  }
-	  
+
 	  return command;
 	} */
-	
+
 }
 
 void Client::executeAi(OwnRobot* ownRobot, int index, net::connection &controller) {
@@ -700,7 +696,7 @@ gboolean Client::run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 }
 
 //basic connection initializations for the client
-void Client::initClient(int argc, char* argv[], bool runClientViewer) {
+void Client::initClient(int argc, char* argv[], string pathToExe, bool runClientViewer) {
 
 	if( !gtk_init_check(&argc, &argv) ){
 		cerr<<"Unable to initialize the X11 windowing system. Client Viewer will not work!"<<endl;
@@ -727,7 +723,7 @@ void Client::initClient(int argc, char* argv[], bool runClientViewer) {
 	cout << " connected." << endl;
 
 	net::connection controller(controllerfd, net::connection::CONTROLLER);
-	ClientViewer* viewer = new ClientViewer(argv[0]);
+	ClientViewer* viewer = new ClientViewer(pathToExe);
 
 	if(runClientViewer){
 		gettimeofday(&microTimeCache, NULL);
@@ -748,6 +744,8 @@ void Client::initClient(int argc, char* argv[], bool runClientViewer) {
 int main(int argc, char* argv[]) {
 	bool runClientViewer = false;
 	srand( time(NULL));
+	string pathToExe=argv[0];
+	pathToExe=pathToExe.substr(0, pathToExe.find_last_of("//") + 1);
 
 	cout << "--== Client Software ==-" << endl;
 
@@ -758,7 +756,7 @@ int main(int argc, char* argv[]) {
 
 	const char* configFileName = cmdline.getArg("-c", "config").c_str();
 	cout << "Using config file: " << configFileName << endl;
-	c.loadConfigFile(configFileName);
+	c.loadConfigFile(configFileName, pathToExe);
 
 	runClientViewer = cmdline.getArg("-viewer").length() ? true : false;
 	cout << "Started client with the client viewer set to " << runClientViewer << endl;
@@ -774,7 +772,7 @@ int main(int argc, char* argv[]) {
 	////////////////////////////////////////////////////
 
 	cout << "Client Running!" << endl;
-	c.initClient(argc, argv, runClientViewer);
+	c.initClient(argc, argv, pathToExe, runClientViewer);
 
 	cout << "Client Shutting Down ..." << endl;
 
