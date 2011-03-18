@@ -13,6 +13,9 @@ add_library(ai_forager SHARED
 add_library(ai_scared SHARED
   ai_scared.cpp client_ai.cpp
   )
+add_library(ai_vaughan SHARED
+  ai_vaughan.cpp client_ai.cpp
+  )
 
 pkg_check_modules(GTK REQUIRED gtk+-2.0)
 

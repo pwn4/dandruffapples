@@ -256,6 +256,7 @@ public:
     // Helpers
     SeenPuck* findPickUpablePuck(OwnRobot* ownRobot);
     SeenPuck* findClosestPuck(OwnRobot* ownRobot);
+    bool insideOurHome(OwnRobot* ownRobot);
     static double relDistance(double x1, double y1);
     static bool sameCoordinates(double x1, double y1, double x2, double y2);
     SeenRobot* findClosestRobot(OwnRobot* ownRobot);

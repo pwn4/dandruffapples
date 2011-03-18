@@ -31,6 +31,13 @@ SeenPuck* ClientAi::findPickUpablePuck(OwnRobot* ownRobot) {
 	return NULL; // Found nothing in the for loop.
 }
 
+// Checks whether the robot is inside its home. If true, then robot can drop
+// puck and score a point.
+bool ClientAi::insideOurHome(OwnRobot* ownRobot) {
+  // TODO: use home width as defined by global variables.
+  return (sameCoordinates(ownRobot->homeRelX, ownRobot->homeRelY, 0.0, 0.0));
+}
+
 double ClientAi::relDistance(double x1, double y1) {
 	return (sqrt(x1 * x1 + y1 * y1));
 }
