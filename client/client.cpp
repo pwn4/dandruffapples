@@ -144,7 +144,7 @@ ClientRobotCommand userAiCode(OwnRobot* ownRobot) {
 	ClientRobotCommand command;
 	
 	//init
-	/*if(state == NULL){
+	if(state == NULL){
 	  state = new int[robotsPerTeam];
 	}
 	
@@ -224,9 +224,9 @@ ClientRobotCommand userAiCode(OwnRobot* ownRobot) {
 	  }
 	  
 	  return command;
-	}*/
+	}
 	
-	
+	/*
 	switch (ownRobot->behaviour) {
 	case 0: {
 		// Forager robot. Pick up any pucks we can. Don't worry about enemy robots.
@@ -361,7 +361,7 @@ ClientRobotCommand userAiCode(OwnRobot* ownRobot) {
 	default:
 		cerr << "You defined a robot behaviour number that you are not checking!" << endl;
 		break;
-	}
+	}*/
 	
 	return command;
 }
@@ -619,7 +619,7 @@ gboolean run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 				  //if (ownRobots[i]->eventQueue.size() > 0 && !ownRobots[i]->pendingCommand) {
 				  //robot AIs SHOULD execute every timestep
 				  if(!ownRobots[i]->pendingCommand){
-					  if(currentTimestep - ownRobots[i]->whenLastSent > 3){
+					  if(currentTimestep - ownRobots[i]->whenLastSent > 10){
 					    executeAi(ownRobots[i], i, controller);
 					    //initializeRobots(controller);
 					  }
