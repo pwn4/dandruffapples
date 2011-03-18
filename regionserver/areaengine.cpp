@@ -41,7 +41,7 @@ AreaEngine::AreaEngine(int robotSize, int regionSize, int minElementSize, double
   //min a[][] element size in terms of pucks
 
   robotRatio = robotSize;
-  pickupRange = 4*(robotRatio / 2); //hard coded
+  pickupRange = (robotRatio / 2); //hard coded
   regionRatio = regionSize;
   curStep = 0;
   viewDist = viewDistance;
