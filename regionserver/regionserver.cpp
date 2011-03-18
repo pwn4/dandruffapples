@@ -245,32 +245,6 @@ void run() {
 
 	//enter the main loop
 	while (true) {
-		//cache the time, so we don't call it several times
-		gettimeofday(&timeCache, NULL);
-
-		//check if its time to output
-		if (timeCache.tv_sec > lastSecond) {
-			cout << timeSteps/2 << " timesteps/second" << endl;
-
-			timeSteps = 0;
-			lastSecond = timeCache.tv_sec;
-		}
-		
-		//if we've gotten our neighbours info for the round and we want to send a tsdone, then
-    bool ready = true;
-    for(int i = 0; i < uniqueRegions.size(); i++)
-      if(uniqueRegions.at(i).second != regionarea->curStep)
-      {
-        ready = false;
-        break;
-      }
-		
-    if(ready && sendTsdone){
-      //Respond with done message
-	    clockconn.queue.push(MSG_TIMESTEPDONE, tsdone);
-	    clockconn.set_writing(true);
-	    sendTsdone = false;
-    }
 
 		//wait on epoll
 		int eventcount;
@@ -284,6 +258,18 @@ void run() {
 
 		//check our events that were triggered
 		for (size_t i = 0; i < (unsigned) eventcount; i++) {
+      //timestep outputting
+      //cache the time, so we don't call it several times
+      gettimeofday(&timeCache, NULL);
+
+      //check if its time to output
+      if (timeCache.tv_sec > lastSecond) {
+        cout << timeSteps/2 << " timesteps/second" << endl;
+
+        timeSteps = 0;
+        lastSecond = timeCache.tv_sec;
+      }      
+		
 			net::EpollConnection *c = (net::EpollConnection*) events[i].data.ptr;
 			if (events[i].events & EPOLLIN) {
 				switch (c->type) {
@@ -360,7 +346,7 @@ void run() {
 									  }
 									if(!exists)
 									{
-									  uniqueRegions.push_back(pair <int, int> (c->fd, -1));
+									  uniqueRegions.push_back(pair <int, int> (newconn->fd, -1));
 								  }
 
 									// Reverse all the positions. If we are connecting to the
@@ -427,6 +413,9 @@ void run() {
 							for (bool complete = false; !complete;) {
 								complete = writer.doWrite();
 							}
+							
+							//NOW you can start the clock
+							cout << "Connected to neighbours! Ready for simulation to begin." << endl;
 
 							break;
 						}
@@ -530,6 +519,21 @@ void run() {
 									;
 								}
 							}
+							
+							bool ready = true;
+			        for(int i = 0; i < uniqueRegions.size(); i++)
+			          if(uniqueRegions.at(i).second != regionarea->curStep)
+			          {
+			            ready = false;
+			            break;
+		            }
+			        
+	            if((ready && sendTsdone)){cout << "ASDDASD" << endl;
+                //Respond with done message
+                clockconn.queue.push(MSG_TIMESTEPDONE, tsdone);
+                clockconn.set_writing(true);
+                sendTsdone = false;
+              }
 #endif
 							break;
 						}
@@ -639,13 +643,13 @@ void run() {
   			          regionarea->GotServerRobot(newUpdate.serverrobot(i));
   			          
   			        for(int i = 0; i < uniqueRegions.size(); i++)
-  			          if(uniqueRegions.at(i).first == c->fd)
+  			        {  if(uniqueRegions.at(i).first == c->fd)
   			          {
   			            uniqueRegions.at(i).second = newUpdate.timestep();
   			            break;
   			          }
-  			        
-  			        //cout << roundReceived << "|" << round << "|" << regionarea->curStep << endl;
+  			          cout <<  uniqueRegions.at(i).first << "*" << c->fd << endl;
+			          }
   			        
   			        bool ready = true;
   			        for(int i = 0; i < uniqueRegions.size(); i++)
@@ -655,7 +659,7 @@ void run() {
   			            break;
 			            }
   			        
-		            if((ready && sendTsdone) || true){
+		            if((ready && sendTsdone)){
                   //Respond with done message
 	                clockconn.queue.push(MSG_TIMESTEPDONE, tsdone);
 	                clockconn.set_writing(true);
@@ -679,6 +683,18 @@ void run() {
 								// Inform AreaEngine of our new neighbour.
 								regionarea->SetNeighbour((int) regioninfo.position(i), c);
 							}
+
+              bool exists = false;
+							for(int k = 0; k < uniqueRegions.size(); k++)
+							  if(uniqueRegions.at(k).first == regioninfo.id())
+							  {
+							    exists = true;
+							    break;
+							  }
+							if(!exists)
+							{
+							  uniqueRegions.push_back(pair <int, int> (c->fd, -1));
+						  }
 
               cout << std::setw(2) << std::setfill('0') << serverByPosition[0]
                    << " | " << std::setw(2) << std::setfill('0')
