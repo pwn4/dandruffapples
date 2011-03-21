@@ -742,6 +742,15 @@ void run() {
 						worldviewers.erase(find(worldviewers.begin(), worldviewers.end(), c));
 						delete c;
 					}
+					catch (SystemError e) {
+						close(c->fd);
+						sendMoreWorldViews[c->fd].value = false;
+						cout << "world viewer with fd=" << c->fd << " disconnected" << endl;
+
+						// Remove from sets
+						worldviewers.erase(find(worldviewers.begin(), worldviewers.end(), c));
+						delete c;
+					}
 
 					break;
 				}
@@ -818,7 +827,7 @@ void run() {
 						if (c->queue.doWrite()) {
 							c->set_writing(false);
 						}
-					} catch (runtime_error e) {
+					} catch (SystemError e) {
 						close(c->fd);
 						sendMoreWorldViews[c->fd].value = false;
 						cout << "world viewer with fd=" << c->fd << " disconnected" << endl;
