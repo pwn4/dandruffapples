@@ -647,7 +647,6 @@ void run() {
   			            uniqueRegions.at(i).second = newUpdate.timestep();
   			            break;
   			          }
-  			          cout <<  uniqueRegions.at(i).first << "*" << c->fd << endl;
 			          }
   			        
   			        bool ready = true;
