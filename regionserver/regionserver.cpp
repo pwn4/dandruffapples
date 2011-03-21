@@ -284,42 +284,75 @@ void run() {
 						case MSG_WORLDINFO: {
 							worldinfo.ParseFromArray(buffer, len);
 							cout << "Got world info." << endl;
-							//added pucks to the world
+
+							//handle the homes
+							HomeInfo *homeinfo;
+							for(int i = 0; i < worldinfo.home_size(); i++ )
+							{
+								homeinfo=worldinfo.mutable_home(i);
+								if (homeinfo->region_id() == myId )
+								{
+									myHomes.push_back(homeinfo);
+									cout<<"Tracking home at ("+helper::toString(homeinfo->home_x())+", "+helper::toString(homeinfo->home_y())+")"<<endl;
+								}
+							}
+
+								//added pucks to the world
               					unsigned pucks = 0;
-              					while(pucks < worldinfo.numpucks() ){// populate the world with numpucks which are randomly distributed over the region
-								int a = (2 * ROBOTDIAMETER)+MINELEMENTSIZE + rand() % (REGIONSIDELEN-2*((2 * ROBOTDIAMETER)+MINELEMENTSIZE));
-								int b = (2 * ROBOTDIAMETER)+MINELEMENTSIZE + rand() % (REGIONSIDELEN-2*((2 * ROBOTDIAMETER)+MINELEMENTSIZE));
-							  regionarea->AddPuck(a, b);
-								pucks++;
-              }
-							int lastRegionIndex = worldinfo.region_size() - 1;
-							myId = worldinfo.region(lastRegionIndex).id();
-							cout << "My id: " << myId << endl;
-              // Draw this:
-              // 00 | 01 | 02
-              // ---+----+---
-              // 07 | ME | 03
-              // ---+----+---
-              // 06 | 05 | 04
-              for (int region = 0; region < worldinfo.region_size() - 1; region++) {
-                for (int pos = 0;
-                    pos < worldinfo.region(region).position_size(); pos++) {
-                  serverByPosition[(int)(worldinfo.region(region).
-                      position(pos))] = worldinfo.region(region).id();
-                }
-              }
-              cout << std::setw(2) << std::setfill('0') << serverByPosition[0]
-                   << " | " << std::setw(2) << std::setfill('0')
-                   << serverByPosition[1] << " | " << std::setw(2)
-                   << std::setfill('0') << serverByPosition[2] << endl
-                   << "---+----+---\n" << std::setw(2) << std::setfill('0')
-                   << serverByPosition[7] << " | ME | " << std::setw(2)
-                   << std::setfill('0') << serverByPosition[3]
-                   << endl << "---+----+---\n" << std::setw(2)
-                   << std::setfill('0') << serverByPosition[6] << " | "
-                   << std::setw(2) << std::setfill('0') << serverByPosition[5]
-                   << " | " << std::setw(2) << std::setfill('0')
-                   << serverByPosition[4] << endl;
+              					int a=0, b=0;
+              					while(pucks < worldinfo.numpucks() ){
+          							// populate the world with numpucks which are randomly distributed over the region
+          							a = (2 * ROBOTDIAMETER)+MINELEMENTSIZE + rand() % (REGIONSIDELEN-2*((2 * ROBOTDIAMETER)+MINELEMENTSIZE));
+									b = (2 * ROBOTDIAMETER)+MINELEMENTSIZE + rand() % (REGIONSIDELEN-2*((2 * ROBOTDIAMETER)+MINELEMENTSIZE));
+
+              						//make sure that the newly generated puck is at least PUCK_MINDISTANCEFROMHOME units away from the home
+              						for(unsigned i=0; i<myHomes.size(); i++ )
+              						{
+										if( helper::distanceBetween(myHomes.at(i)->home_x(), a, myHomes.at(i)->home_y(), b) <= MINDISTANCEFROMHOME )
+										{
+											cout<<"Failed creating puck at ("+helper::toString(a)+", "+helper::toString(b)+"). Retrying."<<endl;
+
+											a = (2 * ROBOTDIAMETER)+MINELEMENTSIZE + rand() % (REGIONSIDELEN-2*((2 * ROBOTDIAMETER)+MINELEMENTSIZE));
+											b = (2 * ROBOTDIAMETER)+MINELEMENTSIZE + rand() % (REGIONSIDELEN-2*((2 * ROBOTDIAMETER)+MINELEMENTSIZE));
+
+											i=-1;
+											continue;
+										}
+              						}
+
+									regionarea->AddPuck(a, b);
+									pucks++;
+              					}
+
+								int lastRegionIndex = worldinfo.region_size() - 1;
+								myId = worldinfo.region(lastRegionIndex).id();
+								cout << "My id: " << myId << endl;
+
+							  // Draw this:
+							  // 00 | 01 | 02
+							  // ---+----+---
+							  // 07 | ME | 03
+							  // ---+----+---
+							  // 06 | 05 | 04
+							  for (int region = 0; region < worldinfo.region_size() - 1; region++) {
+								for (int pos = 0;
+									pos < worldinfo.region(region).position_size(); pos++) {
+								  serverByPosition[(int)(worldinfo.region(region).
+									  position(pos))] = worldinfo.region(region).id();
+								}
+							  }
+							  cout << std::setw(2) << std::setfill('0') << serverByPosition[0]
+								   << " | " << std::setw(2) << std::setfill('0')
+								   << serverByPosition[1] << " | " << std::setw(2)
+								   << std::setfill('0') << serverByPosition[2] << endl
+								   << "---+----+---\n" << std::setw(2) << std::setfill('0')
+								   << serverByPosition[7] << " | ME | " << std::setw(2)
+								   << std::setfill('0') << serverByPosition[3]
+								   << endl << "---+----+---\n" << std::setw(2)
+								   << std::setfill('0') << serverByPosition[6] << " | "
+								   << std::setw(2) << std::setfill('0') << serverByPosition[5]
+								   << " | " << std::setw(2) << std::setfill('0')
+								   << serverByPosition[4] << endl;
 
 							// Connect to existing RegionServers.
 							for (int i = 0; i < worldinfo.region_size() - 1; i++) {
@@ -400,18 +433,6 @@ void run() {
 								}
 							}
 
-							HomeInfo *homeinfo;
-							//handle the homes
-							for(int i = 0; i < worldinfo.home_size(); i++ )
-							{
-								homeinfo=worldinfo.mutable_home(i);
-								if (homeinfo->region_id() == myId )
-								{
-									myHomes.push_back(homeinfo);
-									cout<<"Tracking home at ("+helper::toString(homeinfo->home_x())+", "+helper::toString(homeinfo->home_y())+")"<<endl;
-								}
-							}
-
 							//send the timestepdone packet to tell the clock server we're ready
 							writer.init(MSG_TIMESTEPDONE, tsdone);
 							for (bool complete = false; !complete;) {
@@ -468,8 +489,8 @@ void run() {
 
 							generateImage = false;
 							//find out if we even need to generate an image
-							//generate an image every ( 50 milliseconds ) if we can
-							if ( (regionarea->curStep%2==1) && (timeCache.tv_sec*1000000 + timeCache.tv_usec) > (microTimeCache.tv_sec*1000000 + microTimeCache.tv_usec)+50000) {
+							//generate an image every ( 100 milliseconds ) if we can
+							if ( (regionarea->curStep%2==1) && (timeCache.tv_sec*1000000 + timeCache.tv_usec) > (microTimeCache.tv_sec*1000000 + microTimeCache.tv_usec)+100000) {
 								for (vector<net::EpollConnection*>::const_iterator it = worldviewers.begin(); it
 										!= worldviewers.end(); ++it) {
 									if (sendMoreWorldViews[(*it)->fd].initialized == true
