@@ -344,7 +344,8 @@ void AreaEngine::Step(bool generateImage){
       serverrobot.set_velocityy(curRobot->vy);
       serverrobot.set_angle(curRobot->angle);
       serverrobot.set_hascollided(true);
-      serverrobot.set_haspuck(false);
+      //dont drop pucks on collision for now
+      //serverrobot.set_haspuck(false);
 
       // Is this robot seen by others?
       nowSeenBy = &(curRobot->lastSeenBy);
@@ -890,17 +891,9 @@ void AreaEngine::PickUpPuck(int robotId){
 
   //find the robot
   RobotObject * curRobot = robots.find(robotId)->second;
-cout << "Step 1" << endl;
-  if(curRobot->holdingPuck) //already have a puck
-  {
-    cout << "Already holding?!" << endl;
-    return;
-  }
 
-  /*if(RemovePuck(curRobot->x, curRobot->y))  //can pick up a puck
-  {
-    curRobot->holdingPuck = true;
-  }*/
+  if(curRobot->holdingPuck) //already have a puck
+    return;
   
   int appliedStep = curStep+1;
   if(appliedStep % 2 == 0)
