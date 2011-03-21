@@ -25,7 +25,8 @@ SeenPuck* ClientAi::findPickUpablePuck(OwnRobot* ownRobot) {
 	for (vector<SeenPuck*>::iterator it = ownRobot->seenPucks.begin(); it != ownRobot->seenPucks.end(); it++) {
 		//this is wrong! This is TOO STRICT
 		//if (sameCoordinates((*it)->relx, (*it)->rely, 0.0, 0.0)) {
-		if(abs((*it)->relx) < ROBOTDIAMETER/2 && abs((*it)->rely) < ROBOTDIAMETER/2) {
+		//make the AIs go in a little closer as a buffer
+		if(abs((*it)->relx) < ROBOTDIAMETER/2 - 0.2 && abs((*it)->rely) < ROBOTDIAMETER/2 - 0.2) {
 			return *it;
 		}
 	}
