@@ -45,15 +45,6 @@ struct Index{
   Index(int newx, int newy) : x(newx), y(newy) {}
 };
 
-struct PuckStackObject{
-  int x, y;
-  int count;
-
-  PuckStackObject * nextStack;
-
-  PuckStackObject(int newx, int newy) : x(newx), y(newy), count(1), nextStack(NULL) {}
-};
-
 struct RobotObject{
   int id, lastStep;
   double x, y;
@@ -63,7 +54,6 @@ struct RobotObject{
   Index arrayLocation;
   time_t lastCollision;
   map<int, bool> lastSeenBy;
-  map<PuckStackObject*, bool> pucksSeen;
   RobotObject * nextRobot;
   int controllerfd;
   int team;
@@ -71,6 +61,16 @@ struct RobotObject{
 
   RobotObject(int newid, double newx, double newy, double newa, Index aLoc, int curStep, int teamId) : id(newid), lastStep(curStep-1), x(newx), y(newy), angle(newa), vx(0), vy(0), arrayLocation(aLoc), lastCollision(time(NULL)), nextRobot(NULL), controllerfd(-1), team(teamId) {}
   RobotObject(int newid, double newx, double newy, double newa, double newvx, double newvy, Index aLoc, int curStep, int teamId) : id(newid), lastStep(curStep-1), x(newx), y(newy), angle(newa), vx(newvx), vy(newvy), arrayLocation(aLoc), lastCollision(time(NULL)), nextRobot(NULL), controllerfd(-1), team(teamId) {}
+};
+
+struct PuckStackObject{
+  int x, y;
+  int count;
+  vector<RobotObject*> seenBy;
+
+  PuckStackObject * nextStack;
+
+  PuckStackObject(int newx, int newy) : x(newx), y(newy), count(1), nextStack(NULL) {}
 };
 
 struct ArrayObject{
