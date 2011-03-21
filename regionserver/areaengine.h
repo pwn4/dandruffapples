@@ -90,8 +90,9 @@ struct Command {
   double velocityx, velocityy;
   double angle;
   int step;
+  int puckAction; //0=nothing, 1=pickup, 2=drop
 
-  Command() : robotId(-1), velocityx(INT_MAX), velocityy(INT_MAX), angle(INT_MAX), step(-1) {}
+  Command() : robotId(-1), velocityx(INT_MAX), velocityy(INT_MAX), angle(INT_MAX), step(-1), puckAction(0) {}
 };
 
 class CompareCommand {

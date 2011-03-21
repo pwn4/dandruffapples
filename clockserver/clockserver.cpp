@@ -48,59 +48,30 @@ int server_cols = 1;
 
 WorldInfo worldinfo;
 
-void addPositions(int newServerRow, int newServerCol, int numRows, int numCols, int numColsInLastRow) {
-	int thisRow;
-	int thisCol;
-	int serverid;
-
-	// TOP_LEFT:
-	thisRow = (newServerRow - 1 + numRows) % numRows;
-	thisCol = (newServerCol - 1 + numCols) % numCols;
-	serverid = ((thisRow * server_cols) + thisCol);
-	worldinfo.mutable_region(serverid)->add_position(RegionInfo_Position_TOP_LEFT);
-
-	// TOP:
-	thisRow = (newServerRow - 1 + numRows) % numRows;
-	thisCol = newServerCol;
-	serverid = ((thisRow * server_cols) + thisCol);
-	worldinfo.mutable_region(serverid)->add_position(RegionInfo_Position_TOP);
-
-	// TOP_RIGHT:
-	thisRow = (newServerRow - 1 + numRows) % numRows;
-	thisCol = (newServerCol + 1) % numCols;
-	serverid = ((thisRow * server_cols) + thisCol);
-	worldinfo.mutable_region(serverid)->add_position(RegionInfo_Position_TOP_RIGHT);
-
-	// RIGHT:
-	thisRow = newServerRow;
-	thisCol = (newServerCol + 1) % numColsInLastRow;
-	serverid = ((thisRow * server_cols) + thisCol);
-	worldinfo.mutable_region(serverid)->add_position(RegionInfo_Position_RIGHT);
-
-	// BOTTOM_RIGHT:
-	thisRow = 0;
-	thisCol = (newServerCol + 1) % numCols;
-	serverid = ((thisRow * server_cols) + thisCol);
-	worldinfo.mutable_region(serverid)->add_position(RegionInfo_Position_BOTTOM_RIGHT);
-
-	// BOTTOM:
-	thisRow = 0;
-	thisCol = newServerCol;
-	serverid = ((thisRow * server_cols) + thisCol);
-	worldinfo.mutable_region(serverid)->add_position(RegionInfo_Position_BOTTOM);
-
-	// BOTTOM_LEFT:
-	thisRow = 0;
-	thisCol = (newServerCol - 1 + numCols) % numCols;
-	serverid = ((thisRow * server_cols) + thisCol);
-	worldinfo.mutable_region(serverid)->add_position(RegionInfo_Position_BOTTOM_LEFT);
-
-	// LEFT:
-	thisRow = newServerRow;
-	thisCol = (newServerCol - 1 + numColsInLastRow) % numColsInLastRow;
-	serverid = ((thisRow * server_cols) + thisCol);
-	worldinfo.mutable_region(serverid)->add_position(RegionInfo_Position_LEFT);
+//this function takes a draw_x that you give it, and wraps it around servercols
+unsigned int wrapX(int x)
+{
+  if(x < 0)
+    return x + server_cols;
+  
+  if(x >= server_cols)
+    return x - server_cols;
+    
+  return x;
 }
+//this function takes a draw_y that you give it, and wraps it around serverrows
+unsigned int wrapY(int y)
+{
+  if(y < 0)
+    return y + server_rows;
+  
+  if(y >= server_rows)
+    return y - server_rows;
+    
+  return y;
+}
+
+
 struct xyCoord {
 	int x;
 	int y;
@@ -425,14 +396,6 @@ int main(int argc, char **argv) {
 									freeY++;
 								}
 
-								// Assume servers populate from left to right, then from top
-								// to bottom.
-								int numRows = ((numPositionedServers - 1) / server_cols) + 1;
-								int numCols = numPositionedServers < server_cols ? numPositionedServers : server_cols;
-								int numColsInLastRow = ((numPositionedServers - 1) % server_cols) + 1;
-								int newServerRow = (numPositionedServers - 1) / server_cols;
-								int newServerCol = (numPositionedServers - 1) % server_cols;
-
 								// New server has no neighbours initially.
 								for (int i = 0; i < numPositionedServers - 1; i++) {
 									worldinfo.mutable_region(i)->clear_position();
@@ -443,7 +406,42 @@ int main(int argc, char **argv) {
 								// For example, if 1 is above 4, then we set Position of
 								// 1 to be TOP.
 								if (numPositionedServers > 1) {
-									addPositions(newServerRow, newServerCol, numRows, numCols, numColsInLastRow);
+								  
+								  //iterate through the world object, and add known neighbours that way.
+								  for(int i = 0; i < worldinfo.region_size(); i++)
+								  {
+								    //don't check ourselves
+								    if(worldinfo.region(i).id() == region->id())
+								      continue;
+								    
+								    RegionInfo otherRegion = worldinfo.region(i);
+								    //worldinfo.mutable_region(serverid)->add_position(RegionInfo_Position_TOP_LEFT);
+								    if(wrapX(region->draw_x() - 1) == otherRegion.draw_x() && wrapY(region->draw_y() - 1) == otherRegion.draw_y())
+								      worldinfo.mutable_region(otherRegion.id())->add_position(RegionInfo_Position_TOP_LEFT);
+								      
+								    if(region->draw_x() == otherRegion.draw_x() && wrapY(region->draw_y() - 1) == otherRegion.draw_y())
+								      worldinfo.mutable_region(otherRegion.id())->add_position(RegionInfo_Position_TOP);
+
+								    if(wrapX(region->draw_x() + 1) == otherRegion.draw_x() && wrapY(region->draw_y() - 1) == otherRegion.draw_y())
+								      worldinfo.mutable_region(otherRegion.id())->add_position(RegionInfo_Position_TOP_RIGHT);
+
+								    if(wrapX(region->draw_x() - 1) == otherRegion.draw_x() && region->draw_y() == otherRegion.draw_y())
+								      worldinfo.mutable_region(otherRegion.id())->add_position(RegionInfo_Position_LEFT);
+
+								    if(wrapX(region->draw_x() + 1) == otherRegion.draw_x() && region->draw_y() == otherRegion.draw_y())
+								      worldinfo.mutable_region(otherRegion.id())->add_position(RegionInfo_Position_RIGHT);
+								    
+								    if(wrapX(region->draw_x() - 1) == otherRegion.draw_x() && wrapY(region->draw_y() + 1) == otherRegion.draw_y())
+								      worldinfo.mutable_region(otherRegion.id())->add_position(RegionInfo_Position_BOTTOM_LEFT);
+								    
+								    if(region->draw_x() == otherRegion.draw_x() && wrapY(region->draw_y() + 1) == otherRegion.draw_y())
+								      worldinfo.mutable_region(otherRegion.id())->add_position(RegionInfo_Position_BOTTOM);
+								    
+								    if(wrapX(region->draw_x() + 1) == otherRegion.draw_x() && wrapY(region->draw_y() + 1) == otherRegion.draw_y())
+								      worldinfo.mutable_region(otherRegion.id())->add_position(RegionInfo_Position_BOTTOM_RIGHT);
+								    
+								  }
+								  
 								}
 
 								// Send WorldInfo to the new RegionServer

@@ -131,6 +131,7 @@ void run() {
 	vector<HomeInfo*> myHomes;
 	
 	vector<pair <int, int> >uniqueRegions;
+	vector<int> regionsAdded;
 
 	//this is only here to generate random numbers for the logging
 	srand(time(NULL));
@@ -300,7 +301,7 @@ void run() {
               // 07 | ME | 03
               // ---+----+---
               // 06 | 05 | 04
-              for (int region = 0; region < worldinfo.region_size(); region++) {
+              for (int region = 0; region < worldinfo.region_size() - 1; region++) {
                 for (int pos = 0;
                     pos < worldinfo.region(region).position_size(); pos++) {
                   serverByPosition[(int)(worldinfo.region(region).
@@ -337,9 +338,11 @@ void run() {
 									net::EpollConnection *newconn = new net::EpollConnection(epoll, EPOLLIN, regionfd,
 											net::connection::REGION);
 									borderRegions.push_back(newconn);
+									
+									//iterate back through the regions we've already done, and dont add if we already have
 									bool exists = false;
-									for(unsigned k = 0; k < uniqueRegions.size(); k++)
-									  if(uniqueRegions.at(k).first == worldinfo.region(i).id())
+									for(unsigned k = 0; k < regionsAdded.size(); k++)
+									  if(worldinfo.region(i).id() == regionsAdded.at(k))
 									  {
 									    exists = true;
 									    break;
@@ -347,6 +350,7 @@ void run() {
 									if(!exists)
 									{
 									  uniqueRegions.push_back(pair <int, int> (newconn->fd, -1));
+									  regionsAdded.push_back(worldinfo.region(i).id());
 								  }
 
 									// Reverse all the positions. If we are connecting to the
@@ -595,23 +599,6 @@ void run() {
                 regionarea->ChangeVelocity(bouncedrobot.clientrobot().id(),
                     bouncedrobot.clientrobot().velocityx(),
                     bouncedrobot.clientrobot().velocityy());
-                /*
-                if (bouncedrobot.bounces() == 2) {
-                  cout << "Sending bounce claim: ID #"
-                       << bouncedrobot.clientrobot().id() << endl;
-                  // Message was broadcast to all. Let's claim the robot.
-                  Claim claim;
-                  claim.set_id(bouncedrobot.clientrobot().id());
-                  // Send claim to all controllers
-                  vector<net::EpollConnection*>::iterator it;
-                  vector<net::EpollConnection*>::iterator last =
-                      controllers.end();
-                  for (it = controllers.begin(); it != last; it++) {
-                    (*it)->queue.push(MSG_CLAIM, claim);
-                    (*it)->set_writing(true);
-                  }
-                }
-                */
               } else {
                 // Not our robot. Tell the controller.
                 bouncedrobot.set_bounces(bouncedrobot.bounces() + 1);
@@ -683,8 +670,8 @@ void run() {
 							}
 
               bool exists = false;
-							for(unsigned k = 0; k < uniqueRegions.size(); k++)
-							  if(uniqueRegions.at(k).first == regioninfo.id())
+							for(unsigned k = 0; k < regionsAdded.size(); k++)
+							  if(regioninfo.id() == regionsAdded.at(k))
 							  {
 							    exists = true;
 							    break;
@@ -692,6 +679,7 @@ void run() {
 							if(!exists)
 							{
 							  uniqueRegions.push_back(pair <int, int> (c->fd, -1));
+							  regionsAdded.push_back(regioninfo.id());
 						  }
 
               cout << std::setw(2) << std::setfill('0') << serverByPosition[0]
