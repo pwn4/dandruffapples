@@ -694,8 +694,9 @@ gboolean Client::run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 						  if((*it)->stackSize > (int)puckstack.stacksize())
 						  {
 						    //check if our robot has picked it up
-						    if(sameCoordinates(puckstack.seespuckstack(i).relx(), puckstack.seespuckstack(i).rely(), 0, 0))
+						    if(abs(puckstack.seespuckstack(i).relx()) < ROBOTDIAMETER/2 && abs(puckstack.seespuckstack(i).rely()) < ROBOTDIAMETER/2){
 						    	ownRobots[index]->hasPuck = true;
+					    	}
 						  }
 							(*it)->stackSize = puckstack.stacksize();
 							foundPuck = true;
