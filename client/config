@@ -1,3 +1,4 @@
 CONTROLLERIP 127.0.0.1
-AI libai_forager.so 50
-AI libai_scared.so 50
+AI libai_forager.so 0
+AI libai_scared.so 0
+AI libai_vaughan.so 100
