@@ -129,7 +129,7 @@ void run() {
 	gettimeofday(&microTimeCache, NULL);
 	bool generateImage;
 	vector<HomeInfo*> myHomes;
-	
+
 	vector<pair <int, int> >uniqueRegions;
 	vector<int> regionsAdded;
 
@@ -209,7 +209,7 @@ void run() {
 	WorldInfo worldinfo;
 	RegionInfo regioninfo;
 	unsigned myId = 0; //region id
-	
+
 	//for synchronization
 	int round = 0;
 	bool sendTsdone = false;
@@ -269,8 +269,8 @@ void run() {
 
         timeSteps = 0;
         lastSecond = timeCache.tv_sec;
-      }      
-		
+      }
+
 			net::EpollConnection *c = (net::EpollConnection*) events[i].data.ptr;
 			if (events[i].events & EPOLLIN) {
 				switch (c->type) {
@@ -338,11 +338,11 @@ void run() {
 									net::EpollConnection *newconn = new net::EpollConnection(epoll, EPOLLIN, regionfd,
 											net::connection::REGION);
 									borderRegions.push_back(newconn);
-									
+
 									//iterate back through the regions we've already done, and dont add if we already have
 									bool exists = false;
 									for(unsigned k = 0; k < regionsAdded.size(); k++)
-									  if(worldinfo.region(i).id() == regionsAdded.at(k))
+									  if(worldinfo.region(i).id() == (unsigned)regionsAdded.at(k))
 									  {
 									    exists = true;
 									    break;
@@ -417,7 +417,7 @@ void run() {
 							for (bool complete = false; !complete;) {
 								complete = writer.doWrite();
 							}
-							
+
 							//NOW you can start the clock
 							cout << "Connected to neighbours! Ready for simulation to begin." << endl;
 
@@ -435,7 +435,7 @@ void run() {
 							{
                 //ready the engine buffers
                 regionarea->clearBuffers();
-      
+
 								// Find our robots, and add to the simulation
 							  vector<int> myRobotIds;
 							  vector<int> myRobotTeams;
@@ -486,7 +486,7 @@ void run() {
               //async 'flush'
               round++;  //we need to ensure we get all neighbour data before continuing
               sendTsdone = true;
-              
+
 							timeSteps++; //Note: only use this for this temp stat taking. use regionarea->curStep for syncing
 
 							if (generateImage) {
@@ -530,7 +530,7 @@ void run() {
 			            ready = false;
 			            break;
 		            }
-		            
+
 	            if((ready && sendTsdone)){
                 //Respond with done message
                 clockconn.queue.push(MSG_TIMESTEPDONE, tsdone);
@@ -625,9 +625,9 @@ void run() {
 			        case MSG_REGIONUPDATE: {
 			          RegionUpdate newUpdate;
 			          newUpdate.ParseFromArray(buffer, len);
-			          for(unsigned i = 0; i < newUpdate.serverrobot_size(); i++)
+			          for(int i = 0; i < newUpdate.serverrobot_size(); i++)
   			          regionarea->GotServerRobot(newUpdate.serverrobot(i));
-  			          
+
   			        for(unsigned i = 0; i < uniqueRegions.size(); i++)
   			        {  if(uniqueRegions.at(i).first == c->fd)
   			          {
@@ -635,7 +635,7 @@ void run() {
   			            break;
   			          }
 			          }
-  			        
+
   			        bool ready = true;
   			        for(unsigned i = 0; i < uniqueRegions.size(); i++)
   			          if(uniqueRegions.at(i).second != regionarea->curStep)
@@ -650,7 +650,7 @@ void run() {
 	                clockconn.set_writing(true);
 	                sendTsdone = false;
                 }
- 
+
 			          break;
 			        }
 			        case MSG_PUCKSTACK: {
@@ -671,7 +671,7 @@ void run() {
 
               bool exists = false;
 							for(unsigned k = 0; k < regionsAdded.size(); k++)
-							  if(regioninfo.id() == regionsAdded.at(k))
+							  if(regioninfo.id() == (unsigned)regionsAdded.at(k))
 							  {
 							    exists = true;
 							    break;
@@ -835,7 +835,7 @@ void run() {
 				case net::connection::CLOCK:
 					if (c->queue.doWrite()) {
 						c->set_writing(false);
-					}		
+					}
 					break;
 				default:
 					cerr << "Unexpected writable socket!" << endl;
