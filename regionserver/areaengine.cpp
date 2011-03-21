@@ -239,6 +239,21 @@ void AreaEngine::Step(bool generateImage){
         if(newCommand->angle != INT_MAX)
           curRobot->angle = newCommand->angle;
 
+        if(newCommand->puckAction == 1)
+        {
+          if(RemovePuck(curRobot->x, curRobot->y))  //can pick up a puck
+          {
+            curRobot->holdingPuck = true;
+          }
+        }else if(newCommand->puckAction == 2)
+        {
+          if(curRobot->holdingPuck)
+          {
+            AddPuck(curRobot->x, curRobot->y);
+            curRobot->holdingPuck = false;
+          }
+        }
+
         delete newCommand;
         serverChangeQueue.pop();
       }else if(newCommand->step < curStep-1){
@@ -380,6 +395,21 @@ void AreaEngine::Step(bool generateImage){
 
         if(newCommand->angle != INT_MAX)
           curRobot->angle = newCommand->angle;
+        
+        if(newCommand->puckAction == 1)
+        {
+          if(RemovePuck(curRobot->x, curRobot->y))  //can pick up a puck
+          {
+            curRobot->holdingPuck = true;
+          }
+        }else if(newCommand->puckAction == 2)
+        {
+          if(curRobot->holdingPuck)
+          {
+            AddPuck(curRobot->x, curRobot->y);
+            curRobot->holdingPuck = false;
+          }
+        }
 
         delete newCommand;
         serverChangeQueue.pop();
@@ -848,10 +878,24 @@ void AreaEngine::PickUpPuck(int robotId){
   if(curRobot->holdingPuck) //already have a puck
     return;
 
-  if(RemovePuck(curRobot->x, curRobot->y))  //can pick up a puck
+  /*if(RemovePuck(curRobot->x, curRobot->y))  //can pick up a puck
   {
     curRobot->holdingPuck = true;
-  }
+  }*/
+  
+  int appliedStep = curStep+1;
+  if(appliedStep % 2 == 0)
+    appliedStep++;
+  
+  //store it
+  Command *newCommand = new Command();
+
+  newCommand->robotId = robotId;
+  newCommand->step = appliedStep;
+
+  newCommand->puckAction = 1;
+
+  clientChangeQueue.push(newCommand);
 
 }
 
@@ -863,8 +907,22 @@ void AreaEngine::DropPuck(int robotId){
     return;
 
   //Add the puck
-  AddPuck(curRobot->x, curRobot->y);
-  curRobot->holdingPuck = false;
+  //AddPuck(curRobot->x, curRobot->y);
+  //curRobot->holdingPuck = false;
+  
+  int appliedStep = curStep+1;
+  if(appliedStep % 2 == 0)
+    appliedStep++;
+  
+  //store it
+  Command *newCommand = new Command();
+
+  newCommand->robotId = robotId;
+  newCommand->step = appliedStep;
+
+  newCommand->puckAction = 2;
+
+  clientChangeQueue.push(newCommand);
 
 }
 
