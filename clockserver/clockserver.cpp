@@ -147,7 +147,7 @@ void checkNewStep() {
 			lastSecond = time(NULL);
 		}
 		timeSteps++;
-usleep(100000);
+
 		// All servers are ready, prepare to send next step
 		ready = 0;
 		timestep.set_timestep(step++);
