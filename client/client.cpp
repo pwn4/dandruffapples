@@ -7,13 +7,9 @@ typedef ClientAi* (*FUNCPTR_AI)();
 //Game world variables
 // TODO: organize/move variables out of client.cpp
 bool simulationStarted = false;
-bool simulationEnded = false;
 int currentTimestep = 0;
 int lastTimestep = 0;
 int robotsPerTeam;
-
-// World variables
-double sightDistance = 100.0; // TODO: get this from worldinfo packet?
 
 //this function loads the config file so that the server parameters don't need to be added every time
 void Client::loadConfigFile(const char* configFileName, string& pathToExe) {
@@ -88,7 +84,7 @@ void Client::setControllerIp(string newControllerIp) {
 	controllerips.push_back(newControllerIp);
 }
 
-// Gives the client a teamId. The client controls this team's robots. The 
+// Gives the client a teamId. The client controls this team's robots. The
 // myTeam variable is used to convert robotIds (1-1000000) to indexes in
 // the local ownRobot data structure (0-999).
 void Client::setMyTeam(int myTeam) {
@@ -96,12 +92,12 @@ void Client::setMyTeam(int myTeam) {
 }
 
 // Input: Index from local ownRobot array.
-// Output: The robotId used by the server. 
+// Output: The robotId used by the server.
 int Client::indexToRobotId(int index) {
 	return (index + 1 + myTeam * robotsPerTeam);
 }
 
-// Input: The robotId used by the server. 
+// Input: The robotId used by the server.
 // Output: Index from local ownRobot array.
 int Client::robotIdToIndex(int robotId) {
 	return (robotId - 1 - myTeam * robotsPerTeam);
@@ -198,7 +194,7 @@ ClientRobotCommand userAiCode(OwnRobot* ownRobot) {
 
 		return command;
 	}
-	
+
 	if(state[ownRobot->index] == 0 && (abs(ownRobot->vx) <= 0.0001 && abs(ownRobot->vy) <= 0.0001)){
 	  //go in a random direction
 		command.sendCommand = true;
@@ -230,7 +226,7 @@ ClientRobotCommand userAiCode(OwnRobot* ownRobot) {
 
 }
 
-// Provides the framework needed to generate an AI command for a robot. 
+// Provides the framework needed to generate an AI command for a robot.
 // Handles the ClientRobot message creation. Calls the user's AI code. Sends
 // the ClientRobot message over the network if the AI decided to send a
 // command. Sets pendingCommand to true for the robot, so that no more
@@ -242,7 +238,7 @@ void Client::executeAi(OwnRobot* ownRobot, int index, net::connection &controlle
 	if (ownRobot->pendingCommand)
 		return;
 
-  // Prepare the ClientRobot message. Initialize clientrobot message 
+  // Prepare the ClientRobot message. Initialize clientrobot message
   // to current values.
 	ClientRobot clientrobot;
 	clientrobot.set_id(indexToRobotId(index));
@@ -269,7 +265,7 @@ void Client::executeAi(OwnRobot* ownRobot, int index, net::connection &controlle
 
 		ownRobot->whenLastSent = currentTimestep;
 		sentMessages++; // debug message
-		ownRobot->pendingCommand = true; 
+		ownRobot->pendingCommand = true;
 	}
 }
 
@@ -332,6 +328,7 @@ gboolean Client::run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
     }
   }
 
+#ifdef DEBUG_COUT
 	// Stats: Received messages per second
 	if (lastSecond < time(NULL)) {
 		cout << "Sent " << sentMessages << " per second." << endl;
@@ -348,6 +345,7 @@ gboolean Client::run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 		timeoutMessages = 0;
 		puckPickupMessages = 0;
 	}
+#endif
 
 	if(!((cond & G_IO_IN) && controller.reader.doRead(&type, &len, &buffer))) {
     return true;
@@ -357,8 +355,8 @@ gboolean Client::run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 	switch (type) {
 	case MSG_WORLDINFO: {
 		// Should be the first message we recieve from the controller.
-    // Let's us calculate the number of robots on each team. We send
-    // our ClaimTeam message here. 
+		// Let's us calculate the number of robots on each team. We send
+		// our ClaimTeam message here.
 		WorldInfo worldinfo;
 		worldinfo.ParseFromArray(buffer, len);
 		int robotSize = worldinfo.robot_size();
@@ -394,7 +392,7 @@ gboolean Client::run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
     // the team, then die.
 		ClaimTeam claimteam;
 		claimteam.ParseFromArray(buffer, len);
-		if (!simulationStarted) {
+
 			if (claimteam.granted()) {
 				myTeam = claimteam.id();
 				cout << "ClaimTeam: Success! We control team #" << myTeam << endl;
@@ -422,9 +420,7 @@ gboolean Client::run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 				cout << "Client controls no teams!\n";
 			}
 
-		} else {
-			cout << "Got CLAIMTEAM message after simulation started" << endl;
-		}
+			initializeRobots(controller);
 
 		break;
 	}
@@ -435,14 +431,6 @@ gboolean Client::run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 		TimestepUpdate timestep;
 		timestep.ParseFromArray(buffer, len);
 		currentTimestep = timestep.timestep();
-
-		if (simulationStarted) {
-		  //give the robots initial velocity in the first timestep
-		  if(currentTimestep == 2)
-		  {
-				initializeRobots(controller);
-				break;
-		  }
 
 		  if(currentTimestep % 2 == 0)
 		  {
@@ -472,7 +460,7 @@ gboolean Client::run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 					  (*it)->relx += (*it)->vx - ownRobots[i]->vx;
 					  (*it)->rely += (*it)->vy - ownRobots[i]->vy;
 					  tempDistance = relDistance((*it)->relx, (*it)->rely);
-					  if (tempDistance > sightDistance) {
+					  if (tempDistance > VIEWDISTANCE) {
 						  // We can't see the robot anymore. Delete.
 						  delete *it;
 						  it = ownRobots[i]->seenRobots.erase(it);
@@ -495,7 +483,7 @@ gboolean Client::run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 					  (*it)->rely -= ownRobots[i]->vy;
 					  tempDistance = relDistance((*it)->relx, (*it)->rely);
 
-					  if (tempDistance > sightDistance) {
+					  if (tempDistance > VIEWDISTANCE) {
 						  // We can't see the puck anymore. Delete.
 						  delete *it;
 						  it = ownRobots[i]->seenPucks.erase(it);
@@ -542,8 +530,6 @@ gboolean Client::run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 			    microTimeCache = timeCache;
 		    }
 	    }
-	  }else
-	    throw runtime_error("Simulation started before I was ready");
 
 		break;
 	}
@@ -555,7 +541,7 @@ gboolean Client::run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 		serverrobot.ParseFromArray(buffer, len);
 
 		receivedMessages++;
-		if (simulationStarted) {
+
 			int robotId = serverrobot.id();
 			if (weControlRobot(robotId)) {
 				// The serverrobot is from our team.
@@ -563,9 +549,15 @@ gboolean Client::run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 				ownRobots[index]->pendingCommand = false;
 
 				if (serverrobot.has_velocityx())
+				{
 					ownRobots[index]->vx = serverrobot.velocityx();
+					ownRobots[index]->hasCollided = false;
+				}
 				if (serverrobot.has_velocityy())
+				{
 					ownRobots[index]->vy = serverrobot.velocityy();
+					ownRobots[index]->hasCollided = false;
+				}
 				if (serverrobot.has_angle())
 					ownRobots[index]->angle = serverrobot.angle();
 				if (serverrobot.has_haspuck())
@@ -609,10 +601,12 @@ gboolean Client::run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 								bool stateChange = false;
 								if (serverrobot.has_velocityx() && (*it)->vx != serverrobot.velocityx()) {
 									(*it)->vx = serverrobot.velocityx();
+									(*it)->hasCollided = false;
 									stateChange = true;
 								}
 								if (serverrobot.has_velocityy() && (*it)->vy != serverrobot.velocityy()) {
 									(*it)->vy = serverrobot.velocityy();
+									(*it)->hasCollided = false;
 									stateChange = true;
 								}
 								if (serverrobot.has_angle() && (*it)->angle != serverrobot.angle()) {
@@ -644,9 +638,15 @@ gboolean Client::run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 							//cout << "Our #" << index << " begin see "
 							//     << serverrobot.id() << endl;
 							if (serverrobot.has_velocityx())
+							{
 								r->vx = serverrobot.velocityx();
+								r->hasCollided = false;
+							}
 							if (serverrobot.has_velocityy())
+							{
 								r->vy = serverrobot.velocityy();
+								r->hasCollided = false;
+							}
 							if (serverrobot.has_angle())
 								r->angle = serverrobot.angle();
 							if (serverrobot.has_haspuck())
@@ -662,7 +662,7 @@ gboolean Client::run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 					}
 				}
 			}
-		}
+
 		break;
 	}
 	case MSG_PUCKSTACK: {
@@ -671,7 +671,7 @@ gboolean Client::run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
     // the puck lists for our robots.
 		PuckStack puckstack;
 		puckstack.ParseFromArray(buffer, len);
-		if (simulationStarted) {
+
 			int index;
 			int listSize = puckstack.seespuckstack_size();
 			for (int i = 0; i < listSize; i++) {
@@ -690,11 +690,12 @@ gboolean Client::run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 							!= ownRobots[index]->seenPucks.end() && !foundPuck; it++) {
 						if (sameCoordinates((*it)->relx, (*it)->rely, puckstack.seespuckstack(i).relx(),
 								puckstack.seespuckstack(i).rely())) {
+
 						  if((*it)->stackSize > (int)puckstack.stacksize())
 						  {
 						    //check if our robot has picked it up
 						    if(sameCoordinates(puckstack.seespuckstack(i).relx(), puckstack.seespuckstack(i).rely(), 0, 0))
-		              ownRobots[index]->hasPuck = true;			      
+						    	ownRobots[index]->hasPuck = true;
 						  }
 							(*it)->stackSize = puckstack.stacksize();
 							foundPuck = true;
@@ -723,7 +724,7 @@ gboolean Client::run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 					}
 				}
 			}
-		}
+
 		break;
 	}
 	default:

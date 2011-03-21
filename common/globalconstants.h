@@ -11,7 +11,7 @@
 //#define DEBUG
 //enable regionserver logging to file
 //#define ENABLE_LOGGING
-
+#define DEBUG_COUT
 
 //areaengine constants
 #define REGIONSIDELEN 2500
