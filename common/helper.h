@@ -41,7 +41,10 @@ struct TwoInt{
   int one, two;
 
   TwoInt(int first, int second) : one(first), two(second) {}
+  TwoInt() : one(0), two(0){}
 };
+
+const unsigned int bytePackClear = 65535;
 
 unsigned int BytePack(int a, int b);
 TwoInt ByteUnpack(unsigned int data);

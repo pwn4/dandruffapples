@@ -48,20 +48,27 @@ struct regionConnection: net::connection {
 
 };
 
+struct ViewedRegion {
+	regionConnection *connection;
+	int regionNum;
+};
+
 //define the size of the table
 const guint tableWorldViewRows = 2, tableWorldViewColumns = 2;
+#define DRAWINGORIGINS 4
 
 //Variable declarations
 /////////////////////////////////////////////////////
 vector<regionConnection*> regions;
 vector<GtkDrawingArea*> worldDrawingArea;
-bool horizontalView = true;
 GtkBuilder *builder;
 bool runForTheFirstTime = true;
 uint32 worldServerRows = 0, worldServerColumns = 0;
 map<int, map<int, GtkDrawingArea*> > worldGrid;
-RegionRender renderDraw[3];
-bool draw[3];
+RegionRender renderDraw[DRAWINGORIGINS];
+bool draw[] = { false, false, false, false };
+
+//Peter's SSH stuff
 int tunnelPort = -1;
 int lastTunnelPort = 12345;
 string userAddon;
@@ -70,24 +77,29 @@ string sshpid;
 string sshsock;
 
 //this is the region that the navigation will move the grid around
-regionConnection *pivotRegion = NULL, *pivotRegionBuddy = NULL;
+ViewedRegion viewedRegion[DRAWINGORIGINS];
 
 //used to draw the homes
 WorldInfo worldInfo;
 map<int, unsigned int> fdToRegionId;
 
 //used only for calculating images per second for each server
-int timeCache, lastSecond1 = 0, lastSecond2 = 0, messages1 = 0, messages2 = 0;
+int timeCache, lastSecond[] = { 0, 0, 0, 0 }, benchMessages[] = { 0, 0, 0, 0 };
+
+//read in from the config
 int robotSize = 1;
 double robotAlpha = 1.0;
 
+//cache this, so we don't have to retrieve it many times
+GtkToggleToolButton *InfoToolButton;
+
 /* Position in a grid:
  * ____
- * |1|2|
- * |3|_|
+ * |0|1|
+ * |2|3|
  */
 enum Position {
-	TOP_LEFT = 0, TOP_RIGHT = 1, BOTTOM_LEFT = 2
+	TOP_LEFT = 0, TOP_RIGHT = 1, BOTTOM_LEFT = 2, BOTTOM_RIGHT = 3
 };
 
 #ifdef DEBUG
@@ -117,17 +129,11 @@ void loadConfigFile(const char *configFileName, char* clockip) {
 }
 
 //display the worldView that we received from a region server in its worldDrawingArea space
-void displayWorldView(int regionNum, RegionRender render) {
-	int position = BOTTOM_LEFT;
+void displayWorldView(int regionNum, RegionRender render, int viewedRegionNum) {
 
-	if (regions.at(regionNum) == pivotRegion)
-		position = TOP_LEFT;
-	else if (horizontalView && regions.at(regionNum) == pivotRegionBuddy)
-		position = TOP_RIGHT;
-
-	renderDraw[position] = render;
-	draw[position] = true;
-	gtk_widget_queue_draw(GTK_WIDGET(worldDrawingArea.at(position)));
+	renderDraw[viewedRegionNum] = render;
+	draw[viewedRegionNum] = true;
+	gtk_widget_queue_draw(GTK_WIDGET(worldDrawingArea.at(viewedRegionNum)));
 
 }
 
@@ -151,10 +157,11 @@ void updateWorldGrid(string color) {
 	GdkColor fgColor;
 	gdk_color_parse(color.c_str(), &fgColor);
 
-	gtk_widget_modify_bg(GTK_WIDGET(worldGrid[pivotRegion->info.draw_x()][pivotRegion->info.draw_y()]),
-			GTK_STATE_NORMAL, &fgColor);
-	gtk_widget_modify_bg(GTK_WIDGET(worldGrid[pivotRegionBuddy->info.draw_x()][pivotRegionBuddy->info.draw_y()]),
-			GTK_STATE_NORMAL, &fgColor);
+	for (int i = TOP_LEFT; i <= BOTTOM_RIGHT; i++) {
+		gtk_widget_modify_bg(
+				GTK_WIDGET(worldGrid[viewedRegion[i].connection->info.draw_x()][viewedRegion[i].connection->info.draw_y()]),
+				GTK_STATE_NORMAL, &fgColor);
+	}
 }
 
 //update the info window
@@ -162,12 +169,8 @@ void updateInfoWindow() {
 	const string frameNumName = "frame_frameNum", frameserverAddName = "frame_serverAdd",
 			frameserverLocName = "frame_serverLoc";
 	string tmp, position;
-	regionConnection *pivotPtr = pivotRegion;
 
-	for (int frame = 1; frame < 3; frame++) {
-		if (frame == 2)
-			pivotPtr = pivotRegionBuddy;
-
+	for (int frame = 1; frame <= DRAWINGORIGINS; frame++) {
 		GtkLabel
 				*frameNum = GTK_LABEL(gtk_builder_get_object( builder, (frameNumName+helper::toString(frame)).c_str() ));
 		GtkLabel
@@ -175,22 +178,25 @@ void updateInfoWindow() {
 		GtkLabel
 				*frameserverLoc = GTK_LABEL(gtk_builder_get_object( builder, (frameserverLocName+helper::toString(frame)).c_str() ));
 
-		if (frame == 1 || pivotRegionBuddy == pivotRegion)
+		if (frame == 1)
 			position = "top-left";
-		else if (horizontalView)
+		else if (frame == 2)
 			position = "top-right";
+		else if (frame == 3)
+			position = "bottom-left";
 		else
-			position = "bottom";
+			position = "bottom-right";
 
-		tmp = "Frame Number: " + helper::toString(frame) + " position in the " + position + " corner";
+		tmp = "Frame positioned in the " + position + " corner";
 		gtk_label_set_text(frameNum, tmp.c_str());
 
-		tmp = "Server address: " + helper::toString(pivotPtr->info.address()) + ":" + helper::toString(
-				pivotPtr->info.renderport()) + " connected on fd = " + helper::toString(pivotPtr->fd);
+		tmp = helper::toString(viewedRegion[frame - 1].connection->info.address()) + ":"
+				+ helper::toString(viewedRegion[frame - 1].connection->info.renderport()) + " connected on fd = "
+				+ helper::toString(viewedRegion[frame - 1].connection->fd);
 		gtk_label_set_text(frameserverAdd, tmp.c_str());
 
-		tmp = "Server located at: (" + helper::toString(pivotPtr->info.draw_x()) + ", " + helper::toString(
-				pivotPtr->info.draw_y()) + " )";
+		tmp = "Server located at: (" + helper::toString(viewedRegion[frame - 1].connection->info.draw_x()) + ", " + helper::toString(
+				viewedRegion[frame - 1].connection->info.draw_y()) + " )";
 		gtk_label_set_text(frameserverLoc, tmp.c_str());
 	}
 }
@@ -226,46 +232,29 @@ void initializeToolbarButtons() {
 }
 
 //updates the number of messages found in the Info window
-void benchmarkMessages(regionConnection *region) {
+void benchmarkMessages(regionConnection *region, int viewedRegionNum) {
 	timeCache = time(NULL);
-
-	if (region == pivotRegion)
-		messages1++;
-	else
-		messages2++;
+	benchMessages[viewedRegionNum]++;
 
 	//check if its time to output
-	if (timeCache > lastSecond1 || timeCache > lastSecond2) {
-		string tmp;
+	if (timeCache > lastSecond[viewedRegionNum]) {
+		string tmp = "frame_serverId" + helper::toString(viewedRegionNum+1);
 
-		if (region == pivotRegion) {
-			GtkLabel *frameserverId = GTK_LABEL(gtk_builder_get_object( builder, "frame_serverId1" ));
-			tmp = "Server ID: " + helper::toString(pivotRegion->info.id()) + " sending at " + helper::toString(
-					messages1) + " images per second";
-			gtk_label_set_text(frameserverId, tmp.c_str());
+		GtkLabel *frameserverId = GTK_LABEL(gtk_builder_get_object( builder, tmp.c_str() ));
+		tmp = "Server: " + helper::toString(viewedRegion[viewedRegionNum].connection->info.id()) + " sending " + helper::toString(
+				benchMessages[viewedRegionNum]) + " images/second";
+		gtk_label_set_text(frameserverId, tmp.c_str());
 
-			messages1 = 0;
-			lastSecond1 = timeCache;
-		}
-		if (region == pivotRegionBuddy) {
-			GtkLabel *frameserverId = GTK_LABEL(gtk_builder_get_object( builder, "frame_serverId2" ));
-			tmp = "Server ID: " + helper::toString(pivotRegionBuddy->info.id()) + " sending at " + helper::toString(
-					messages2) + " images per second";
-			gtk_label_set_text(frameserverId, tmp.c_str());
-
-			messages2 = 0;
-			lastSecond2 = timeCache;
-		}
+		benchMessages[viewedRegionNum] = 0;
+		lastSecond[viewedRegionNum] = timeCache;
 	}
 }
 
 //handler for region received messages
 gboolean regionMessage(GIOChannel *ioch, GIOCondition cond, gpointer data) {
-	g_type_init();
 	MessageType type;
-	int len;
 	const void *buffer;
-	int regionNum = 0;
+	int regionNum = 0, len, viewedRegionNum=-1;
 
 	//get the region number that we are receiving a world view from
 	for (vector<regionConnection*>::const_iterator it = regions.begin();
@@ -283,9 +272,8 @@ gboolean regionMessage(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 		worldServerRows++;
 		worldServerColumns++;
 
-		//if you don't have a buddy then you're your own buddy ='(
-		if (pivotRegionBuddy == NULL)
-			pivotRegionBuddy = pivotRegion;
+		if ( worldServerRows * worldServerColumns < DRAWINGORIGINS)
+			throw SystemError("The World Viewer will not work with less that four region servers");
 
 		initializeToolbarButtons();
 	}
@@ -293,16 +281,35 @@ gboolean regionMessage(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 	switch (type) {
 	case MSG_REGIONVIEW: {
 		RegionRender render;
-
 		render.ParseFromArray(buffer, len);
 
+		//we got an update from a region, but how what drawing area is responsible for that region?
+		for (int i= TOP_LEFT; i < DRAWINGORIGINS; i++) {
+			if (viewedRegion[i].regionNum == regionNum)
+			{
+				viewedRegionNum=i;
+				break;
+			}
+		}
+
+		//there is a delay between telling a region to stop sending and when it actually STOPS sending
+		if(viewedRegionNum==-1)
+		{
 #ifdef DEBUG
-		debug << "Received render update from server fd=" << regions.at(regionNum)->fd << " and the timestep is # "
+		debug << "Received AN UNWANTED render update from server with fd=" << regions.at(regionNum)->fd << " skipping."<< endl;
+#endif
+
+		return TRUE;
+		}
+
+#ifdef DEBUG
+		debug << "Received render update from server with fd=" << regions.at(regionNum)->fd << " and the timestep is # "
 				<< render.timestep() << endl;
 #endif
-		benchmarkMessages(regions.at(regionNum));
+		if (gtk_toggle_tool_button_get_active(InfoToolButton))
+			benchmarkMessages(regions.at(regionNum), viewedRegionNum);
 
-		displayWorldView(regionNum, render);
+		displayWorldView(regionNum, render, viewedRegionNum);
 
 		break;
 	}
@@ -320,7 +327,6 @@ gboolean regionMessage(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 
 //handler for clock received messages
 gboolean clockMessage(GIOChannel *ioch, GIOCondition cond, gpointer data) {
-	g_type_init();
 	MessageType type;
 	int len;
 	const void *buffer;
@@ -342,38 +348,48 @@ gboolean clockMessage(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 
 		int regionFd;
 		//setup an ssh tunnel first
-		if(tunnelPort != -1)
-		{
-		  char * stringAddr = inet_ntoa(addr);
-		  stringstream tunnelcmd;
+		if (tunnelPort != -1) {
+			char * stringAddr = inet_ntoa(addr);
+			stringstream tunnelcmd;
 
-		  tunnelcmd << sshkeyloc << "ssh -f -N -p" << tunnelPort << " -L " << lastTunnelPort << ":127.0.0.1:" << regioninfo.renderport() << " " << userAddon << stringAddr;
+			tunnelcmd << sshkeyloc << "ssh -f -N -p" << tunnelPort << " -L " << lastTunnelPort << ":127.0.0.1:"
+					<< regioninfo.renderport() << " " << userAddon << stringAddr;
 
-      //setup the tunnel
-      if(system(tunnelcmd.str().c_str()) != 0)
-        throw runtime_error("Unable to establish ssh connection");
+			//setup the tunnel
+			if (system(tunnelcmd.str().c_str()) != 0)
+				throw runtime_error("Unable to establish ssh connection");
 
-		  addr.s_addr = inet_addr("127.0.0.1");
-		  regionFd = net::do_connect(addr, lastTunnelPort);
-		  lastTunnelPort++;
-		  //cout << tunnelcmd.str() << endl;
-		}else
-		  regionFd = net::do_connect(addr, regioninfo.renderport());
+			addr.s_addr = inet_addr("127.0.0.1");
+			regionFd = net::do_connect(addr, lastTunnelPort);
+			lastTunnelPort++;
+			//cout << tunnelcmd.str() << endl;
+		} else
+			regionFd = net::do_connect(addr, regioninfo.renderport());
 
 		net::set_blocking(regionFd, false);
-		fdToRegionId[regionFd]=regioninfo.id();
+		fdToRegionId[regionFd] = regioninfo.id();
 
 		//when the world viewer starts it only shows a horizontal rectangle of world views from region servers (0,0) and (0,1)
 		if (regioninfo.draw_x() == 0 && regioninfo.draw_y() == 0) {
-			gtk_widget_set_size_request(GTK_WIDGET(worldDrawingArea.at(TOP_LEFT)), IMAGEWIDTH, IMAGEHEIGHT);
 			regions.push_back(new regionConnection(regionFd, regioninfo));
-			pivotRegion = regions.at(regions.size() - 1);
-			sendWorldViews(pivotRegion->fd, true);
+			viewedRegion[TOP_LEFT].regionNum = regions.size() - 1;
+			viewedRegion[TOP_LEFT].connection = regions.at(viewedRegion[TOP_LEFT].regionNum);
+			sendWorldViews(viewedRegion[TOP_LEFT].connection->fd, true);
 		} else if (regioninfo.draw_x() == 1 && regioninfo.draw_y() == 0) {
-			gtk_widget_set_size_request(GTK_WIDGET(worldDrawingArea.at(TOP_RIGHT)), IMAGEWIDTH, IMAGEHEIGHT);
 			regions.push_back(new regionConnection(regionFd, regioninfo));
-			pivotRegionBuddy = regions.at(regions.size() - 1);
-			sendWorldViews(pivotRegionBuddy->fd, true);
+			viewedRegion[TOP_RIGHT].regionNum = regions.size() - 1;
+			viewedRegion[TOP_RIGHT].connection = regions.at(viewedRegion[TOP_RIGHT].regionNum);
+			sendWorldViews(viewedRegion[TOP_RIGHT].connection->fd, true);
+		} else if (regioninfo.draw_x() == 0 && regioninfo.draw_y() == 1) {
+			regions.push_back(new regionConnection(regionFd, regioninfo));
+			viewedRegion[BOTTOM_LEFT].regionNum = regions.size() - 1;
+			viewedRegion[BOTTOM_LEFT].connection = regions.at(viewedRegion[BOTTOM_LEFT].regionNum);
+			sendWorldViews(viewedRegion[BOTTOM_LEFT].connection->fd, true);
+		} else if (regioninfo.draw_x() == 1 && regioninfo.draw_y() == 1) {
+			regions.push_back(new regionConnection(regionFd, regioninfo));
+			viewedRegion[BOTTOM_RIGHT].regionNum = regions.size() - 1;
+			viewedRegion[BOTTOM_RIGHT].connection = regions.at(viewedRegion[BOTTOM_RIGHT].regionNum);
+			sendWorldViews(viewedRegion[BOTTOM_RIGHT].connection->fd, true);
 		} else {
 			regions.push_back(new regionConnection(regionFd, regioninfo));
 #ifdef DEBUG
@@ -419,42 +435,42 @@ gboolean clockMessage(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 	return TRUE;
 }
 
-//see if the buddy of the pivot is the pivot itself
-void compareBuddy() {
-	if (pivotRegion == pivotRegionBuddy) {
-		gtk_widget_set_size_request(GTK_WIDGET(worldDrawingArea.at(TOP_RIGHT)), 0, 0);
-		gtk_widget_set_size_request(GTK_WIDGET(worldDrawingArea.at(BOTTOM_LEFT)), 0, 0);
-
-		gtk_widget_queue_draw(GTK_WIDGET(worldDrawingArea.at(TOP_RIGHT)));
-		gtk_widget_queue_draw(GTK_WIDGET(worldDrawingArea.at(BOTTOM_LEFT)));
-#ifdef DEBUG
-		debug << "pivtorBuddy is the same as the pivotRegion. Removing buddy!" << endl;
-#endif
-	}
-}
-
-//find and set the new pivotRegion and its buddy from the new coordinates
-void setNewRegionPivotAndBuddy(uint32 newPivotRegion[], uint32 newPivotRegionBuddy[]) {
+//find and new regions to be drawn
+void setNewViewedRegion(int newViewed[][2]) {
 
 #ifdef DEBUG
-	debug << "Changing pivotRegion to (" << newPivotRegion[0] << "," << newPivotRegion[1]
-			<< ") and pivotRegionBuddy to (" << newPivotRegionBuddy[0] << "," << newPivotRegionBuddy[1] << ")" << endl;
+	debug << "Changing viewedRegion[TOP_LEFT] to (" << newViewed[0][0] << "," << newViewed[0][1]
+			<< "), changing viewedRegion[TOP_RIGHT] to (" << newViewed[1][0] << "," << newViewed[1][1]
+			<< "), changing viewedRegion[BOTTOM_LEFT] to (" << newViewed[2][0] << "," << newViewed[2][1]
+			<< "), changing viewedRegion[BOTTOM_RIGHT] to (" << newViewed[3][0] << "," << newViewed[3][1]<<")"<<endl;
 #endif
+
+	//update the world grid to have no currently viewed regions
+	updateWorldGrid("white");
 
 	for (int i = 0; i < (int) regions.size(); i++) {
-		if (regions.at(i)->info.draw_x() == newPivotRegion[0] && regions.at(i)->info.draw_y() == newPivotRegion[1]) {
-			pivotRegion = regions.at(i);
+		if ((int)regions.at(i)->info.draw_x() == newViewed[TOP_LEFT][0] && (int)regions.at(i)->info.draw_y() == newViewed[TOP_LEFT][1]) {
+			viewedRegion[TOP_LEFT].connection = regions.at(i);
+			viewedRegion[TOP_LEFT].regionNum=i;
 		}
-		if (regions.at(i)->info.draw_x() == newPivotRegionBuddy[0] && regions.at(i)->info.draw_y()
-				== newPivotRegionBuddy[1]) {
-			pivotRegionBuddy = regions.at(i);
+		else if ((int)regions.at(i)->info.draw_x() == newViewed[TOP_RIGHT][0] && (int)regions.at(i)->info.draw_y() == newViewed[TOP_RIGHT][1]) {
+			viewedRegion[TOP_RIGHT].connection = regions.at(i);
+			viewedRegion[TOP_RIGHT].regionNum=i;
+		}
+		else if ((int)regions.at(i)->info.draw_x() == newViewed[BOTTOM_LEFT][0] && (int)regions.at(i)->info.draw_y() == newViewed[BOTTOM_LEFT][1]) {
+			viewedRegion[BOTTOM_LEFT].connection = regions.at(i);
+			viewedRegion[BOTTOM_LEFT].regionNum=i;
+		}
+		else if ((int)regions.at(i)->info.draw_x() == newViewed[BOTTOM_RIGHT][0] && (int)regions.at(i)->info.draw_y() == newViewed[BOTTOM_RIGHT][1]) {
+			viewedRegion[BOTTOM_RIGHT].connection = regions.at(i);
+			viewedRegion[BOTTOM_RIGHT].regionNum=i;
 		}
 	}
 
-	compareBuddy();
 	updateWorldGrid("light green");
+
 	//only update the info window if the its button is toggled
-	if (gtk_toggle_tool_button_get_active(GTK_TOGGLE_TOOL_BUTTON(gtk_builder_get_object( builder, "Info" ))))
+	if (gtk_toggle_tool_button_get_active(InfoToolButton))
 		updateInfoWindow();
 }
 
@@ -463,43 +479,23 @@ void onDownButtonClicked(GtkWidget *widget, gpointer window) {
 #ifdef DEBUG
 	debug << "Clicked down" << endl;
 #endif
-	uint32 tmp1, tmp2;
+	int newViewed[DRAWINGORIGINS][2];
 
-	//update the world grid to have no currently viewed regions
-	updateWorldGrid("white");
-
-	//find the new positions of the region and its buddy
-	if (pivotRegion->info.draw_y() + 1 >= worldServerRows)
-		tmp1 = 0;
-	else
-		tmp1 = pivotRegion->info.draw_y() + 1;
-
-	if (pivotRegionBuddy->info.draw_y() + 1 >= worldServerRows)
-		tmp2 = 0;
-	else
-		tmp2 = pivotRegionBuddy->info.draw_y() + 1;
-
-	uint32 newPivotRegion[2] = { pivotRegion->info.draw_x(), tmp1 };
-	uint32 newPivotRegionBuddy[2] = { pivotRegionBuddy->info.draw_x(), tmp2 };
+	for (int i = TOP_LEFT; i < DRAWINGORIGINS; i++) {
+		newViewed[i][0] = viewedRegion[i].connection->info.draw_x();
+		newViewed[i][1] = (viewedRegion[i].connection->info.draw_y() + 1) % worldServerRows;
+	}
 
 	//disable the sending of world views from regions that we are moving away from
-	if (horizontalView) {
-		sendWorldViews(pivotRegion->fd, false);
-		sendWorldViews(pivotRegionBuddy->fd, false);
-	} else {
-		sendWorldViews(pivotRegion->fd, false);
-	}
-	//set the new pivotRegion and pivotRegionBuddy
-	setNewRegionPivotAndBuddy(newPivotRegion, newPivotRegionBuddy);
+	sendWorldViews(viewedRegion[TOP_LEFT].connection->fd, false);
+	sendWorldViews(viewedRegion[TOP_RIGHT].connection->fd, false);
+
+	//set the new viewedRegions
+	setNewViewedRegion(newViewed);
 
 	//enable the sending of world views from regions that we are moving to
-	if (horizontalView) {
-		sendWorldViews(pivotRegion->fd, true);
-		sendWorldViews(pivotRegionBuddy->fd, true);
-	} else {
-		sendWorldViews(pivotRegionBuddy->fd, true);
-	}
-
+	sendWorldViews(viewedRegion[BOTTOM_LEFT].connection->fd, true);
+	sendWorldViews(viewedRegion[BOTTOM_RIGHT].connection->fd, true);
 }
 
 //down button handler
@@ -507,38 +503,26 @@ void onUpButtonClicked(GtkWidget *widget, gpointer window) {
 #ifdef DEBUG
 	debug << "Clicked up" << endl;
 #endif
-	uint32 tmp1, tmp2;
+	int newViewed[DRAWINGORIGINS][2];
 
-	updateWorldGrid("white");
+	for (int i = TOP_LEFT; i < DRAWINGORIGINS; i++) {
+		newViewed[i][0] = viewedRegion[i].connection->info.draw_x();
+		newViewed[i][1] = viewedRegion[i].connection->info.draw_y() - 1;
 
-	if ((int) pivotRegion->info.draw_y() - 1 < 0)
-		tmp1 = worldServerRows - 1;
-	else
-		tmp1 = pivotRegion->info.draw_y() - 1;
-
-	if ((int) pivotRegionBuddy->info.draw_y() - 1 < 0)
-		tmp2 = worldServerRows - 1;
-	else
-		tmp2 = pivotRegionBuddy->info.draw_y() - 1;
-
-	uint32 newPivotRegion[2] = { pivotRegion->info.draw_x(), tmp1 };
-	uint32 newPivotRegionBuddy[2] = { pivotRegionBuddy->info.draw_x(), tmp2 };
-
-	if (horizontalView) {
-		sendWorldViews(pivotRegion->fd, false);
-		sendWorldViews(pivotRegionBuddy->fd, false);
-	} else {
-		sendWorldViews(pivotRegionBuddy->fd, false);
+		if( newViewed[i][1] == -1 )
+			newViewed[i][1] = worldServerRows-1;
 	}
 
-	setNewRegionPivotAndBuddy(newPivotRegion, newPivotRegionBuddy);
+	//disable the sending of world views from regions that we are moving away from
+	sendWorldViews(viewedRegion[BOTTOM_LEFT].connection->fd, false);
+	sendWorldViews(viewedRegion[BOTTOM_RIGHT].connection->fd, false);
 
-	if (horizontalView) {
-		sendWorldViews(pivotRegion->fd, true);
-		sendWorldViews(pivotRegionBuddy->fd, true);
-	} else {
-		sendWorldViews(pivotRegion->fd, true);
-	}
+	//set the new viewedRegions
+	setNewViewedRegion(newViewed);
+
+	//enable the sending of world views from regions that we are moving to
+	sendWorldViews(viewedRegion[TOP_LEFT].connection->fd, true);
+	sendWorldViews(viewedRegion[TOP_RIGHT].connection->fd, true);
 }
 
 //back button handler
@@ -546,38 +530,26 @@ void onBackButtonClicked(GtkWidget *widget, gpointer window) {
 #ifdef DEBUG
 	debug << "Clicked back" << endl;
 #endif
-	uint32 tmp1, tmp2;
+	int newViewed[DRAWINGORIGINS][2];
 
-	updateWorldGrid("white");
+	for (int i = TOP_LEFT; i < DRAWINGORIGINS; i++) {
+		newViewed[i][0] = viewedRegion[i].connection->info.draw_x() - 1;
+		newViewed[i][1] = viewedRegion[i].connection->info.draw_y();
 
-	if (((int) pivotRegion->info.draw_x()) - 1 < 0)
-		tmp1 = worldServerColumns - 1;
-	else
-		tmp1 = pivotRegion->info.draw_x() - 1;
-
-	if (((int) pivotRegionBuddy->info.draw_x()) - 1 < 0)
-		tmp2 = worldServerColumns - 1;
-	else
-		tmp2 = pivotRegionBuddy->info.draw_x() - 1;
-
-	uint32 newPivotRegion[2] = { tmp1, pivotRegion->info.draw_y() };
-	uint32 newPivotRegionBuddy[2] = { tmp2, pivotRegionBuddy->info.draw_y() };
-
-	if (horizontalView) {
-		sendWorldViews(pivotRegionBuddy->fd, false);
-	} else {
-		sendWorldViews(pivotRegion->fd, false);
-		sendWorldViews(pivotRegionBuddy->fd, false);
+		if( newViewed[i][0] == -1 )
+			newViewed[i][0] = worldServerColumns-1;
 	}
 
-	setNewRegionPivotAndBuddy(newPivotRegion, newPivotRegionBuddy);
+	//disable the sending of world views from regions that we are moving away from
+	sendWorldViews(viewedRegion[TOP_RIGHT].connection->fd, false);
+	sendWorldViews(viewedRegion[BOTTOM_RIGHT].connection->fd, false);
 
-	if (horizontalView) {
-		sendWorldViews(pivotRegion->fd, true);
-	} else {
-		sendWorldViews(pivotRegion->fd, true);
-		sendWorldViews(pivotRegionBuddy->fd, true);
-	}
+	//set the new viewedRegions
+	setNewViewedRegion(newViewed);
+
+	//enable the sending of world views from regions that we are moving to
+	sendWorldViews(viewedRegion[TOP_LEFT].connection->fd, true);
+	sendWorldViews(viewedRegion[BOTTOM_LEFT].connection->fd, true);
 }
 
 //forward button handler
@@ -585,93 +557,23 @@ void onForwardButtonClicked(GtkWidget *widget, gpointer window) {
 #ifdef DEBUG
 	debug << "Clicked forward" << endl;
 #endif
-	uint32 tmp1, tmp2;
+	int newViewed[DRAWINGORIGINS][2];
 
-	updateWorldGrid("white");
-
-	if (pivotRegion->info.draw_x() + 1 >= worldServerColumns)
-		tmp1 = 0;
-	else
-		tmp1 = pivotRegion->info.draw_x() + 1;
-
-	if (pivotRegionBuddy->info.draw_x() + 1 >= worldServerColumns)
-		tmp2 = 0;
-	else
-		tmp2 = pivotRegionBuddy->info.draw_x() + 1;
-
-	uint32 newPivotRegion[2] = { tmp1, pivotRegion->info.draw_y() };
-	uint32 newPivotRegionBuddy[2] = { tmp2, pivotRegionBuddy->info.draw_y() };
-
-	if (horizontalView) {
-		sendWorldViews(pivotRegion->fd, false);
-	} else {
-		sendWorldViews(pivotRegion->fd, false);
-		sendWorldViews(pivotRegionBuddy->fd, false);
+	for (int i = TOP_LEFT; i < DRAWINGORIGINS; i++) {
+		newViewed[i][0] = (viewedRegion[i].connection->info.draw_x()+1)% worldServerColumns;
+		newViewed[i][1] = viewedRegion[i].connection->info.draw_y();
 	}
 
-	setNewRegionPivotAndBuddy(newPivotRegion, newPivotRegionBuddy);
+	//disable the sending of world views from regions that we are moving away from
+	sendWorldViews(viewedRegion[TOP_LEFT].connection->fd, false);
+	sendWorldViews(viewedRegion[BOTTOM_LEFT].connection->fd, false);
 
-	if (horizontalView) {
-		sendWorldViews(pivotRegionBuddy->fd, true);
-	} else {
-		sendWorldViews(pivotRegion->fd, true);
-		sendWorldViews(pivotRegionBuddy->fd, true);
-	}
-}
+	//set the new viewedRegions
+	setNewViewedRegion(newViewed);
 
-//rotate button handler
-void onRotateButtonClicked(GtkWidget *widget, gpointer window) {
-#ifdef DEBUG
-	debug << "Clicked rotate" << endl;
-#endif
-	uint32 newPivotRegionBuddy[2], tmp1 = pivotRegion->info.draw_x(), tmp2 = pivotRegion->info.draw_y();
-	horizontalView = !horizontalView;
-
-	updateWorldGrid("white");
-
-	//which way do we want to rotate?
-	if (horizontalView) {
-		gtk_widget_set_size_request(GTK_WIDGET(worldDrawingArea.at(TOP_RIGHT)), IMAGEWIDTH, IMAGEHEIGHT);
-		gtk_widget_set_size_request(GTK_WIDGET(worldDrawingArea.at(BOTTOM_LEFT)), 0, 0);
-
-		if (pivotRegion->info.draw_x() + 1 >= worldServerColumns)
-			tmp1 = 0;
-		else
-			tmp1 += 1;
-	} else {
-		gtk_widget_set_size_request(GTK_WIDGET(worldDrawingArea.at(BOTTOM_LEFT)), IMAGEWIDTH, IMAGEHEIGHT);
-		gtk_widget_set_size_request(GTK_WIDGET(worldDrawingArea.at(TOP_RIGHT)), 0, 0);
-
-		if (pivotRegion->info.draw_y() + 1 >= worldServerRows)
-			tmp2 = 0;
-		else
-			tmp2 += 1;
-	}
-
-	newPivotRegionBuddy[0] = tmp1;
-	newPivotRegionBuddy[1] = tmp2;
-
-#ifdef DEBUG
-	debug << "Changing pivotRegionBuddy to (" << newPivotRegionBuddy[0] << "," << newPivotRegionBuddy[1] << ")" << endl;
-#endif
-
-	if (pivotRegionBuddy != pivotRegion)
-		sendWorldViews(pivotRegionBuddy->fd, false);
-
-	for (int i = 0; i < (int) regions.size(); i++) {
-		if (regions.at(i)->info.draw_x() == newPivotRegionBuddy[0] && regions.at(i)->info.draw_y()
-				== newPivotRegionBuddy[1])
-			pivotRegionBuddy = regions.at(i);
-	}
-
-	if (pivotRegionBuddy != pivotRegion)
-		sendWorldViews(pivotRegionBuddy->fd, true);
-
-	compareBuddy();
-	updateWorldGrid("light green");
-
-	if (gtk_toggle_tool_button_get_active(GTK_TOGGLE_TOOL_BUTTON(gtk_builder_get_object( builder, "Info" ))))
-		updateInfoWindow();
+	//enable the sending of world views from regions that we are moving to
+	sendWorldViews(viewedRegion[TOP_RIGHT].connection->fd, true);
+	sendWorldViews(viewedRegion[BOTTOM_RIGHT].connection->fd, true);
 }
 
 //window destruction methods for the info and navigation windows
@@ -690,7 +592,7 @@ static gboolean delete_event(GtkWidget *window, GdkEvent *event, gpointer widget
 void onAboutClicked(GtkWidget *widget, gpointer window) {
 	GtkWidget *dialog = gtk_about_dialog_new();
 	gtk_about_dialog_set_name(GTK_ABOUT_DIALOG(dialog), "World Viewer");
-	gtk_about_dialog_set_version(GTK_ABOUT_DIALOG(dialog), "0.1");
+	gtk_about_dialog_set_version(GTK_ABOUT_DIALOG(dialog), "0.2");
 	gtk_about_dialog_set_copyright(GTK_ABOUT_DIALOG(dialog), "(c) Team 2");
 	gtk_about_dialog_set_comments(GTK_ABOUT_DIALOG(dialog),
 			"World Viewer is a program to create a real-time visual representation of the 'Antix' simulation.");
@@ -741,14 +643,9 @@ void onFullscreenToggled(GtkWidget *widget, gpointer window) {
 gboolean drawingAreaExpose(GtkWidget *widget, GdkEventExpose *event, gpointer data) {
 	if (draw[(int) data]) {
 		cairo_t *cr = gdk_cairo_create(worldDrawingArea.at((int) data)->widget.window);
-		unsigned int regionId;
 
-		if( (int)data == TOP_LEFT )
-			regionId=fdToRegionId.at(pivotRegion->fd);
-		else
-			regionId=fdToRegionId.at(pivotRegionBuddy->fd);
-
-		UnpackImage(cr, &renderDraw[(int) data], robotSize, robotAlpha, &worldInfo, regionId);
+		UnpackImage(cr, &renderDraw[(int) data], robotSize, robotAlpha, &worldInfo,
+				fdToRegionId.at(viewedRegion[(int) data].connection->fd));
 
 		cairo_destroy(cr);
 		draw[(int) data] = false;
@@ -757,28 +654,35 @@ gboolean drawingAreaExpose(GtkWidget *widget, GdkEventExpose *event, gpointer da
 	return FALSE;
 }
 
+//zoom in button handler
+void onZoomInClicked(GtkWidget *widgetDrawingArea, gpointer data) {
+
+}
+
+//zoom out button hundler
+void onZoomOutClicked(GtkWidget *widgetDrawingArea, gpointer data) {
+
+}
+
 //initializations and simple modifications for the things that will be drawn
 void initWorldViewer() {
 	g_type_init();
 
 	GtkWidget *mainWindow = GTK_WIDGET(gtk_builder_get_object( builder, "window" ));
 	GtkToggleToolButton *navigation = GTK_TOGGLE_TOOL_BUTTON(gtk_builder_get_object( builder, "Navigation" ));
-	GtkToggleToolButton *info = GTK_TOGGLE_TOOL_BUTTON(gtk_builder_get_object( builder, "Info" ));
+	InfoToolButton = GTK_TOGGLE_TOOL_BUTTON(gtk_builder_get_object( builder, "Info" ));
 	GtkToggleToolButton *fullscreen = GTK_TOGGLE_TOOL_BUTTON(gtk_builder_get_object( builder, "Fullscreen" ));
+	GtkToolButton *zoomIn = GTK_TOOL_BUTTON(gtk_builder_get_object(builder, "ZoomIn"));
+	GtkToolButton *zoomOut = GTK_TOOL_BUTTON(gtk_builder_get_object(builder, "ZoomOut"));
 	GtkWidget *about = GTK_WIDGET(gtk_builder_get_object( builder, "About" ));
 	GtkWidget *infoWindow = GTK_WIDGET(gtk_builder_get_object( builder, "infoWindow" ));
 	GtkWidget *navigationWindow = GTK_WIDGET(gtk_builder_get_object( builder, "navigationWindow" ));
-	GtkWidget *table = GTK_WIDGET(gtk_builder_get_object( builder, "tableWorldView" ));
 	GtkWidget *upButton = GTK_WIDGET(gtk_builder_get_object( builder, "up" ));
 	GtkWidget *downButton = GTK_WIDGET(gtk_builder_get_object( builder, "down" ));
 	GtkWidget *backButton = GTK_WIDGET(gtk_builder_get_object( builder, "back" ));
 	GtkWidget *forwardButton = GTK_WIDGET(gtk_builder_get_object( builder, "forward" ));
-	GtkWidget *rotateButton = GTK_WIDGET(gtk_builder_get_object( builder, "rotate" ));
 	GdkColor color;
 
-	draw[0] = false;
-	draw[1] = false;
-	draw[2] = false;
 	gtk_window_set_keep_above(GTK_WINDOW(infoWindow), true);
 	gtk_window_set_keep_above(GTK_WINDOW(navigationWindow), true);
 
@@ -788,7 +692,7 @@ void initWorldViewer() {
 
 	//change the color of the label's text to white
 	gdk_color_parse("white", &color);
-	for (int frame = 1; frame < 3; frame++) {
+	for (int frame = 1; frame <= DRAWINGORIGINS; frame++) {
 		gtk_widget_modify_fg(
 				GTK_WIDGET(gtk_builder_get_object( builder,("frame_frameNum"+helper::toString(frame)).c_str())),
 				GTK_STATE_NORMAL, &color);
@@ -803,34 +707,38 @@ void initWorldViewer() {
 				GTK_STATE_NORMAL, &color);
 	}
 
-	//create a grid to display the received world views
-	for (guint i = 0; i < tableWorldViewRows; i++) {
-		for (guint j = 0; j < tableWorldViewColumns; j++) {
-			GtkDrawingArea* area = GTK_DRAWING_AREA(gtk_drawing_area_new());
-			gtk_widget_modify_bg(GTK_WIDGET(area), GTK_STATE_NORMAL, &color);
-			gtk_table_attach(GTK_TABLE(table), GTK_WIDGET(area), j, j + 1, i, i + 1, GTK_FILL, GTK_FILL, 0, 0);
-			worldDrawingArea.push_back(GTK_DRAWING_AREA(area));
-		}
+	GtkDrawingArea* tmp;
+	string tmpStr;
+	//set default size, color and keep track of the drawing areas
+	for(int i=TOP_LEFT; i<=BOTTOM_RIGHT; i++ )
+	{
+		tmpStr="drawingarea"+helper::toString(i+1);
+		tmp = GTK_DRAWING_AREA(gtk_builder_get_object( builder, tmpStr.c_str()));
+		gtk_widget_set_size_request(GTK_WIDGET(tmp), IMAGEWIDTH, IMAGEHEIGHT);
+		gtk_widget_modify_bg(GTK_WIDGET(tmp),GTK_STATE_NORMAL, &color);
+		worldDrawingArea.push_back(tmp);
 	}
 
 	g_signal_connect(worldDrawingArea.at(TOP_LEFT), "expose-event", G_CALLBACK(drawingAreaExpose), (gpointer)TOP_LEFT);
 	g_signal_connect(worldDrawingArea.at(TOP_RIGHT), "expose-event", G_CALLBACK(drawingAreaExpose), (gpointer)TOP_RIGHT);
 	g_signal_connect(worldDrawingArea.at(BOTTOM_LEFT), "expose-event", G_CALLBACK(drawingAreaExpose), (gpointer)BOTTOM_LEFT);
+	g_signal_connect(worldDrawingArea.at(BOTTOM_RIGHT), "expose-event", G_CALLBACK(drawingAreaExpose), (gpointer)BOTTOM_RIGHT);
 
+	g_signal_connect(zoomIn, "clicked", G_CALLBACK(onZoomInClicked), (gpointer)NULL);
+	g_signal_connect(zoomOut, "clicked", G_CALLBACK(onZoomOutClicked), (gpointer)NULL);
 	g_signal_connect(navigation, "toggled", G_CALLBACK(onWindowToggled), (gpointer) navigationWindow);
-	g_signal_connect(info, "toggled", G_CALLBACK(onWindowToggled), (gpointer) infoWindow);
+	g_signal_connect(InfoToolButton, "toggled", G_CALLBACK(onWindowToggled), (gpointer) infoWindow);
 	g_signal_connect(fullscreen, "toggled", G_CALLBACK(onFullscreenToggled), (gpointer) mainWindow);
 	g_signal_connect(about, "clicked", G_CALLBACK(onAboutClicked), (gpointer) mainWindow);
 	g_signal_connect(upButton, "clicked", G_CALLBACK(onUpButtonClicked), (gpointer) mainWindow);
 	g_signal_connect(downButton, "clicked", G_CALLBACK(onDownButtonClicked), (gpointer) mainWindow);
 	g_signal_connect(backButton, "clicked", G_CALLBACK(onBackButtonClicked), (gpointer) mainWindow);
 	g_signal_connect(forwardButton, "clicked", G_CALLBACK(onForwardButtonClicked), (gpointer) mainWindow);
-	g_signal_connect(rotateButton, "clicked", G_CALLBACK(onRotateButtonClicked), (gpointer) mainWindow);
 
 	g_signal_connect(navigationWindow, "destroy", G_CALLBACK(destroy), (gpointer)navigation);
-	g_signal_connect(infoWindow, "destroy", G_CALLBACK(destroy), (gpointer)info);
+	g_signal_connect(infoWindow, "destroy", G_CALLBACK(destroy), (gpointer)InfoToolButton);
 	g_signal_connect(navigationWindow, "delete-event", G_CALLBACK(delete_event), (gpointer)navigation);
-	g_signal_connect(infoWindow, "delete-event", G_CALLBACK(delete_event), (gpointer)info);
+	g_signal_connect(infoWindow, "delete-event", G_CALLBACK(delete_event), (gpointer)InfoToolButton);
 
 	gtk_widget_show_all(mainWindow);
 
@@ -850,22 +758,21 @@ int main(int argc, char* argv[]) {
 	gtk_builder_add_from_file(builder, builderPath.c_str(), NULL);
 	gtk_builder_connect_signals(builder, NULL);
 
-  //for the config filename
+	//for the config filename
 	string configFileName = cmdline.getArg("-c", "config");
 
 	userAddon = cmdline.getArg("-u", "");
-	if(userAddon != "")
-	{
-	  userAddon = userAddon + "@";
+	if (userAddon != "") {
+		userAddon = userAddon + "@";
 
-	  //sshkeyloc = "exec ssh-agent $BASH >> /dev/null; ssh-add " + sshkeyloc + "; ";
-	  sshpid = cmdline.getArg("-p", "");
-	  if(sshpid == "")
-	    throw runtime_error("Tunnel used, but no auth pid");
-	  sshsock = cmdline.getArg("-s", "");
-	  if(sshsock == "")
-	    throw runtime_error("Tunnel used, but no auth sock");
-	  sshkeyloc = "SSH_AGENT_PID=" + sshpid + "; SSH_AUTH_SOCK=" + sshsock + "; ";
+		//sshkeyloc = "exec ssh-agent $BASH >> /dev/null; ssh-add " + sshkeyloc + "; ";
+		sshpid = cmdline.getArg("-p", "");
+		if (sshpid == "")
+			throw runtime_error("Tunnel used, but no auth pid");
+		sshsock = cmdline.getArg("-s", "");
+		if (sshsock == "")
+			throw runtime_error("Tunnel used, but no auth sock");
+		sshkeyloc = "SSH_AGENT_PID=" + sshpid + "; SSH_AUTH_SOCK=" + sshsock + "; ";
 	}
 
 	//for triggering an ssh tunnel
@@ -874,6 +781,9 @@ int main(int argc, char* argv[]) {
 	debug.open(helper::worldViewerDebugLogName.c_str(), ios::out);
 #endif
 	loadConfigFile(configFileName.c_str(), clockip);
+
+	if (cmdline.getArg("-l").length())
+		strncpy(clockip, cmdline.getArg("-l").c_str(), 40);
 
 	//connect to the clock server
 	int clockfd = net::do_connect(clockip, WORLD_VIEWER_PORT);

@@ -529,7 +529,7 @@ gboolean Client::run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 
 				  // Clear the queue, wait for new events.
 				  ownRobots[i]->eventQueue.clear();
-				  
+
 				  //clear the collided flag so that the client, or ai, or whatever is refusing to forget about collisions after a period doesn't die forever
 				  ownRobots[i]->hasCollided = false;
 			  }
@@ -608,7 +608,7 @@ gboolean Client::run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 						bool foundRobot = false;
 						for (vector<SeenRobot*>::iterator it = ownRobots[index]->seenRobots.begin(); it
 								!= ownRobots[index]->seenRobots.end() && !foundRobot; it++) {
-								
+
 							if ((*it)->id == serverrobot.id()) {
 								foundRobot = true;
 								//cout << "Our #" << index << " update see "
@@ -649,7 +649,7 @@ gboolean Client::run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 						}
 
 						if (!foundRobot) {
-					  
+
 							SeenRobot *r = new SeenRobot();
 							//cout << "Our #" << index << " begin see "
 							//     << serverrobot.id() << endl;
@@ -668,7 +668,7 @@ gboolean Client::run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 							if (serverrobot.has_hascollided())
 								r->hasCollided = serverrobot.hascollided();
 							r->id = serverrobot.id();
-							
+
 							if (serverrobot.seesserverrobot(i).has_relx())
   							r->relx = serverrobot.seesserverrobot(i).relx();
 							if (serverrobot.seesserverrobot(i).has_rely())
@@ -722,7 +722,7 @@ gboolean Client::run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 					    //if(abs(puckstack.seespuckstack(i).relx()) < ROBOTDIAMETER/2 && abs(puckstack.seespuckstack(i).rely()) < ROBOTDIAMETER/2){
 					    if(puckstack.robotmover() == indexToRobotId(index))
 					    	ownRobots[index]->hasPuck = true;
-				    	
+
 					  }
 					  if((*it)->stackSize < (int)puckstack.stacksize())
 					  {
@@ -730,9 +730,9 @@ gboolean Client::run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 					    //if(abs(puckstack.seespuckstack(i).relx()) < ROBOTDIAMETER/2 && abs(puckstack.seespuckstack(i).rely()) < ROBOTDIAMETER/2){
 					    if(puckstack.robotmover() == indexToRobotId(index))
 					    	ownRobots[index]->hasPuck = false;
-				    	
+
 					  }
-					  
+
 						(*it)->stackSize = puckstack.stacksize();
 						foundPuck = true;
 						if ((*it)->stackSize <= 0 || puckstack.seespuckstack(i).viewlostid()) {
@@ -750,11 +750,11 @@ gboolean Client::run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 					p->rely = puckstack.seespuckstack(i).rely();
 					p->xid = puckstack.x();
 					p->yid = puckstack.y();
-					
+
 			    //check if our robot has dropped it, with a backup
 			    if(puckstack.robotmover() == indexToRobotId(index))
 			    	ownRobots[index]->hasPuck = false;
-					
+
 					ownRobots[index]->seenPucks.push_back(p);
 				}
 
@@ -775,7 +775,7 @@ gboolean Client::run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 		break;
 	}
 
-  int mss = net::get_mss(g_io_channel_unix_get_fd(ioch));
+  //int mss = net::get_mss(g_io_channel_unix_get_fd(ioch));
   if(!writing && controller.queue.remaining()) {
     g_source_remove(gwatch);
     // Ensure that we're watching for writability
