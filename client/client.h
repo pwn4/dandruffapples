@@ -57,9 +57,10 @@ public:
 	double relx;
 	double rely;
 	int stackSize;
+	unsigned int xid, yid;
 
 	SeenPuck() :
-		relx(0.0), rely(0.0), stackSize(1) {
+		relx(0.0), rely(0.0), stackSize(1), xid(0), yid(0) {
 	}
 };
 
