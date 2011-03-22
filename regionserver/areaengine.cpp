@@ -618,7 +618,7 @@ void AreaEngine::Step(bool generateImage){
       PuckStackObject *puckStack;
 
       //robot sight losses
-      for(sightCheck = (*nowSeenBy).begin(); sightCheck != sightEnd; )
+      /*for(sightCheck = (*nowSeenBy).begin(); sightCheck != sightEnd; )
       {
         if(robots.find((*sightCheck).first) == robots.end())
         {
@@ -641,53 +641,6 @@ void AreaEngine::Step(bool generateImage){
         }
 
         sightCheck++;
-      }
-
-      //puck sight losses
-      /*for(pSightCheck = (*pucksNowSeen).begin(); pSightCheck != pSightEnd; )
-      {
-        PuckStack * puckStackAccess;
-        puckStack = (*pSightCheck).first;
-        if(puckq.find(puckStack) == puckq.end())
-        {
-          //check if this is the first seen by for the stack
-          if(puckUpdates.find(puckStack) == puckUpdates.end()){
-            PuckStack *newStack = new PuckStack;
-            newStack->set_stacksize(0);
-            puckUpdates.insert(pair<PuckStackObject*, PuckStack*>(puckStack, newStack));
-          }
-
-          puckStackAccess = puckUpdates[puckStack];
-          SeesPuckStack* seesPuckStack = puckStackAccess->add_seespuckstack();
-          seesPuckStack->set_viewlostid(true);
-          seesPuckStack->set_seenbyid(curRobot->id);
-          seesPuckStack->set_relx(puckStack->x - curRobot->x);
-          seesPuckStack->set_rely(puckStack->y - curRobot->y);
-
-          pucksNowSeen->erase(pSightCheck++);
-          continue;
-        }
-
-        if(!AreaEngine::Sees(curRobot->x, curRobot->y, puckStack->x, puckStack->y)){
-          //check if this is the first seen by for the stack
-          if(puckUpdates.find(puckStack) == puckUpdates.end()){
-            PuckStack *newStack = new PuckStack;
-            newStack->set_stacksize(0);
-            puckUpdates.insert(pair<PuckStackObject*, PuckStack*>(puckStack, newStack));
-          }
-
-          puckStackAccess = puckUpdates[puckStack];
-          SeesPuckStack* seesPuckStack = puckStackAccess->add_seespuckstack();
-          seesPuckStack->set_viewlostid(true);
-          seesPuckStack->set_seenbyid(curRobot->id);
-          seesPuckStack->set_relx(puckStack->x - curRobot->x);
-          seesPuckStack->set_rely(puckStack->y - curRobot->y);
-
-          pucksNowSeen->erase(pSightCheck++);
-          continue;
-        }
-
-        pSightCheck++;
       }*/
 
       //do puck and robot sight acquires
