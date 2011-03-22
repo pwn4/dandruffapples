@@ -39,7 +39,7 @@ public:
             modx = ratio;
           }
 
-          double velocity = 0.1;
+          double velocity = 1.0;
           if (relDistance(closest->relx, closest->rely) < 1.0) {
             // The closer we are to the puck, the slower we move!
             velocity = 0.01;
