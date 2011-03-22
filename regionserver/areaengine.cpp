@@ -176,7 +176,7 @@ void AreaEngine::Step(bool generateImage){
 
         if(newCommand->puckAction == 1)
         {
-          if(RemovePuck(curRobot->x, curRobot->y))  //can pick up a puck
+          if(RemovePuck(curRobot->x, curRobot->y, curRobot->id))  //can pick up a puck
           {
             curRobot->holdingPuck = true;
           }
@@ -184,8 +184,48 @@ void AreaEngine::Step(bool generateImage){
         {
           if(curRobot->holdingPuck)
           {
-            AddPuck(curRobot->x, curRobot->y);
+            PuckStackObject * curStack = AddPuck(curRobot->x, curRobot->y, curRobot->id);
             curRobot->holdingPuck = false;
+            
+            //tell clients
+            vector<RobotObject*> * robotsViewing = &(curStack->seenBy);
+            if(robotsViewing->size() > 0)
+            {
+              PuckStack puckUpdate;
+              puckUpdate.set_stacksize(curStack->count);
+              puckUpdate.set_robotmover(curRobot->id);
+              puckUpdate.set_x(curStack->x);
+              puckUpdate.set_y(curStack->y);
+              int added = 0;
+              vector<RobotObject*>::iterator robotIt;
+              for(robotIt = robotsViewing->begin(); robotIt != robotsViewing->end();)
+              {
+                //pruning as we go
+                if(!AreaEngine::Sees((*robotIt)->x, (*robotIt)->y, curStack->x, curStack->y)){
+                  robotIt = robotsViewing->erase(robotIt);
+                  continue;
+                }
+
+                added++;
+                SeesPuckStack* seesPuckStack = puckUpdate.add_seespuckstack();
+                seesPuckStack->set_viewlostid(false);
+                seesPuckStack->set_seenbyid((*robotIt)->id);
+                seesPuckStack->set_relx(curStack->x - (*robotIt)->x);
+                seesPuckStack->set_rely(curStack->y - (*robotIt)->y);
+                
+                robotIt++;
+              }
+              
+              if(added > 0)
+              {
+                map<PuckStackObject*, PuckStack*>::iterator puckIt;
+                for (vector<EpollConnection*>::const_iterator it =
+                     controllers.begin(); it != controllers.end(); it++) {
+                  (*it)->queue.push(MSG_PUCKSTACK, puckUpdate);
+                  (*it)->set_writing(true);
+                }
+              }
+            }
           }
         }
 
@@ -395,21 +435,6 @@ void AreaEngine::Step(bool generateImage){
 
         if(newCommand->angle != INT_MAX)
           curRobot->angle = newCommand->angle;
-        
-        if(newCommand->puckAction == 1)
-        {
-          if(RemovePuck(curRobot->x, curRobot->y))  //can pick up a puck
-          {
-            curRobot->holdingPuck = true;
-          }
-        }else if(newCommand->puckAction == 2)
-        {
-          if(curRobot->holdingPuck)
-          {
-            AddPuck(curRobot->x, curRobot->y);
-            curRobot->holdingPuck = false;
-          }
-        }
 
         delete newCommand;
         serverChangeQueue.pop();
@@ -710,6 +735,8 @@ void AreaEngine::Step(bool generateImage){
                   if(puckUpdates.find(puckStack) == puckUpdates.end()){
                     PuckStack *newStack = new PuckStack;
                     newStack->set_stacksize(puckStack->count);
+                    newStack->set_x(puckStack->x);
+                    newStack->set_y(puckStack->y);
                     puckUpdates.insert(pair<PuckStackObject*, PuckStack*>(puckStack, newStack));
                   }
 
@@ -943,7 +970,7 @@ void AreaEngine::SetPuckStack(double newx, double newy, int newc){
 }
 
 //add a puck to the system.
-void AreaEngine::AddPuck(double newx, double newy){
+PuckStackObject* AreaEngine::AddPuck(double newx, double newy, int robotId){
   Index puckElement = getRobotIndices(newx, newy, true);
 
   ArrayObject *element = &robotArray[puckElement.x][puckElement.y];
@@ -974,11 +1001,18 @@ void AreaEngine::AddPuck(double newx, double newy){
   
   BroadcastPuckStack(curStack, regionUpdate);
   
+  return curStack;
+ 
+}
+
+//overloaded
+PuckStackObject* AreaEngine::AddPuck(double newx, double newy){
+  return AddPuck(newx, newy, -1);
 }
 
 //remove a puck - returns a success boolean. This way we can just call the method when a client
 //requests and not bother checking ourselves. Tries to remove a puck within the pickup range of x and y
-bool AreaEngine::RemovePuck(double x, double y){
+bool AreaEngine::RemovePuck(double x, double y, int robotId){
 
   Index topLeft = getRobotIndices(x-pickupRange, y-pickupRange, true);
   Index botRight = getRobotIndices(x+pickupRange, y+pickupRange, true);
@@ -1021,6 +1055,10 @@ bool AreaEngine::RemovePuck(double x, double y){
       {
         PuckStack puckUpdate;
         puckUpdate.set_stacksize(curStack->count);
+        puckUpdate.set_x(curStack->x);
+        puckUpdate.set_y(curStack->y);
+        if(robotId != -1)
+          puckUpdate.set_robotmover(robotId);
         int added = 0;
         vector<RobotObject*>::iterator robotIt;
         for(robotIt = robotsViewing->begin(); robotIt != robotsViewing->end();)

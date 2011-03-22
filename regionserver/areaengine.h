@@ -137,8 +137,9 @@ public:
 
   void PickUpPuck(int robotId);
   void DropPuck(int robotId);
-  void AddPuck(double newx, double newy);
-  bool RemovePuck(double x, double y);
+  PuckStackObject* AddPuck(double newx, double newy, int RobotId);
+  PuckStackObject* AddPuck(double newx, double newy);
+  bool RemovePuck(double x, double y, int RobotId);
   void SetPuckStack(double newx, double newy, int newc);
 
   void AddRobot(RobotObject * oldRobot);
