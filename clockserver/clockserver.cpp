@@ -713,10 +713,12 @@ int main(int argc, char **argv) {
 	for (vector<RegionConnection*>::const_iterator i = controllers.begin(); i != controllers.end(); ++i) {
 		shutdown((*i)->fd, SHUT_RDWR);
 		close((*i)->fd);
+    delete *i;
 	}
 	for (vector<RegionConnection*>::const_iterator i = regions.begin(); i != regions.end(); ++i) {
 		shutdown((*i)->fd, SHUT_RDWR);
 		close((*i)->fd);
+    delete *i;
 	}
 	close(sock);
 	close(controllerSock);
