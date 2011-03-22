@@ -361,6 +361,7 @@ gboolean Client::run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
     return true;
   }
 
+  static bool gotTeam = false;
 	// this should be the only type of messages
 	switch (type) {
 	case MSG_WORLDINFO: {
@@ -406,6 +407,7 @@ gboolean Client::run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 			if (claimteam.granted()) {
 				myTeam = claimteam.id();
 				cout << "ClaimTeam: Success! We control team #" << myTeam << endl;
+        gotTeam = true;
 
 				ownRobots = new OwnRobot*[robotsPerTeam];
 				for (int i = 0; i < robotsPerTeam; i++) {
@@ -764,7 +766,7 @@ gboolean Client::run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 	}
 
   int mss = net::get_mss(g_io_channel_unix_get_fd(ioch));
-  if(!writing && (controller.queue.remaining() >= (mss - (0.1*mss)))) {
+  if(!writing && (gotTeam || controller.queue.remaining() >= (mss - (0.1*mss)))) {
     g_source_remove(gwatch);
     // Ensure that we're watching for writability
     gwatch = g_io_add_watch(ioch, (GIOCondition)(G_IO_IN | G_IO_OUT), runner, data);
