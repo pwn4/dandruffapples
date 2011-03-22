@@ -39,7 +39,7 @@ message SeesPuckStack {
 message PuckStack {
   optional fixed64 x = 1; //we need these as ids for inter-region and to-client
   optional fixed64 y = 2;
-  required fixed32 stackSize = 3;
+  required int32 stackSize = 3;
   repeated SeesPuckStack seespuckstack = 4;
   optional fixed32 robotMover = 5;
 }
