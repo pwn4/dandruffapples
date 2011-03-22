@@ -103,9 +103,8 @@ void checkNewStep() {
       lastSecond = now;
       ++seconds;
 
-      cout << setprecision(1);
+      cout << setprecision(1) << fixed;
       cout << timeSteps / 2.0f << " ts/s | ";
-      cout << fixed;
 
       // Update record and sum total
       unsigned total = 0;
@@ -291,6 +290,7 @@ int main(int argc, char **argv) {
 	worldinfo.set_numpucks(1000);//send the number of pucks in the region
 	unsigned teams = atoi(configuration["TEAMS"].c_str());
 	unsigned robots_per_team = atoi(configuration["ROBOTS_PER_TEAM"].c_str());
+  unsigned teamsLeft = teams;
 
 	handleHomes(teams, server_count);
 
@@ -533,7 +533,9 @@ int main(int argc, char **argv) {
 									cout << "Team " << id << " was already claimed!" << endl;
 									claimteam.set_granted(false);
 								} else {
-									cout << "Team " << id << " has been claimed." << endl;
+                  --teamsLeft;
+									cout << "Team " << id << " has been claimed, "
+                       << teamsLeft << " remaining." << endl;
 									claimteam.set_granted(true);
 									teamclaimed[id] = true;
 
@@ -573,6 +575,9 @@ int main(int argc, char **argv) {
 									  }
 									}
 								}
+                if(teamsLeft == 0) {
+                  cout << "All teams claimed!" << endl;
+                }
 								c->queue.push(MSG_CLAIMTEAM, claimteam);
 								c->set_writing(true);
 								break;
