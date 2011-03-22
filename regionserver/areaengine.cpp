@@ -607,6 +607,9 @@ void AreaEngine::Step(bool generateImage){
       ServerRobot serverrobot;
       serverrobot.set_id(curRobot->id);
       serverrobot.set_laststep(-1);   //allow stray msg detection
+      serverrobot.set_velocityx(curRobot->vx);
+      serverrobot.set_velocityy(curRobot->vy);
+      serverrobot.set_angle(curRobot->angle);
 
       //first check sight losses
       //NOTICE: We should not need to send sight losses. We still need to CALCULATE them, but we don't need to send them.
