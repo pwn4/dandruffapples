@@ -116,7 +116,7 @@ void checkNewStep() {
       total += timeSteps;
       timeSteps = 0;
 
-      if(seconds > (interval + 1)) {
+      if(seconds > interval) {
         // We have enough data to do stats
         float mean = ((float)total / (float)interval) / 2.0f;
       
