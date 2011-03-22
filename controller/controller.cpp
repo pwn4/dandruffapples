@@ -112,13 +112,13 @@ int main(int argc, char** argv)
   printf("--== Controller Server Software ==-\n");
 
   clockfd = net::do_connect(clockip, CONTROLLERS_PORT);
-  cout << "Connected to Clock Server" << endl;
 
   if (clockfd < 0) {
     throw SystemError("Failed to connect to clock server");
 	} else if (clockfd == 0) {
 		throw runtime_error("Invalid clock address");
 	}
+  cout << "Connected to Clock Server" << endl;
 
   listenfd = net::do_listen(CLIENTS_PORT);
   net::set_blocking(listenfd, false);

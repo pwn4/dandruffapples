@@ -1,11 +1,13 @@
 #!/bin/bash
 
-DEBUG=1
+#DEBUG=1
 
 # Port remote hosts' sshds are listening on
 SSHPORT=24
 # Path of project dir relative to $HOME
 PROJDIR="dandruffapples"
+# Path to write logs
+LOGDIR="logs"
 # Path to write other files
 OUTPATH="tmp"
 # Path to write generated clock config to
@@ -111,13 +113,13 @@ then
 fi
 CONTROLHOSTS=""
 #CLIENTS_LEFT=$TEAMS
-echo -n "Launching $CONTROLLERS_LEFT controllers and $REGIONS_LEFT regions"
+echo "Launching $CONTROLLERS_LEFT controllers and $REGIONS_LEFT regions"
 for HOST in `grep -hv \`hostname\` "$HOSTFILE"`
 do
     #check for host being up
-    if (! host "$HOST" >/dev/null) || (! nc -z "$HOST" $SSHPORT)
+    if (! host "$HOST" >/dev/null) || (! nc -w 1 -z "$HOST" $SSHPORT)
     then
-	echo "Skipping unresponsive host $HOST"
+	echo "- Skipping unresponsive host $HOST"
         continue
     fi
 
@@ -134,28 +136,29 @@ do
     
     if [ $CONTROLLERS_LEFT -gt 0 ]
     then
-        wrap $SSHCOMMAND $HOST "bash -c \"cd '$PROJDIR/controller' && LD_LIBRARY_PATH='$PROJDIR/sharedlibs' $DEBUGGER ./controller -l $CLOCKSERVER\"" > /dev/null &
+        echo "Launching controller on $HOST"
+        wrap $SSHCOMMAND $HOST "bash -c \"cd '$PROJDIR/controller' && LD_LIBRARY_PATH='$PROJDIR/sharedlibs' $DEBUGGER ./controller -l $CLOCKSERVER\"" > "$LOGDIR/controller.out.$HOST.log" 2> "$LOGDIR/controller.err.$HOST.log" &
         SSHPROCS="$SSHPROCS $!"
-        echo -n .
         CONTROLLERS_LEFT=$[$CONTROLLERS_LEFT - 1]
         CONTROLHOSTS="$CONTROLHOSTS $HOST"
     elif [ $REGIONS_LEFT -gt 0 ]
     then
+        echo "Launching $REGIONS_PER_HOST regions on $HOST"
         DECREMENTED=$[$REGIONS_LEFT - $REGIONS_PER_HOST]
         CONFIDX=1
         while [ $REGIONS_LEFT -gt $DECREMENTED -a $REGIONS_LEFT -gt 0 ]
         do
+            NUM=$[$REGIONS_LEFT - $DECREMENTED]
             if [ $CONFIDX -eq 1 ]
             then
 		sleep 0.1
-                wrap $SSHCOMMAND $HOST "bash -c \"cd '$PROJDIR/regionserver' && LD_LIBRARY_PATH='$PROJDIR/sharedlibs' $DEBUGGER ./regionserver -l $CLOCKSERVER -c config\"" > /dev/null &
+                wrap $SSHCOMMAND $HOST "bash -c \"cd '$PROJDIR/regionserver' && LD_LIBRARY_PATH='$PROJDIR/sharedlibs' $DEBUGGER ./regionserver -l $CLOCKSERVER -c config\"" > "$LOGDIR/region.out.$HOST.$NUM.log" 2> "$LOGDIR/region.err.$HOST.$NUM.log"  &
                 SSHPROCS="$SSHPROCS $!"
             else
 		sleep 0.1
-                wrap $SSHCOMMAND $HOST "bash -c \"cd '$PROJDIR/regionserver' && LD_LIBRARY_PATH='$PROJDIR/sharedlibs' $DEBUGGER ./regionserver -l $CLOCKSERVER -c config${CONFIDX}\"" > /dev/null &
+                wrap $SSHCOMMAND $HOST "bash -c \"cd '$PROJDIR/regionserver' && LD_LIBRARY_PATH='$PROJDIR/sharedlibs' $DEBUGGER ./regionserver -l $CLOCKSERVER -c config${CONFIDX}\"" > "$LOGDIR/region.out.$HOST.$NUM.log" 2> "$LOGDIR/region.err.$HOST.$NUM.log" &
                 SSHPROCS="$SSHPROCS $!"
             fi
-            echo -n .
             CONFIDX=$[CONFIDX + 1]
             REGIONS_LEFT=$[$REGIONS_LEFT - 1]
         done
@@ -179,7 +182,7 @@ do
     #       fi
     #     done
     else
-        echo " done!"
+        echo "All regions and controllers launched!"
         break
     fi
 done
@@ -194,19 +197,32 @@ fi
 sleep 3
 if [ $CONTROLLERS ]
 then
-   echo -n "Launching $TEAMS clients across $CONTROLLERS machines"
-   HOSTNUM=`echo $CONTROLHOSTS |wc -w`
+   echo "Launching $TEAMS clients across $CONTROLLERS machines"
+   # One shell per machine
    CLIENTS_LEFT=$TEAMS
+   QUOTIENT=$[$TEAMS / $CONTROLLERS]
+   REMAINDER=$[$TEAMS % $CONTROLLERS]
+   HOSTIDX=1
    while [ $CLIENTS_LEFT -gt 0 ]
    do
-       sleep 0.1
-       CLIENTS_LEFT=$[CLIENTS_LEFT - 1]
-       HOST=`echo $CONTROLHOSTS |cut -d ' ' -f $[$CLIENTS_LEFT % $HOSTNUM + 1]`
-       wrap $SSHCOMMAND $HOST "bash -c \"cd '$PROJDIR/client' && LD_LIBRARY_PATH='$PROJDIR/sharedlibs' $DEBUGGER ./client -t $CLIENTS_LEFT\"" > /dev/null &
+       CLIENTS_LEFT=$[$CLIENTS_LEFT - $QUOTIENT]
+       EXTRA=0
+       if [ $REMAINDER -gt 0 ]
+       then
+           EXTRA=1
+           REMAINDER=$[$REMAINDER - 1]
+           CLIENTS_LEFT=$[$CLIENTS_LEFT - 1]
+       fi
+       
+       HOST=`echo $CONTROLHOSTS |cut -d ' ' -f $HOSTIDX`
+       echo "Launching $[$QUOTIENT + $EXTRA] clients on controller $HOST"
+       wrap $SSHCOMMAND $HOST "bash -c \"cd '$PROJDIR' && ./start-n-clients.sh $[$QUOTIENT + $EXTRA] $CLIENTS_LEFT\"" > "$LOGDIR/clientgroup.out.$HOST.log" 2> "$LOGDIR/clientgroup.err.$HOST.log" &
        SSHPROCS="$SSHPROCS $!"
-       echo -n .
+       HOSTIDX=$[$HOSTIDX+1]
+       sleep 0.1
    done
-   echo " done!"
+
+   echo "All clients launched!"
 fi
 
 echo "All done!  Here's the clock server."
