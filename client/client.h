@@ -230,7 +230,7 @@ protected:
 	// Robots
 	OwnRobot** ownRobots;
 	// Helper functions
-	int indexToRobotId(int index);
+	unsigned int indexToRobotId(int index);
 	int robotIdToIndex(int robotId);
 	bool weControlRobot(int robotId);
 public:
