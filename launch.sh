@@ -140,7 +140,7 @@ do
         CONTROLHOSTS="$CONTROLHOSTS $HOST"
     elif [ $REGIONS_LEFT -gt 0 ]
     then
-        echo $HOST
+        echo "Launching $REGIONS_PER_HOST regions on $HOST"
         DECREMENTED=$[$REGIONS_LEFT - $REGIONS_PER_HOST]
         CONFIDX=1
         while [ $REGIONS_LEFT -gt $DECREMENTED -a $REGIONS_LEFT -gt 0 ]
@@ -211,7 +211,7 @@ then
        fi
        
        HOST=`echo $CONTROLHOSTS |cut -d ' ' -f $HOST`
-       echo $HOST
+       echo "Launching $[$QUOTIENT + $EXTRA] clients on controller $HOST"
        wrap $SSHCOMMAND $HOST "bash -c \"cd '$PROJDIR' && ./start-n-clients.sh $[$QUOTIENT + $EXTRA] $CLIENTS_LEFT\"" > /dev/null &
        SSHPROCS="$SSHPROCS $!"
        HOST=$[$HOST+1]
