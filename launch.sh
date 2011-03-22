@@ -102,8 +102,7 @@ then
     exit 1
 fi
 
-SSHCOMMAND="ssh -o StrictHostKeyChecking=no -o PasswordAuthentication=no -p $SSHPORT"
-SSHCOMMAND="ssh -X -p $SSHPORT"
+SSHCOMMAND="ssh -o StrictHostKeyChecking=no -p $SSHPORT"
 
 REGIONS_LEFT=$[$COLS * $ROWS]
 CONTROLLERS_LEFT=0;
