@@ -460,7 +460,7 @@ gboolean Client::run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 					  (*it)->relx += (*it)->vx - ownRobots[i]->vx;
 					  (*it)->rely += (*it)->vy - ownRobots[i]->vy;
 					  tempDistance = relDistance((*it)->relx, (*it)->rely);
-					  if (tempDistance > VIEWDISTANCE) {
+					  if (tempDistance > VIEWDISTANCE - ROBOTDIAMETER) {
 						  // We can't see the robot anymore. Delete.
 						  delete *it;
 						  it = ownRobots[i]->seenRobots.erase(it);
@@ -517,6 +517,9 @@ gboolean Client::run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 
 				  // Clear the queue, wait for new events.
 				  ownRobots[i]->eventQueue.clear();
+				  
+				  //clear the collided flag so that the client, or ai, or whatever is refusing to forget about collisions after a period doesn't die forever
+				  ownRobots[i]->hasCollided = false;
 			  }
 
 			    //update the view of the viewed robot
@@ -553,12 +556,10 @@ gboolean Client::run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 				if (serverrobot.has_velocityx())
 				{
 					ownRobots[index]->vx = serverrobot.velocityx();
-					ownRobots[index]->hasCollided = false;
 				}
 				if (serverrobot.has_velocityy())
 				{
 					ownRobots[index]->vy = serverrobot.velocityy();
-					ownRobots[index]->hasCollided = false;
 				}
 				if (serverrobot.has_angle())
 					ownRobots[index]->angle = serverrobot.angle();
@@ -603,12 +604,10 @@ gboolean Client::run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 								bool stateChange = false;
 								if (serverrobot.has_velocityx() && (*it)->vx != serverrobot.velocityx()) {
 									(*it)->vx = serverrobot.velocityx();
-									(*it)->hasCollided = false;
 									stateChange = true;
 								}
 								if (serverrobot.has_velocityy() && (*it)->vy != serverrobot.velocityy()) {
 									(*it)->vy = serverrobot.velocityy();
-									(*it)->hasCollided = false;
 									stateChange = true;
 								}
 								if (serverrobot.has_angle() && (*it)->angle != serverrobot.angle()) {
@@ -636,18 +635,17 @@ gboolean Client::run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 							}
 						}
 						if (!foundRobot) {
+						
 							SeenRobot *r = new SeenRobot();
 							//cout << "Our #" << index << " begin see "
 							//     << serverrobot.id() << endl;
 							if (serverrobot.has_velocityx())
 							{
 								r->vx = serverrobot.velocityx();
-								r->hasCollided = false;
 							}
 							if (serverrobot.has_velocityy())
 							{
 								r->vy = serverrobot.velocityy();
-								r->hasCollided = false;
 							}
 							if (serverrobot.has_angle())
 								r->angle = serverrobot.angle();
