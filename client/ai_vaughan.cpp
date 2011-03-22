@@ -75,7 +75,8 @@ public:
       }
 		} else {
       // We have a puck! 
-			if (insideOurHome(ownRobot)) {
+      //do /3 to ensure we're really inside the home before dropping. None of this border crap.
+			if (relDistance(ownRobot->homeRelX, ownRobot->homeRelY) < HOMEDIAMETER/3) {
         // We're home! Drop the puck. 
 				command.sendCommand = true;
 				command.changePuckPickup = true;
