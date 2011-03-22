@@ -7,14 +7,32 @@ SeenPuck* ClientAi::findClosestPuck(OwnRobot* ownRobot) {
 	vector<SeenPuck*>::iterator closest;
 	double minDistance = 9000.01; // Over nine thousand!
 	double tempDistance;
+	bool foundPuck = false;
 	for (vector<SeenPuck*>::iterator it = ownRobot->seenPucks.begin(); it != ownRobot->seenPucks.end(); it++) {
 		tempDistance = relDistance((*it)->relx, (*it)->rely);
-		if (tempDistance < minDistance) {
+		//again, don't return pucks in our home
+		if (tempDistance < minDistance && relDistance((*it)->relx - ownRobot->homeRelX, (*it)->rely - ownRobot->homeRelY) > HOMEDIAMETER/2) {
 			minDistance = tempDistance;
 			closest = it;
+			foundPuck = true;
 		}
 	}
+	
+	if(!foundPuck)
+	  return NULL;
+	
 	return *closest;
+}
+
+// Checks whether the robot is inside its home. If true, then robot can drop
+// puck and score a point.
+bool ClientAi::insideOurHome(OwnRobot* ownRobot) {
+  // TODO: use home width as defined by global variables.
+  return (abs(ownRobot->homeRelX) <= HOMEDIAMETER/2 && abs(ownRobot->homeRelY) <= HOMEDIAMETER/2);
+}
+
+double ClientAi::relDistance(double x1, double y1) {
+	return (sqrt(x1 * x1 + y1 * y1));
 }
 
 SeenPuck* ClientAi::findPickUpablePuck(OwnRobot* ownRobot) {
@@ -26,22 +44,12 @@ SeenPuck* ClientAi::findPickUpablePuck(OwnRobot* ownRobot) {
 		//this is wrong! This is TOO STRICT
 		//if (sameCoordinates((*it)->relx, (*it)->rely, 0.0, 0.0)) {
 		//make the AIs go in a little closer as a buffer
-		if(abs((*it)->relx) < ROBOTDIAMETER/2 - 0.2 && abs((*it)->rely) < ROBOTDIAMETER/2 - 0.2) {
+		//Also, don't include pucks inside the home as pickupable pucks
+		if(abs((*it)->relx) < ROBOTDIAMETER/2 - 0.2 && abs((*it)->rely) < ROBOTDIAMETER/2 - 0.2 && relDistance((*it)->relx - ownRobot->homeRelX, (*it)->rely - ownRobot->homeRelY) > HOMEDIAMETER/2) {
 			return *it;
 		}
 	}
 	return NULL; // Found nothing in the for loop.
-}
-
-// Checks whether the robot is inside its home. If true, then robot can drop
-// puck and score a point.
-bool ClientAi::insideOurHome(OwnRobot* ownRobot) {
-  // TODO: use home width as defined by global variables.
-  return (sameCoordinates(ownRobot->homeRelX, ownRobot->homeRelY, 0.0, 0.0));
-}
-
-double ClientAi::relDistance(double x1, double y1) {
-	return (sqrt(x1 * x1 + y1 * y1));
 }
 
 // Check if the two coordinates are the same, compensating for
