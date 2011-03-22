@@ -134,6 +134,7 @@ do
     
     if [ $CONTROLLERS_LEFT -gt 0 ]
     then
+        echo "Launching controller on $HOST"
         wrap $SSHCOMMAND $HOST "bash -c \"cd '$PROJDIR/controller' && LD_LIBRARY_PATH='$PROJDIR/sharedlibs' $DEBUGGER ./controller -l $CLOCKSERVER\"" > /dev/null &
         SSHPROCS="$SSHPROCS $!"
         CONTROLLERS_LEFT=$[$CONTROLLERS_LEFT - 1]
@@ -198,7 +199,7 @@ then
    CLIENTS_LEFT=$TEAMS
    QUOTIENT=$[$TEAMS / $CONTROLLERS]
    REMAINDER=$[$TEAMS % $CONTROLLERS]
-   HOST=1
+   HOSTIDX=1
    while [ $CLIENTS_LEFT -gt 0 ]
    do
        CLIENTS_LEFT=$[$CLIENTS_LEFT - $QUOTIENT]
@@ -210,11 +211,11 @@ then
            CLIENTS_LEFT=$[$CLIENTS_LEFT - 1]
        fi
        
-       HOST=`echo $CONTROLHOSTS |cut -d ' ' -f $HOST`
+       HOST=`echo $CONTROLHOSTS |cut -d ' ' -f $HOSTIDX`
        echo "Launching $[$QUOTIENT + $EXTRA] clients on controller $HOST"
        wrap $SSHCOMMAND $HOST "bash -c \"cd '$PROJDIR' && ./start-n-clients.sh $[$QUOTIENT + $EXTRA] $CLIENTS_LEFT\"" > /dev/null &
        SSHPROCS="$SSHPROCS $!"
-       HOST=$[$HOST+1]
+       HOSTIDX=$[$HOSTIDX+1]
        sleep 0.1
    done
 
