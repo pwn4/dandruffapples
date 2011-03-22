@@ -117,7 +117,7 @@ do
     #check for host being up
     if (! host "$HOST" >/dev/null) || (! nc -w 1 -z "$HOST" $SSHPORT)
     then
-	echo "Skipping unresponsive host $HOST"
+	echo "- Skipping unresponsive host $HOST"
         continue
     fi
 
@@ -179,7 +179,7 @@ do
     #       fi
     #     done
     else
-        echo " done!"
+        echo "All regions and controllers launched!"
         break
     fi
 done
@@ -219,7 +219,7 @@ then
        sleep 0.1
    done
 
-   echo " done!"
+   echo "All clients launched!"
 fi
 
 echo "All done!  Here's the clock server."
