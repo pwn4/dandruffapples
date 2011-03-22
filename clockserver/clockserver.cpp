@@ -3,6 +3,7 @@
 #include <cstring>
 #include <cerrno>
 #include <iostream>
+#include <iomanip>
 #include <vector>
 #include <algorithm>
 
@@ -85,39 +86,55 @@ TimestepDone tsdone;
 TimestepUpdate timestep;
 ClaimTeam claimteam;
 unsigned long long step = 0;
-time_t lastSecond = time(NULL);
-int timeSteps = 0;
 int numPositionedServers = 0;
-long totalpersecond = 0, number = 0;
-long values[1000];
-long freeval = 0;
-int second = 0;
 bool running = false;
 
 void checkNewStep() {
+  static time_t lastSecond = time(NULL);
+  static unsigned long long timeSteps = 0;
+  const size_t interval = 10;      // seconds
+  static unsigned pastStepCounts[10];
+  static unsigned long long seconds = 0;
+  if (ready == server_count + controllers.size() && running) {
+    ++timeSteps;
+    time_t now = time(NULL);
+		// Check if a second has passed
+		if(now > lastSecond) {
+      lastSecond = now;
+      ++seconds;
 
-	if (ready == server_count + controllers.size() && running) {
-		//check if its time to output
-		if (time(NULL) > lastSecond) {
-			cout << timeSteps / 2 << " timesteps/second. second: " << second++ << endl;
-			//do some stats calculations
-			totalpersecond += timeSteps / 2;
-			number++;
-			values[freeval++] = (long) timeSteps / 2;
-			long avg = (totalpersecond / number);
-			cout << avg << " timesteps/second on average" << endl;
-			//calc std dev
-			long stddev = 0;
-			for (int k = 0; k < freeval; k++)
-				stddev += (values[k] - avg) * (values[k] - avg);
-			stddev /= freeval;
-			stddev = sqrt(stddev);
-			cout << "Standard Deviation: " << stddev << endl << endl;
-			////////////////////////////
-			timeSteps = 0;
-			lastSecond = time(NULL);
+      cout << fixed << setprecision(1);
+      cout << timeSteps / 2.0f << " ts/s | ";
+
+      // Update record and sum total
+      unsigned total = 0;
+      for(unsigned i = interval - 1; i > 0; --i) {
+        pastStepCounts[i] = pastStepCounts[i-1];
+        total += pastStepCounts[i];
+      }
+      pastStepCounts[0] = timeSteps;
+      total += timeSteps;
+      timeSteps = 0;
+
+      if(seconds > interval) {
+        // We have enough data to do stats
+        float mean = ((float)total / (float)interval) / 2.0f;
+      
+        cout << mean << " avg | ";
+      
+        // Calculate standard deviation
+        float sumOfSquares = 0;
+        for(unsigned i = 0; i < interval; ++i) {
+          float delta = (pastStepCounts[i]/2.0f) - mean;
+          sumOfSquares += delta * delta;
+        }
+        float stddev = sqrt(sumOfSquares/(float)(interval-1));
+        cout << stddev << " std dev";
+      } else {
+        cout << " gathering data...";
+      }
+      cout << endl;
 		}
-		timeSteps++;
 
 		// All servers are ready, prepare to send next step
 		ready = 0;
@@ -479,9 +496,8 @@ int main(int argc, char **argv) {
 							}
 						}
 					} catch (EOFError e) {
-						//added the last "seconds>0" check to test whether we started running the simulation
 						//and a region server has disconnected
-						if ((ready == connected && connected == server_count) || second > 0) {
+						if ((ready == connected && connected == server_count) || running) {
 							cerr << "Region server disconnected!  Shutting down." << endl;
 							return 1;
 						} else {
