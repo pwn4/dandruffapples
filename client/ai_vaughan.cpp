@@ -40,9 +40,9 @@ public:
           }
 
           double velocity = 1.0;
-          if (relDistance(closest->relx, closest->rely) < 1.0) {
+          if (relDistance(closest->relx, closest->rely) < 5.0) {
             // The closer we are to the puck, the slower we move!
-            velocity = 0.01;
+            velocity = 0.1;
           }
           command.sendCommand = true;
           if (closest->relx <= 0.0) {
