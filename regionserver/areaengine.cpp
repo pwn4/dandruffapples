@@ -187,44 +187,25 @@ void AreaEngine::Step(bool generateImage){
             PuckStackObject * curStack = AddPuck(curRobot->x, curRobot->y, curRobot->id);
             curRobot->holdingPuck = false;
             
-            //tell clients
-            vector<RobotObject*> * robotsViewing = &(curStack->seenBy);
-            if(robotsViewing->size() > 0)
-            {
-              PuckStack puckUpdate;
-              puckUpdate.set_stacksize(curStack->count);
-              puckUpdate.set_robotmover(curRobot->id);
-              puckUpdate.set_x(curStack->x);
-              puckUpdate.set_y(curStack->y);
-              int added = 0;
-              vector<RobotObject*>::iterator robotIt;
-              for(robotIt = robotsViewing->begin(); robotIt != robotsViewing->end();)
-              {
-                //pruning as we go
-                if(!AreaEngine::Sees((*robotIt)->x, (*robotIt)->y, curStack->x, curStack->y)){
-                  robotIt = robotsViewing->erase(robotIt);
-                  continue;
-                }
-
-                added++;
-                SeesPuckStack* seesPuckStack = puckUpdate.add_seespuckstack();
-                seesPuckStack->set_viewlostid(false);
-                seesPuckStack->set_seenbyid((*robotIt)->id);
-                seesPuckStack->set_relx(curStack->x - (*robotIt)->x);
-                seesPuckStack->set_rely(curStack->y - (*robotIt)->y);
-                
-                robotIt++;
-              }
-              
-              if(added > 0)
-              {
-                map<PuckStackObject*, PuckStack*>::iterator puckIt;
-                for (vector<EpollConnection*>::const_iterator it =
-                     controllers.begin(); it != controllers.end(); it++) {
-                  (*it)->queue.push(MSG_PUCKSTACK, puckUpdate);
-                  (*it)->set_writing(true);
-                }
-              }
+            //tell the client
+            PuckStack puckUpdate;
+            puckUpdate.set_stacksize(curStack->count);
+            puckUpdate.set_robotmover(curRobot->id);
+            puckUpdate.set_x(curStack->x);
+            puckUpdate.set_y(curStack->y);
+                    
+            curStack->seenBy.push_back(curRobot);
+            SeesPuckStack* seesPuckStack = puckUpdate.add_seespuckstack();
+            seesPuckStack->set_viewlostid(false);
+            seesPuckStack->set_seenbyid(curRobot->id);
+            seesPuckStack->set_relx(curStack->x - curRobot->x);
+            seesPuckStack->set_rely(curStack->y - curRobot->y);
+            
+            map<PuckStackObject*, PuckStack*>::iterator puckIt;
+            for (vector<EpollConnection*>::const_iterator it =
+                 controllers.begin(); it != controllers.end(); it++) {
+              (*it)->queue.push(MSG_PUCKSTACK, puckUpdate);
+              (*it)->set_writing(true);
             }
           }
         }
@@ -900,7 +881,28 @@ void AreaEngine::DropPuck(int robotId){
   RobotObject * curRobot = robots.find(robotId)->second;
 
   if(!curRobot->holdingPuck) //dont have a puck
-    return;
+  {  
+  //temp fix
+  //tell the client
+  PuckStack puckUpdate;
+  puckUpdate.set_stacksize(-1);
+  puckUpdate.set_robotmover(curRobot->id);
+  
+  SeesPuckStack* seesPuckStack = puckUpdate.add_seespuckstack();
+  seesPuckStack->set_viewlostid(false);
+  seesPuckStack->set_seenbyid(curRobot->id);
+  seesPuckStack->set_relx(0);
+  seesPuckStack->set_rely(0);
+  
+  for (vector<EpollConnection*>::const_iterator it =
+       controllers.begin(); it != controllers.end(); it++) {
+    (*it)->queue.push(MSG_PUCKSTACK, puckUpdate);
+    (*it)->set_writing(true);
+  }
+  
+  //cout << "YOU DONT HAVE A PUCK DAMMIT" << endl;
+  return;
+  }
 
   //Add the puck
   //AddPuck(curRobot->x, curRobot->y);
