@@ -733,7 +733,7 @@ void run() {
 							}
 
 						}
-					} catch (runtime_error e) {
+					} catch (EOFError e) {
 						close(c->fd);
 						sendMoreWorldViews[c->fd].value = false;
 						cout << "world viewer with fd=" << c->fd << " disconnected" << endl;
