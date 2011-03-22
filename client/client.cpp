@@ -103,7 +103,7 @@ void Client::setMyTeam(int myTeam) {
 
 // Input: Index from local ownRobot array.
 // Output: The robotId used by the server.
-int Client::indexToRobotId(int index) {
+unsigned int Client::indexToRobotId(int index) {
 	return (index + 1 + myTeam * robotsPerTeam);
 }
 
@@ -690,6 +690,14 @@ gboolean Client::run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 		PuckStack puckstack;
 		puckstack.ParseFromArray(buffer, len);
 
+		//temp fix
+		if(puckstack.stacksize() == -1)
+		{
+		  if(weControlRobot(puckstack.robotmover()))
+		    ownRobots[robotIdToIndex(puckstack.robotmover())]->hasPuck=false;
+		  break;
+		}
+
 		int index;
 		int listSize = puckstack.seespuckstack_size();
 		for (int i = 0; i < listSize; i++) {
@@ -743,10 +751,9 @@ gboolean Client::run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 					p->xid = puckstack.x();
 					p->yid = puckstack.y();
 					
-			    //check if our robot has dropped it
-			    if(abs(puckstack.seespuckstack(i).relx()) < ROBOTDIAMETER/2 && abs(puckstack.seespuckstack(i).rely()) < ROBOTDIAMETER/2){
+			    //check if our robot has dropped it, with a backup
+			    if(puckstack.robotmover() == indexToRobotId(index))
 			    	ownRobots[index]->hasPuck = false;
-		    	}
 					
 					ownRobots[index]->seenPucks.push_back(p);
 				}
