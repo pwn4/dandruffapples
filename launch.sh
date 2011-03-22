@@ -6,6 +6,8 @@
 SSHPORT=24
 # Path of project dir relative to $HOME
 PROJDIR="dandruffapples"
+# Path to write logs
+LOGDIR="logs"
 # Path to write other files
 OUTPATH="tmp"
 # Path to write generated clock config to
@@ -135,7 +137,7 @@ do
     if [ $CONTROLLERS_LEFT -gt 0 ]
     then
         echo "Launching controller on $HOST"
-        wrap $SSHCOMMAND $HOST "bash -c \"cd '$PROJDIR/controller' && LD_LIBRARY_PATH='$PROJDIR/sharedlibs' $DEBUGGER ./controller -l $CLOCKSERVER\"" > /dev/null &
+        wrap $SSHCOMMAND $HOST "bash -c \"cd '$PROJDIR/controller' && LD_LIBRARY_PATH='$PROJDIR/sharedlibs' $DEBUGGER ./controller -l $CLOCKSERVER\"" > "$LOGDIR/controller.out.$HOST.log" 2> "$LOGDIR/controller.err.$HOST.log" &
         SSHPROCS="$SSHPROCS $!"
         CONTROLLERS_LEFT=$[$CONTROLLERS_LEFT - 1]
         CONTROLHOSTS="$CONTROLHOSTS $HOST"
@@ -146,14 +148,15 @@ do
         CONFIDX=1
         while [ $REGIONS_LEFT -gt $DECREMENTED -a $REGIONS_LEFT -gt 0 ]
         do
+            NUM=$[$REGIONS_LEFT - $DECREMENTED]
             if [ $CONFIDX -eq 1 ]
             then
 		sleep 0.1
-                wrap $SSHCOMMAND $HOST "bash -c \"cd '$PROJDIR/regionserver' && LD_LIBRARY_PATH='$PROJDIR/sharedlibs' $DEBUGGER ./regionserver -l $CLOCKSERVER -c config\"" > /dev/null &
+                wrap $SSHCOMMAND $HOST "bash -c \"cd '$PROJDIR/regionserver' && LD_LIBRARY_PATH='$PROJDIR/sharedlibs' $DEBUGGER ./regionserver -l $CLOCKSERVER -c config\"" > "$LOGDIR/region.out.$HOST.$NUM.log" 2> "$LOGDIR/region.err.$HOST.$NUM.log"  &
                 SSHPROCS="$SSHPROCS $!"
             else
 		sleep 0.1
-                wrap $SSHCOMMAND $HOST "bash -c \"cd '$PROJDIR/regionserver' && LD_LIBRARY_PATH='$PROJDIR/sharedlibs' $DEBUGGER ./regionserver -l $CLOCKSERVER -c config${CONFIDX}\"" > /dev/null &
+                wrap $SSHCOMMAND $HOST "bash -c \"cd '$PROJDIR/regionserver' && LD_LIBRARY_PATH='$PROJDIR/sharedlibs' $DEBUGGER ./regionserver -l $CLOCKSERVER -c config${CONFIDX}\"" > "$LOGDIR/region.out.$HOST.$NUM.log" 2> "$LOGDIR/region.err.$HOST.$NUM.log" &
                 SSHPROCS="$SSHPROCS $!"
             fi
             CONFIDX=$[CONFIDX + 1]
@@ -213,7 +216,7 @@ then
        
        HOST=`echo $CONTROLHOSTS |cut -d ' ' -f $HOSTIDX`
        echo "Launching $[$QUOTIENT + $EXTRA] clients on controller $HOST"
-       wrap $SSHCOMMAND $HOST "bash -c \"cd '$PROJDIR' && ./start-n-clients.sh $[$QUOTIENT + $EXTRA] $CLIENTS_LEFT\"" > /dev/null &
+       wrap $SSHCOMMAND $HOST "bash -c \"cd '$PROJDIR' && ./start-n-clients.sh $[$QUOTIENT + $EXTRA] $CLIENTS_LEFT\"" > "$LOGDIR/clientgroup.out.$HOST.log" 2> "$LOGDIR/clientgroup.err.$HOST.log" &
        SSHPROCS="$SSHPROCS $!"
        HOSTIDX=$[$HOSTIDX+1]
        sleep 0.1
