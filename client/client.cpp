@@ -688,73 +688,76 @@ gboolean Client::run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 		PuckStack puckstack;
 		puckstack.ParseFromArray(buffer, len);
 
-			int index;
-			int listSize = puckstack.seespuckstack_size();
-			for (int i = 0; i < listSize; i++) {
-				// Check if one of our robots is in the list. If it is,
-				// add the puck to its seenPuck list. Pretend that every
-				// puck is a new, previously-unseen puck.
-				if (weControlRobot(puckstack.seespuckstack(i).seenbyid())) {
-					index = robotIdToIndex(puckstack.seespuckstack(i). seenbyid()); // Our robot that can see.
-					int oldSeenPuckSize = ownRobots[index]->seenPucks.size();
+		int index;
+		int listSize = puckstack.seespuckstack_size();
+		for (int i = 0; i < listSize; i++) {
+			// Check if one of our robots is in the list. If it is,
+			// add the puck to its seenPuck list. Pretend that every
+			// puck is a new, previously-unseen puck.
+			if (weControlRobot(puckstack.seespuckstack(i).seenbyid())) {
+				index = robotIdToIndex(puckstack.seespuckstack(i). seenbyid()); // Our robot that can see.
+				int oldSeenPuckSize = ownRobots[index]->seenPucks.size();
 
-					// Look through seenPuck list, check if the new puck's
-					// position is the same as one we already see. If so,
-					// update our stacksize.
-					bool foundPuck = false;
-					for (vector<SeenPuck*>::iterator it = ownRobots[index]->seenPucks.begin(); it
-							!= ownRobots[index]->seenPucks.end() && !foundPuck; it++) {
-						if (sameCoordinates((*it)->relx, (*it)->rely, puckstack.seespuckstack(i).relx(),
-								puckstack.seespuckstack(i).rely())) {
+				// Look through seenPuck list, check if the new puck's
+				// position is the same as one we already see. If so,
+				// update our stacksize.
+				bool foundPuck = false;
+				for (vector<SeenPuck*>::iterator it = ownRobots[index]->seenPucks.begin(); it
+						!= ownRobots[index]->seenPucks.end() && !foundPuck; it++) {
+					if ((*it)->xid == puckstack.x() && (*it)->yid == puckstack.y()) {
 
-						  if((*it)->stackSize > (int)puckstack.stacksize())
-						  {
-						    //check if our robot has picked it up
-						    if(abs(puckstack.seespuckstack(i).relx()) < ROBOTDIAMETER/2 && abs(puckstack.seespuckstack(i).rely()) < ROBOTDIAMETER/2){
-						    	ownRobots[index]->hasPuck = true;
-					    	}
-						  }
-						  if((*it)->stackSize < (int)puckstack.stacksize())
-						  {
-						    //check if our robot has dropped it
-						    if(abs(puckstack.seespuckstack(i).relx()) < ROBOTDIAMETER/2 && abs(puckstack.seespuckstack(i).rely()) < ROBOTDIAMETER/2){
-						    	ownRobots[index]->hasPuck = false;
-					    	}
-						  }
-						  
-							(*it)->stackSize = puckstack.stacksize();
-							foundPuck = true;
-							if ((*it)->stackSize <= 0 || puckstack.seespuckstack(i).viewlostid()) {
-								delete *it;
-								it = ownRobots[index]->seenPucks.erase(it);
-							}
+					  if((*it)->stackSize > (int)puckstack.stacksize())
+					  {
+					    //check if our robot has picked it up
+					    //if(abs(puckstack.seespuckstack(i).relx()) < ROBOTDIAMETER/2 && abs(puckstack.seespuckstack(i).rely()) < ROBOTDIAMETER/2){
+					    if(puckstack.robotmover() == indexToRobotId(index))
+					    	ownRobots[index]->hasPuck = true;
+				    	
+					  }
+					  if((*it)->stackSize < (int)puckstack.stacksize())
+					  {
+					    //check if our robot has dropped it
+					    //if(abs(puckstack.seespuckstack(i).relx()) < ROBOTDIAMETER/2 && abs(puckstack.seespuckstack(i).rely()) < ROBOTDIAMETER/2){
+					    if(puckstack.robotmover() == indexToRobotId(index))
+					    	ownRobots[index]->hasPuck = false;
+				    	
+					  }
+					  
+						(*it)->stackSize = puckstack.stacksize();
+						foundPuck = true;
+						if ((*it)->stackSize <= 0 || puckstack.seespuckstack(i).viewlostid()) {
+							delete *it;
+							it = ownRobots[index]->seenPucks.erase(it);
 						}
 					}
+				}
 
-					// If we didn't find a match in seenPucks, add new puck.
-					if (!foundPuck) {
-						SeenPuck *p = new SeenPuck();
-						p->stackSize = puckstack.stacksize();
-						p->relx = puckstack.seespuckstack(i).relx();
-						p->rely = puckstack.seespuckstack(i).rely();
-						
-				    //check if our robot has dropped it
-				    if(abs(puckstack.seespuckstack(i).relx()) < ROBOTDIAMETER/2 && abs(puckstack.seespuckstack(i).rely()) < ROBOTDIAMETER/2){
-				    	ownRobots[index]->hasPuck = false;
-			    	}
-						
-						ownRobots[index]->seenPucks.push_back(p);
-					}
+				// If we didn't find a match in seenPucks, add new puck.
+				if (!foundPuck && puckstack.stacksize() > 0) {
+					SeenPuck *p = new SeenPuck();
+					p->stackSize = puckstack.stacksize();
+					p->relx = puckstack.seespuckstack(i).relx();
+					p->rely = puckstack.seespuckstack(i).rely();
+					p->xid = puckstack.x();
+					p->yid = puckstack.y();
+					
+			    //check if our robot has dropped it
+			    if(abs(puckstack.seespuckstack(i).relx()) < ROBOTDIAMETER/2 && abs(puckstack.seespuckstack(i).rely()) < ROBOTDIAMETER/2){
+			    	ownRobots[index]->hasPuck = false;
+		    	}
+					
+					ownRobots[index]->seenPucks.push_back(p);
+				}
 
-					int newSeenPuckSize = ownRobots[index]->seenPucks.size();
-					// Check for seenPuck size changes to create events.
-					if (oldSeenPuckSize == 0 && newSeenPuckSize > 0) {
-						ownRobots[index]->eventQueue.push_back(EVENT_START_SEEING_PUCKS);
-					} else if (oldSeenPuckSize > 0 && newSeenPuckSize == 0) {
-						ownRobots[index]->eventQueue.push_back(EVENT_END_SEEING_PUCKS);
-					}
+				int newSeenPuckSize = ownRobots[index]->seenPucks.size();
+				// Check for seenPuck size changes to create events.
+				if (oldSeenPuckSize == 0 && newSeenPuckSize > 0) {
+					ownRobots[index]->eventQueue.push_back(EVENT_START_SEEING_PUCKS);
+				} else if (oldSeenPuckSize > 0 && newSeenPuckSize == 0) {
+					ownRobots[index]->eventQueue.push_back(EVENT_END_SEEING_PUCKS);
 				}
 			}
+		}
 
 		break;
 	}
