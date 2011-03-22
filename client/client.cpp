@@ -763,7 +763,8 @@ gboolean Client::run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 		break;
 	}
 
-  if(!writing && controller.queue.remaining()) {
+  int mss = net::get_mss(g_io_channel_unix_get_fd(ioch));
+  if(!writing && (controller.queue.remaining() >= (mss - (0.1*mss)))) {
     g_source_remove(gwatch);
     // Ensure that we're watching for writability
     gwatch = g_io_add_watch(ioch, (GIOCondition)(G_IO_IN | G_IO_OUT), runner, data);
