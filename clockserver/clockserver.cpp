@@ -103,8 +103,9 @@ void checkNewStep() {
       lastSecond = now;
       ++seconds;
 
-      cout << fixed << setprecision(1);
+      cout << setprecision(1);
       cout << timeSteps / 2.0f << " ts/s | ";
+      cout << fixed;
 
       // Update record and sum total
       unsigned total = 0;
@@ -116,7 +117,7 @@ void checkNewStep() {
       total += timeSteps;
       timeSteps = 0;
 
-      if(seconds > interval) {
+      if(seconds > (interval + 1)) {
         // We have enough data to do stats
         float mean = ((float)total / (float)interval) / 2.0f;
       
