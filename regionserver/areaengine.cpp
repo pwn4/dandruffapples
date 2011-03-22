@@ -681,11 +681,12 @@ void AreaEngine::Step(bool generateImage){
             puckStack = element->pucks;
             PuckStack * puckStackAccess;
             vector<RobotObject*> * puckViewers;
-            bool robotAlreadySees = false;
+            bool robotAlreadySees;
 
             while(puckStack != NULL) {
               puckViewers = &(puckStack->seenBy);
               vector<RobotObject*>::iterator viewIt;
+              robotAlreadySees = false;
               for(viewIt = puckViewers->begin(); viewIt != puckViewers->end();)
               {
                 if(!AreaEngine::Sees((*viewIt)->x, (*viewIt)->y, puckStack->x, puckStack->y)){
