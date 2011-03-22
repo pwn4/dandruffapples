@@ -656,8 +656,12 @@ gboolean Client::run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 							if (serverrobot.has_hascollided())
 								r->hasCollided = serverrobot.hascollided();
 							r->id = serverrobot.id();
-							r->relx = serverrobot.seesserverrobot(i).relx();
-							r->rely = serverrobot.seesserverrobot(i).rely();
+							
+							if (serverrobot.seesserverrobot(i).has_relx())
+  							r->relx = serverrobot.seesserverrobot(i).relx();
+							if (serverrobot.seesserverrobot(i).has_rely())
+  							r->rely = serverrobot.seesserverrobot(i).rely();
+
 							r->lastTimestepSeen = currentTimestep;
 							ownRobots[index]->seenRobots.push_back(r);
 						}
