@@ -97,7 +97,7 @@ public:
           modx = ratio;
         }
 
-        double velocity = 0.1;
+        double velocity = 1.0;
         command.sendCommand = true;
         if (ownRobot->homeRelX <= 0.0) {
           // Move left!
