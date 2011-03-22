@@ -563,7 +563,7 @@ void run() {
                   if (clientrobot.puckpickup()) {
                     regionarea->PickUpPuck(clientrobot.id());
                   } else {
-                    //regionarea->DropPuck(clientrobot.id());
+                    regionarea->DropPuck(clientrobot.id());
                   }
                 }
 
