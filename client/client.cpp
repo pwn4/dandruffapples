@@ -78,6 +78,16 @@ void Client::loadConfigFile(const char* configFileName, string& pathToExe) {
 	}
 }
 
+//FROM THE AREA ENGINE
+//this method checks if a robot at (x1,y1) sees a robot at (x2,y2)
+double sightSquare = (VIEWDISTANCE+ROBOTDIAMETER)*(VIEWDISTANCE+ROBOTDIAMETER);
+bool Sees(double x1, double y1){
+//assumes robots can see from any part of themselves
+  if((x1)*(x1) + (y1)*(y1) <= sightSquare)
+    return true;
+  return false;
+}
+
 // Adds a new controller address to the client's known list of controllers.
 void Client::setControllerIp(string newControllerIp) {
 	controllerips.clear();
@@ -460,7 +470,7 @@ gboolean Client::run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 					  (*it)->relx += (*it)->vx - ownRobots[i]->vx;
 					  (*it)->rely += (*it)->vy - ownRobots[i]->vy;
 					  tempDistance = relDistance((*it)->relx, (*it)->rely);
-					  if (tempDistance > VIEWDISTANCE - ROBOTDIAMETER) {
+					  if (!Sees((*it)->relx, (*it)->rely)) {
 						  // We can't see the robot anymore. Delete.
 						  delete *it;
 						  it = ownRobots[i]->seenRobots.erase(it);
@@ -483,7 +493,7 @@ gboolean Client::run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 					  (*it)->rely -= ownRobots[i]->vy;
 					  tempDistance = relDistance((*it)->relx, (*it)->rely);
 
-					  if (tempDistance > VIEWDISTANCE) {
+					  if (!Sees((*it)->relx, (*it)->rely)) {
 						  // We can't see the puck anymore. Delete.
 						  delete *it;
 						  it = ownRobots[i]->seenPucks.erase(it);
@@ -575,7 +585,7 @@ gboolean Client::run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 			for (int i = 0; i < listSize; i++) {
 				if (weControlRobot(serverrobot.seesserverrobot(i).seenbyid())) {
 					// The serverrobot is not on our team. Can we see it?
-					index = robotIdToIndex(serverrobot.seesserverrobot(i). seenbyid());
+					index = robotIdToIndex(serverrobot.seesserverrobot(i).seenbyid());
 					if (serverrobot.seesserverrobot(i).viewlostid()) {
 						// Could see before, can't see anymore.
 						for (vector<SeenRobot*>::iterator it = ownRobots[index]->seenRobots.begin(); it
@@ -596,6 +606,7 @@ gboolean Client::run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 						bool foundRobot = false;
 						for (vector<SeenRobot*>::iterator it = ownRobots[index]->seenRobots.begin(); it
 								!= ownRobots[index]->seenRobots.end() && !foundRobot; it++) {
+								
 							if ((*it)->id == serverrobot.id()) {
 								foundRobot = true;
 								//cout << "Our #" << index << " update see "
@@ -634,8 +645,9 @@ gboolean Client::run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 								}
 							}
 						}
+
 						if (!foundRobot) {
-						
+					  
 							SeenRobot *r = new SeenRobot();
 							//cout << "Our #" << index << " begin see "
 							//     << serverrobot.id() << endl;
