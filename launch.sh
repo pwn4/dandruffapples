@@ -111,7 +111,7 @@ then
 fi
 CONTROLHOSTS=""
 #CLIENTS_LEFT=$TEAMS
-echo -n "Launching $CONTROLLERS_LEFT controllers and $REGIONS_LEFT regions"
+echo "Launching $CONTROLLERS_LEFT controllers and $REGIONS_LEFT regions"
 for HOST in `grep -hv \`hostname\` "$HOSTFILE"`
 do
     #check for host being up
@@ -136,11 +136,11 @@ do
     then
         wrap $SSHCOMMAND $HOST "bash -c \"cd '$PROJDIR/controller' && LD_LIBRARY_PATH='$PROJDIR/sharedlibs' $DEBUGGER ./controller -l $CLOCKSERVER\"" > /dev/null &
         SSHPROCS="$SSHPROCS $!"
-        echo -n .
         CONTROLLERS_LEFT=$[$CONTROLLERS_LEFT - 1]
         CONTROLHOSTS="$CONTROLHOSTS $HOST"
     elif [ $REGIONS_LEFT -gt 0 ]
     then
+        echo $HOST
         DECREMENTED=$[$REGIONS_LEFT - $REGIONS_PER_HOST]
         CONFIDX=1
         while [ $REGIONS_LEFT -gt $DECREMENTED -a $REGIONS_LEFT -gt 0 ]
@@ -155,7 +155,6 @@ do
                 wrap $SSHCOMMAND $HOST "bash -c \"cd '$PROJDIR/regionserver' && LD_LIBRARY_PATH='$PROJDIR/sharedlibs' $DEBUGGER ./regionserver -l $CLOCKSERVER -c config${CONFIDX}\"" > /dev/null &
                 SSHPROCS="$SSHPROCS $!"
             fi
-            echo -n .
             CONFIDX=$[CONFIDX + 1]
             REGIONS_LEFT=$[$REGIONS_LEFT - 1]
         done
@@ -194,7 +193,7 @@ fi
 sleep 3
 if [ $CONTROLLERS ]
 then
-   echo -n "Launching $TEAMS clients across $CONTROLLERS machines"
+   echo "Launching $TEAMS clients across $CONTROLLERS machines"
    # One shell per machine
    CLIENTS_LEFT=$TEAMS
    QUOTIENT=$[$TEAMS / $CONTROLLERS]
@@ -214,7 +213,7 @@ then
        HOST=`echo $CONTROLHOSTS |cut -d ' ' -f $HOST`
        wrap $SSHCOMMAND $HOST "bash -c \"cd '$PROJDIR' && ./start-n-clients.sh $[$QUOTIENT + $EXTRA] $CLIENTS_LEFT\"" > /dev/null &
        SSHPROCS="$SSHPROCS $!"
-       echo -n .
+       echo $HOST
        HOST=$[$HOST+1]
        sleep 0.1
    done
