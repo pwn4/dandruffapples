@@ -28,7 +28,7 @@ SeenPuck* ClientAi::findClosestPuck(OwnRobot* ownRobot) {
 // puck and score a point.
 bool ClientAi::insideOurHome(OwnRobot* ownRobot) {
   // TODO: use home width as defined by global variables.
-  return (abs(ownRobot->homeRelX) <= HOMEDIAMETER/2 && abs(ownRobot->homeRelY) <= HOMEDIAMETER/2);
+  return (relDistance(ownRobot->homeRelX, ownRobot->homeRelY) <= HOMEDIAMETER/2);
 }
 
 double ClientAi::relDistance(double x1, double y1) {
