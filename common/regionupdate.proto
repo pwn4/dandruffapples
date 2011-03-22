@@ -37,8 +37,9 @@ message SeesPuckStack {
 }
 
 message PuckStack {
-  optional fixed64 x = 1; //we don't use absolute positions anymore, so these should be obsolete.
-  optional fixed64 y = 2; //Delete them when we're sure.
+  optional fixed64 x = 1; //we need these as ids for inter-region and to-client
+  optional fixed64 y = 2;
   required fixed32 stackSize = 3;
   repeated SeesPuckStack seespuckstack = 4;
+  optional fixed32 robotMover = 5;
 }
