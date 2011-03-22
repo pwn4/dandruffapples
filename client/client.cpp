@@ -518,18 +518,20 @@ gboolean Client::run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 				  // Clear the queue, wait for new events.
 				  ownRobots[i]->eventQueue.clear();
 			  }
+
+			    //update the view of the viewed robot
+			    if (runClientViewer)
+			    {
+			    	    gettimeofday(&timeCache, NULL);
+				    if( viewer->getViewedRobot() != -1 && (timeCache.tv_sec*1000000 + timeCache.tv_usec) > (microTimeCache.tv_sec*1000000 + microTimeCache.tv_usec)+DRAWTIME)
+				    {
+					    viewer->updateViewer(ownRobots[viewer->getViewedRobot()]);
+					    microTimeCache = timeCache;
+				    }
+			    }
 			}
 
-	    //update the view of the viewed robot
-	    if (runClientViewer)
-	    {
-	    	gettimeofday(&timeCache, NULL);
-		    if( viewer->getViewedRobot() != -1 && (timeCache.tv_sec*1000000 + timeCache.tv_usec) > (microTimeCache.tv_sec*1000000 + microTimeCache.tv_usec)+DRAWTIME)
-		    {
-			    viewer->updateViewer(ownRobots[viewer->getViewedRobot()]);
-			    microTimeCache = timeCache;
-		    }
-	    }
+
 
 		break;
 	}
