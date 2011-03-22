@@ -1,6 +1,6 @@
 #!/bin/bash
 
-DEBUG=1
+#DEBUG=1
 
 # Port remote hosts' sshds are listening on
 SSHPORT=24
@@ -115,7 +115,7 @@ echo -n "Launching $CONTROLLERS_LEFT controllers and $REGIONS_LEFT regions"
 for HOST in `grep -hv \`hostname\` "$HOSTFILE"`
 do
     #check for host being up
-    if (! host "$HOST" >/dev/null) || (! nc -z "$HOST" $SSHPORT)
+    if (! host "$HOST" >/dev/null) || (! nc -w 1 -z "$HOST" $SSHPORT)
     then
 	echo "Skipping unresponsive host $HOST"
         continue
