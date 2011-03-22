@@ -618,7 +618,7 @@ void AreaEngine::Step(bool generateImage){
       PuckStackObject *puckStack;
 
       //robot sight losses
-      /*for(sightCheck = (*nowSeenBy).begin(); sightCheck != sightEnd; )
+      for(sightCheck = (*nowSeenBy).begin(); sightCheck != sightEnd; )
       {
         if(robots.find((*sightCheck).first) == robots.end())
         {
@@ -631,17 +631,17 @@ void AreaEngine::Step(bool generateImage){
           nowSeenBy->erase(sightCheck++);
 
           //BEGIN DEPRICATED SECTION
-          SeesServerRobot* seesServerRobot = serverrobot.add_seesserverrobot();
+          /*SeesServerRobot* seesServerRobot = serverrobot.add_seesserverrobot();
           seesServerRobot->set_viewlostid(true);
           seesServerRobot->set_seenbyid(otherRobot->id);
           seesServerRobot->set_relx(curRobot->x - otherRobot->x);
-          seesServerRobot->set_rely(curRobot->y - otherRobot->y);
+          seesServerRobot->set_rely(curRobot->y - otherRobot->y);*/
           //END OF DEPRICATED SECTION
           continue;
         }
 
         sightCheck++;
-      }*/
+      }
 
       //do puck and robot sight acquires
       for(int j = topLeft.x; j <= botRight.x; j++)
