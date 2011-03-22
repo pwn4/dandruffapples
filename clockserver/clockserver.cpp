@@ -92,7 +92,7 @@ bool running = false;
 void checkNewStep() {
   static time_t lastSecond = time(NULL);
   static unsigned long long timeSteps = 0;
-  const size_t interval = 10;      // seconds
+  const size_t interval = 20;      // seconds
   static unsigned pastStepCounts[10];
   static unsigned long long seconds = 0;
   if (ready == server_count + controllers.size() && running) {
