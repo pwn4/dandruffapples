@@ -195,17 +195,30 @@ sleep 3
 if [ $CONTROLLERS ]
 then
    echo -n "Launching $TEAMS clients across $CONTROLLERS machines"
-   HOSTNUM=`echo $CONTROLHOSTS |wc -w`
+   # One shell per machine
    CLIENTS_LEFT=$TEAMS
+   QUOTIENT=$[$TEAMS / $CONTROLLERS]
+   REMAINDER=$[$TEAMS % $CONTROLLERS]
+   HOST=1
    while [ $CLIENTS_LEFT -gt 0 ]
    do
-       sleep 0.1
-       CLIENTS_LEFT=$[CLIENTS_LEFT - 1]
-       HOST=`echo $CONTROLHOSTS |cut -d ' ' -f $[$CLIENTS_LEFT % $HOSTNUM + 1]`
-       wrap $SSHCOMMAND $HOST "bash -c \"cd '$PROJDIR/client' && LD_LIBRARY_PATH='$PROJDIR/sharedlibs' $DEBUGGER ./client -t $CLIENTS_LEFT\"" > /dev/null &
+       CLIENTS_LEFT=$[$CLIENTS_LEFT - $QUOTIENT]
+       EXTRA=0
+       if [ $REMAINDER -gt 0 ]
+       then
+           EXTRA=1
+           REMAINDER=$[$REMAINDER - 1]
+           CLIENTS_LEFT=$[$CLIENTS_LEFT - 1]
+       fi
+       
+       HOST=`echo $CONTROLHOSTS |cut -d ' ' -f $HOST`
+       wrap $SSHCOMMAND $HOST "bash -c \"cd '$PROJDIR' && ./start-n-clients.sh $[$QUOTIENT + $EXTRA] $CLIENTS_LEFT\"" > /dev/null &
        SSHPROCS="$SSHPROCS $!"
        echo -n .
+       HOST=$[$HOST+1]
+       sleep 0.1
    done
+
    echo " done!"
 fi
 
