@@ -37,4 +37,13 @@ const string worldViewerDebugLogName="/tmp/worldviewer_debug.txt";
 const string clientViewerDebugLogName="/tmp/clientviewer_debug.txt";
 }
 
+struct TwoInt{
+  int one, two;
+
+  TwoInt(int first, int second) : one(first), two(second) {}
+};
+
+unsigned int BytePack(int a, int b);
+TwoInt ByteUnpack(unsigned int data);
+
 #endif

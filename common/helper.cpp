@@ -56,3 +56,35 @@ string CmdLine::getArg(string arg, string defaultVal, int maxLength) {
 }
 
 }
+
+//Takes Two Integers and Packs their first 16 bits into 4 bytes.
+//Note: Is NOT cross platform ('course neither is epoll)
+//ASSUMES BIG ENDIAN, FOR NOW
+unsigned int BytePack(int a, int b) {
+
+	unsigned int clear = 65535;
+	unsigned int rtn = a;
+	rtn = rtn & clear;
+
+	unsigned int tmpb = b;
+	tmpb = tmpb & clear;
+	tmpb = tmpb << 16;
+
+	rtn = rtn | tmpb;
+
+	return rtn;
+
+}
+
+//ASSUMES BIG ENDIAN, FOR NOW
+TwoInt ByteUnpack(unsigned int data) {
+
+	unsigned int clear = 65535;
+	unsigned int first = data & clear;
+
+	unsigned int second = data >> 16;
+	second = second & clear;
+
+	return TwoInt(first, second);
+
+}

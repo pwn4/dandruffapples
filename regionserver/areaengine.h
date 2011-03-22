@@ -16,15 +16,13 @@
 #include <map>
 #include <set>
 #include <queue>
-#include <gtk/gtk.h>
-#include <cairo.h>
 #include <string>
 
 #include "../common/claim.pb.h"
 #include "../common/regionupdate.pb.h"
 #include "../common/net.h"
 #include "../common/helper.h"
-#include "../worldviewer/drawer.h"
+#include "../common/regionrender.pb.h"
 
 using namespace std;
 using namespace net;

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#DEBUG=1
+DEBUG=1
 
 # Port remote hosts' sshds are listening on
 SSHPORT=24
@@ -101,6 +101,7 @@ then
 fi
 
 SSHCOMMAND="ssh -o StrictHostKeyChecking=no -o PasswordAuthentication=no -p $SSHPORT"
+SSHCOMMAND="ssh -X -p $SSHPORT"
 
 REGIONS_LEFT=$[$COLS * $ROWS]
 CONTROLLERS_LEFT=0;
@@ -116,17 +117,18 @@ do
     #check for host being up
     if (! host "$HOST" >/dev/null) || (! nc -z "$HOST" $SSHPORT)
     then
+	echo "Skipping unresponsive host $HOST"
         continue
     fi
 
     #check for host being used
-    INUSE=$($SSHCOMMAND $HOST "set USERNAME=$(whoami); w | awk ' {if(NR>2 && \$1!=wai && !(\$5 ~ /.*m/ || \$5 ~ /.*days/)) print \$5} ' wai=$USERNAME")
+    INUSE=$($SSHCOMMAND $HOST "w | awk ' {if(NR>2 && \$1!=wai && !(\$5 ~ /.*m/ || \$5 ~ /.*days/)) print \$1} ' wai=`whoami`")
     INUSE=${INUSE//[[:space:]]}
     OTHERS=$INUSE #old artifact left in for the time being
     OTHERS=${OTHERS//[[:space:]]}
     if [ "$OTHERS" != "" ]
     then
-        echo "Skipping in-use host $HOST, user only idle for $OTHERS"
+        echo "Skipping in-use host $HOST, active users $OTHERS"
         continue
     fi
     
@@ -145,11 +147,11 @@ do
         do
             if [ $CONFIDX -eq 1 ]
             then
-		sleep 0.5
+		sleep 0.1
                 wrap $SSHCOMMAND $HOST "bash -c \"cd '$PROJDIR/regionserver' && LD_LIBRARY_PATH='$PROJDIR/sharedlibs' $DEBUGGER ./regionserver -l $CLOCKSERVER -c config\"" > /dev/null &
                 SSHPROCS="$SSHPROCS $!"
             else
-		sleep 0.5
+		sleep 0.1
                 wrap $SSHCOMMAND $HOST "bash -c \"cd '$PROJDIR/regionserver' && LD_LIBRARY_PATH='$PROJDIR/sharedlibs' $DEBUGGER ./regionserver -l $CLOCKSERVER -c config${CONFIDX}\"" > /dev/null &
                 SSHPROCS="$SSHPROCS $!"
             fi
@@ -189,7 +191,7 @@ then
     exit 1
 fi
 
-sleep 10
+sleep 3
 if [ $CONTROLLERS ]
 then
    echo -n "Launching $TEAMS clients across $CONTROLLERS machines"

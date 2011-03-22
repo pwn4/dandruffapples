@@ -3,7 +3,7 @@ add_executable(regionserver
   areaengine.cpp
   )
 
-target_link_libraries(regionserver common drawer)
+target_link_libraries(regionserver common)
 
 find_package(OpenCL)
 
