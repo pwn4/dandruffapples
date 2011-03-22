@@ -714,6 +714,14 @@ gboolean Client::run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 						    	ownRobots[index]->hasPuck = true;
 					    	}
 						  }
+						  if((*it)->stackSize < (int)puckstack.stacksize())
+						  {
+						    //check if our robot has dropped it
+						    if(abs(puckstack.seespuckstack(i).relx()) < ROBOTDIAMETER/2 && abs(puckstack.seespuckstack(i).rely()) < ROBOTDIAMETER/2){
+						    	ownRobots[index]->hasPuck = false;
+					    	}
+						  }
+						  
 							(*it)->stackSize = puckstack.stacksize();
 							foundPuck = true;
 							if ((*it)->stackSize <= 0 || puckstack.seespuckstack(i).viewlostid()) {
@@ -729,6 +737,12 @@ gboolean Client::run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 						p->stackSize = puckstack.stacksize();
 						p->relx = puckstack.seespuckstack(i).relx();
 						p->rely = puckstack.seespuckstack(i).rely();
+						
+				    //check if our robot has dropped it
+				    if(abs(puckstack.seespuckstack(i).relx()) < ROBOTDIAMETER/2 && abs(puckstack.seespuckstack(i).rely()) < ROBOTDIAMETER/2){
+				    	ownRobots[index]->hasPuck = false;
+			    	}
+						
 						ownRobots[index]->seenPucks.push_back(p);
 					}
 
