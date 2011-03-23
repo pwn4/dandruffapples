@@ -262,8 +262,9 @@ int main(int argc, char** argv)
               flushing = true;
 
               // Enqueue update to all clients
+							vector<ClientConnection*>::iterator clientsEnd = clients.end();
               for(vector<ClientConnection*>::iterator i = clients.begin();
-                  i != clients.end(); ++i) {
+                  i != clientsEnd; ++i) {
                 (*i)->queue.push(MSG_TIMESTEPUPDATE, timestep);
                 (*i)->set_writing(true);
                 // No more reading until we've finished flushing
@@ -271,8 +272,9 @@ int main(int argc, char** argv)
               }
 
               // No more reading until we've finished flushing
+							vector<ServerConnection*>::iterator serversEnd = servers.end();
               for(vector<ServerConnection*>::iterator i = servers.begin();
-                  i != servers.end(); ++i) {
+                  i != serversEnd; ++i) {
                 (*i)->set_reading(false);
               }
               break;
@@ -398,7 +400,8 @@ int main(int argc, char** argv)
               }
 							//lookup clients using seenbyid and store into set then send to all clients
 							//this resolves sending multiple msgs to same client.
-							for(int i=0; i<serverrobot.seesserverrobot_size(); i++){
+							int seenbyidsize = serverrobot.seesserverrobot_size();
+							for(int i=0; i<seenbyidsize; i++){
 							  client = (robots.find(serverrobot.seesserverrobot(i).seenbyid()))->second.client;
                 if (client != NULL) {
                   ret = seenbyidset.insert(client);
@@ -420,7 +423,8 @@ int main(int argc, char** argv)
 
               seenbyidset.clear();
               net::EpollConnection *client;
-              for(int i=0; i<puckstack.seespuckstack_size(); i++){
+							int seenbyidsize = puckstack.seespuckstack_size();
+              for(int i=0; i<seenbyidsize; i++){
                 client = (robots.find(puckstack.seespuckstack(i).seenbyid()))->
                     second.client;
                 if (client != NULL) {
@@ -492,7 +496,8 @@ int main(int argc, char** argv)
                 {
                   net::EpollConnection* robotServer = (robots.find(bouncedrobot.clientrobot().id()))->second.server;
                   vector<ClientRobot> * robotBacklog = &((robots.find(bouncedrobot.clientrobot().id()))->second.bouncedMessages);
-                  for(unsigned int i = 0; i < robotBacklog->size(); i++)
+									unsigned int robotBacklogSize = robotBacklog->size();
+                  for(unsigned int i = 0; i < robotBacklogSize; i++)
                   {
                     robotServer->queue.push(MSG_CLIENTROBOT, (*robotBacklog)[i]);
 		                robotServer->set_writing(true);
@@ -556,15 +561,17 @@ int main(int argc, char** argv)
             bool incomplete = false;
 
             // Check for remaining data to write
+						vector<ServerConnection*>::iterator serversEnd = servers.end();
+						vector<ClientConnection*>::iterator clientsEnd = clients.end();
             for(vector<ServerConnection*>::iterator i = servers.begin();
-                i != servers.end(); ++i) {
+                i != serversEnd; ++i) {
               if(incomplete) {
                 break;
               }
               incomplete = (*i)->queue.remaining();
             }
             for(vector<ClientConnection*>::iterator i = clients.begin();
-                i != clients.end(); ++i) {
+                i != clientsEnd; ++i) {
               if(incomplete) {
                 break;
               }
@@ -578,11 +585,11 @@ int main(int argc, char** argv)
             clockconn.queue.push(MSG_TIMESTEPDONE, tsdone);
             clockconn.set_writing(true);
             for(vector<ServerConnection*>::iterator i = servers.begin();
-                i != servers.end(); ++i) {
+                i != serversEnd; ++i) {
               (*i)->set_reading(true);
             }
             for(vector<ClientConnection*>::iterator i = clients.begin();
-                i != clients.end(); ++i) {
+                i != clientsEnd; ++i) {
               (*i)->set_reading(true);
             }
           }
