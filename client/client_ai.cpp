@@ -11,7 +11,10 @@ SeenPuck* ClientAi::findClosestPuck(OwnRobot* ownRobot) {
 	for (vector<SeenPuck*>::iterator it = ownRobot->seenPucks.begin(); it != ownRobot->seenPucks.end(); it++) {
 		tempDistance = relDistance((*it)->relx, (*it)->rely);
 		//again, don't return pucks in our home
-		if (tempDistance < minDistance && relDistance((*it)->relx - ownRobot->homeRelX, (*it)->rely - ownRobot->homeRelY) > HOMEDIAMETER/2) {
+		if(puckInsideOurHome((*it), ownRobot)){
+			continue;
+		}
+		if (tempDistance < minDistance) {
 			minDistance = tempDistance;
 			closest = it;
 			foundPuck = true;
@@ -24,11 +27,46 @@ SeenPuck* ClientAi::findClosestPuck(OwnRobot* ownRobot) {
 	return *closest;
 }
 
+SeenPuck* ClientAi::findSecondClosestPuck(OwnRobot* ownRobot) {
+	if (ownRobot->seenPucks.size() == 0)
+		return NULL;
+
+	SeenPuck* closest = findClosestPuck(ownRobot);
+
+	vector<SeenPuck*>::iterator secondClosest;
+	double minDistance = 9000.01; // Over nine thousand!
+	double tempDistance;
+	bool foundPuck = false;
+	for (vector<SeenPuck*>::iterator it = ownRobot->seenPucks.begin(); it != ownRobot->seenPucks.end(); it++) {
+		tempDistance = relDistance((*it)->relx, (*it)->rely);
+		//again, don't return pucks in our home
+		if(puckInsideOurHome((*it), ownRobot) || (*it) == closest){
+			continue;
+		}
+		if (tempDistance < minDistance) {
+			minDistance = tempDistance;
+			secondClosest = it;
+			foundPuck = true;
+		}
+	}
+	
+	if(!foundPuck)
+	  return NULL;
+	
+	return *secondClosest;
+}
+
 // Checks whether the robot is inside its home. If true, then robot can drop
 // puck and score a point.
 bool ClientAi::insideOurHome(OwnRobot* ownRobot) {
   // TODO: use home width as defined by global variables.
   return (relDistance(ownRobot->homeRelX, ownRobot->homeRelY) <= HOMEDIAMETER/2);
+}
+
+// Checks whether the robot thinks puck is inside its home.
+bool ClientAi::puckInsideOurHome(SeenPuck* seenPuck, OwnRobot* ownRobot) {
+  // TODO: use home width as defined by global variables.
+  return (relDistance(ownRobot->homeRelX - seenPuck->relx, ownRobot->homeRelY - seenPuck->rely) <= HOMEDIAMETER/2);
 }
 
 double ClientAi::relDistance(double x1, double y1) {
@@ -45,8 +83,18 @@ SeenPuck* ClientAi::findPickUpablePuck(OwnRobot* ownRobot) {
 		//if (sameCoordinates((*it)->relx, (*it)->rely, 0.0, 0.0)) {
 		//make the AIs go in a little closer as a buffer
 		//Also, don't include pucks inside the home as pickupable pucks
+/*
 		if(abs((*it)->relx) < ROBOTDIAMETER/2 - 0.2 && abs((*it)->rely) < ROBOTDIAMETER/2 - 0.2 && relDistance((*it)->relx - ownRobot->homeRelX, (*it)->rely - ownRobot->homeRelY) > HOMEDIAMETER/2) {
 			return *it;
+		}
+*/
+		if(puckInsideOurHome(*it, ownRobot)){
+			continue;
+		}
+		else{
+			if(relDistance((*it)->relx, (*it)->rely) <= ROBOTDIAMETER/2){
+				return *it;
+			}
 		}
 	}
 	return NULL; // Found nothing in the for loop.
