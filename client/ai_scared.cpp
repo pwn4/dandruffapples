@@ -7,11 +7,8 @@ public:
 
 		// Check if we are not moving
 			if (hasNotMovingEvent(ownRobot)) {
-				command.sendCommand = true;
-				command.changeVx = true;
-				command.vx = (((rand() % 11) / 10.0) - 0.5);
-				command.changeVy = true;
-				command.vy = (((rand() % 11) / 10.0) - 0.5);
+				command.setVx(((rand() % 11) / 10.0) - 0.5);
+				command.setVy(((rand() % 11) / 10.0) - 0.5);
 				return;
 			}
 
@@ -29,22 +26,17 @@ public:
 		SeenRobot* closest = findClosestRobot(ownRobot);
 		if (closest != NULL) {
 			double velocity = 1.0;
-			command.sendCommand = true;
 			if (closest->relx <= 0.0) {
 				// Move right!
-				command.changeVx = true;
-				command.vx = velocity;
+				command.setVx(velocity);
 			} else if (closest->relx > 0.0) {
-				command.changeVx = true;
-				command.vx = velocity * -1.0;
+				command.setVx(velocity * -1.0);
 			}
 			if (closest->rely <= 0.0) {
 				// Move down!
-				command.changeVy = true;
-				command.vy = velocity;
+				command.setVy(velocity);
 			} else if (closest->rely > 0.0) {
-				command.changeVy = true;
-				command.vy = velocity * -1.0;
+				command.setVy(velocity * -1.0);
 			}
 		}
 	}

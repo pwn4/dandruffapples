@@ -11,20 +11,15 @@ public:
 		if (hasCanPickUpPuckEvent(ownRobot)) {
 			SeenPuck* pickup = findPickUpablePuck(ownRobot);
 			if (pickup != NULL) {
-				command.sendCommand = true;
-				command.changePuckPickup = true;
-				command.puckPickup = true;
+        command.setPuckPickup(true);
 				return;
 			}
 		}
 
 		// Check if we are not moving
 		if (hasNotMovingEvent(ownRobot)) {
-			command.sendCommand = true;
-			command.changeVx = true;
-			command.vx = (((rand() % 11) / 10.0) - 0.5);
-			command.changeVy = true;
-			command.vy = (((rand() % 11) / 10.0) - 0.5);
+			command.setVx(((rand() % 11) / 10.0) - 0.5);
+			command.setVy(((rand() % 11) / 10.0) - 0.5);
 			return;
 		}
 
@@ -46,22 +41,17 @@ public:
 			if (relDistance(closest->relx, closest->rely) < 1.0) {
 				velocity = 0.01;
 			}
-			command.sendCommand = true;
 			if (closest->relx <= 0.0) {
 				// Move left!
-				command.changeVx = true;
-				command.vx = velocity * -1.0 * modx;
+				command.setVx(velocity * -1.0 * modx);
 			} else if (closest->relx > 0.0) {
-				command.changeVx = true;
-				command.vx = velocity * modx;
+				command.setVx(velocity * modx);
 			}
 			if (closest->rely <= 0.0) {
 				// Move up!
-				command.changeVy = true;
-				command.vy = velocity * -1.0 * mody;
+				command.setVy(velocity * -1.0 * mody);
 			} else if (closest->rely > 0.0) {
-				command.changeVy = true;
-				command.vy = velocity * mody;
+				command.setVy(velocity * mody);
 			}
 		}
 	}
