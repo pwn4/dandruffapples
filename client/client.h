@@ -127,6 +127,32 @@ public:
 		sendCommand(false), changeVx(false), vx(0.0), changeVy(false), vy(0.0), changeAngle(false), angle(0.0),
 				changePuckPickup(false), puckPickup(false) {
 	}
+
+  // Setters - set sendCommand, boolean, and change value at once
+  void setVx(double _vx) {
+    sendCommand = true;
+    changeVx = true;
+    vx = _vx;
+  }  
+
+  void setVy(double _vy) {
+    sendCommand = true;
+    changeVy = true;
+    vy = _vy;
+  }  
+
+  void setAngle(double _angle) {
+    sendCommand = true;
+    changeAngle = true;
+    angle = _angle;
+  }  
+
+  void setPuckPickup(bool _puckPickup) {
+    sendCommand = true;
+    changePuckPickup = true;
+    puckPickup = _puckPickup;
+  }  
+
 };
 
 class ClientViewer {
