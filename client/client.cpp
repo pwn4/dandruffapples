@@ -586,7 +586,7 @@ gboolean Client::run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 			int listSize = serverrobot.seesserverrobot_size();
 			for (int i = 0; i < listSize; i++) {
 				if (weControlRobot(serverrobot.seesserverrobot(i).seenbyid())) {
-					// The serverrobot is not on our team. Can we see it?
+					// The serverrobot may or may not be on our team. Can we see it?
 					index = robotIdToIndex(serverrobot.seesserverrobot(i).seenbyid());
 					if (serverrobot.seesserverrobot(i).viewlostid()) {
 						// Could see before, can't see anymore.
