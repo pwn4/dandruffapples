@@ -16,13 +16,9 @@ public:
 			SeenPuck* pickup = findPickUpablePuck(ownRobot);
 			if (pickup != NULL && !insideOurHome(ownRobot)) {
         // We're on a puck, we think! Set velocity to 0 and pickup.
-				command.sendCommand = true;
-				command.changePuckPickup = true;
-				command.puckPickup = true;
-        command.changeVx = true;
-        command.vx = 0.0;
-        command.changeVy = true;
-        command.vx = 0.0;
+				command.setPuckPickup(true);
+        command.setVx(0.0);
+        command.setVy(0.0);
 			} else {
         // Make robot move in direction of the nearest puck.
         SeenPuck* closest = findClosestPuck(ownRobot);
@@ -44,32 +40,24 @@ public:
             // The closer we are to the puck, the slower we move!
             velocity = 0.1;
           }
-          command.sendCommand = true;
           if (closest->relx <= 0.0) {
             // Move left!
-            command.changeVx = true;
-            command.vx = velocity * -1.0 * modx;
+            command.setVx(velocity * -1.0 * modx);
           } else if (closest->relx > 0.0) {
-            command.changeVx = true;
-            command.vx = velocity * modx;
+            command.setVx(velocity * modx);
           }
           if (closest->rely <= 0.0) {
             // Move up!
-            command.changeVy = true;
-            command.vy = velocity * -1.0 * mody;
+            command.setVy(velocity * -1.0 * mody);
           } else if (closest->rely > 0.0) {
-            command.changeVy = true;
-            command.vy = velocity * mody;
+            command.setVy(velocity * mody);
           }
         } else {
           // We can't see any pucks! Move if we are "not moving".
           if (abs(ownRobot->vx) < 0.1 && abs(ownRobot->vy) < 0.1) {
             // We're moving too slow! New random velocity.
-            command.sendCommand = true;
-            command.changeVx = true;
-            command.vx = (((rand() % 11) / 10.0) - 0.5);
-            command.changeVy = true;
-            command.vy = (((rand() % 11) / 10.0) - 0.5);
+            command.setVx(((rand() % 11) / 10.0) - 0.5);
+            command.setVy(((rand() % 11) / 10.0) - 0.5);
           }
         }
       }
@@ -78,13 +66,9 @@ public:
       //do /3 to ensure we're really inside the home before dropping. None of this border crap.
 			if (relDistance(ownRobot->homeRelX, ownRobot->homeRelY) < HOMEDIAMETER/3) {
         // We're home! Drop the puck. 
-				command.sendCommand = true;
-				command.changePuckPickup = true;
-				command.puckPickup = false;
-        command.changeVx = true;
-        command.vx = 0.0;
-        command.changeVy = true;
-        command.vx = 0.0;
+				command.setPuckPickup(false);
+        command.setVx(0.0);
+        command.setVy(0.0);
 			} else {
         // Carry the puck home!
         if(ownRobot->homeRelY == 0)  //prevent NaN
@@ -99,22 +83,17 @@ public:
         }
 
         double velocity = 1.0;
-        command.sendCommand = true;
         if (ownRobot->homeRelX <= 0.0) {
           // Move left!
-          command.changeVx = true;
-          command.vx = velocity * -1.0 * modx;
+          command.setVx(velocity * -1.0 * modx);
         } else if (ownRobot->homeRelX > 0.0) {
-          command.changeVx = true;
-          command.vx = velocity * modx;
+          command.setVx(velocity * modx);
         }
         if (ownRobot->homeRelY <= 0.0) {
           // Move up!
-          command.changeVy = true;
-          command.vy = velocity * -1.0 * mody;
+          command.setVy(velocity * -1.0 * mody);
         } else if (ownRobot->homeRelY > 0.0) {
-          command.changeVy = true;
-          command.vy = velocity * mody;
+          command.setVy(velocity * mody);
         }
       }
     }
