@@ -483,8 +483,6 @@ void setNewViewedRegion(int newViewed[][2]) {
 	//only update the info window if the its button is toggled
 	if (gtk_toggle_tool_button_get_active(InfoToolButton))
 		updateInfoWindow();
-
-	updateDrawFactor();
 }
 
 //up button handler
