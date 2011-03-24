@@ -137,7 +137,7 @@ void updateInfoWindow(OwnRobot* ownRobotDraw, GtkBuilder* builder) {
 	}
 }
 
-const float arrowLength=0.15, arrowDegrees=0.35;
+const float arrowLength=1, arrowDegrees=0.35;
 //calculate arrow vertexes
 //taken from: http://kapo-cpp.blogspot.com/2008/10/drawing-arrows-with-cairo.html
 void calcVertexes(int start_x, int start_y, int end_x, int end_y, int drawFactor, double& x1, double& y1, double& x2,
@@ -183,34 +183,6 @@ gboolean drawingAreaExpose(GtkWidget *widgetDrawingArea, GdkEventExpose *event, 
 			cairo_fill(cr);
 		}
 
-		//if the robot has a puck then actually draw the puck in its center
-		//WARNING: if a robot has a puck, does it still see the puck?
-		if (ownRobotDraw->hasPuck) {
-			cairo_set_source_rgb(cr, 0, 0, 0);
-
-			cairo_arc(cr, origin[0], origin[1], PUCKDIAMETER * *drawFactor / 6, 0, 2 * M_PI);
-			cairo_stroke(cr);
-		}
-
-		//ownRobot->angle does not provide a valid angle ( it's always zero )!
-		//draw the line showing the angle that the robot is moving at
-		if( !(ownRobotDraw->vx == 0 && ownRobotDraw->vy == 0 ))
-		{
-			int endX=origin[0] + ownRobotDraw->vx * *drawFactor, endY=origin[1] + ownRobotDraw->vy * *drawFactor;
-
-			double x1, y1, x2, y2;
-			calcVertexes(origin[0], origin[1], endX, endY, *drawFactor, x1, y1, x2, y2);
-
-			cairo_set_source_rgb(cr, 0, 0, 0);
-			cairo_move_to(cr, origin[0], origin[1]);
-			cairo_line_to(cr, endX, endY);
-			cairo_line_to(cr, x1, y1);
-			cairo_move_to(cr, x2, y2);
-			cairo_line_to(cr, endX, endY);
-
-			cairo_stroke(cr);
-		}
-
 		for (unsigned int i = 0; i < ownRobotDraw->seenRobots.size(); i++) {
 			color = colorFromTeam((ownRobotDraw->seenRobots.at(i)->id) / numberOfRobots);
 			cairo_set_source_rgb(cr, 0, 0, 0);
@@ -239,6 +211,35 @@ gboolean drawingAreaExpose(GtkWidget *widgetDrawingArea, GdkEventExpose *event, 
 		cairo_stroke_preserve(cr);
 		cairo_set_source_rgb(cr, color.r, color.g, color.b);
 		cairo_fill(cr);
+
+
+		//ownRobot->angle does not provide a valid angle ( it's always zero )!
+		//draw the line showing the angle that the robot is moving at
+		if( !(ownRobotDraw->vx == 0 && ownRobotDraw->vy == 0 ))
+		{
+			int endX=origin[0] + ownRobotDraw->vx * *drawFactor * 4, endY=origin[1] + ownRobotDraw->vy * *drawFactor * 4;
+
+			double x1, y1, x2, y2;
+			calcVertexes(origin[0], origin[1], endX, endY, *drawFactor, x1, y1, x2, y2);
+
+			cairo_set_source_rgb(cr, 0, 0, 0);
+			cairo_move_to(cr, origin[0], origin[1]);
+			cairo_line_to(cr, endX, endY);
+			cairo_line_to(cr, x1, y1);
+			cairo_move_to(cr, x2, y2);
+			cairo_line_to(cr, endX, endY);
+
+			cairo_stroke(cr);
+		}
+
+		//if the robot has a puck then actually draw the puck in its center
+		//WARNING: if a robot has a puck, does it still see the puck?
+		if (ownRobotDraw->hasPuck) {
+			cairo_set_source_rgb(cr, 0, 0, 0);
+
+			cairo_arc(cr, origin[0], origin[1], PUCKDIAMETER * *drawFactor, 0, 2 * M_PI);
+			cairo_stroke(cr);
+		}
 
 		//draw a rectangle around the drawing area
 		cairo_rectangle(cr, 0, 0, imageWidth, imageHeight);

@@ -15,7 +15,7 @@
 
 //printing of debug logs ( logmerger, clientviewer, worldivewer only )
 //#define DEBUG
-//#define DEBUG_COUT
+#define DEBUG_COUT
 
 //areaengine constants
 #define REGIONSIDELEN 2500

@@ -54,10 +54,10 @@ unsigned int wrapX(int x)
 {
   if(x < 0)
     return x + server_cols;
-  
+
   if(x >= server_cols)
     return x - server_cols;
-    
+
   return x;
 }
 //this function takes a draw_y that you give it, and wraps it around serverrows
@@ -65,10 +65,10 @@ unsigned int wrapY(int y)
 {
   if(y < 0)
     return y + server_rows;
-  
+
   if(y >= server_rows)
     return y - server_rows;
-    
+
   return y;
 }
 
@@ -97,6 +97,7 @@ void checkNewStep() {
   static unsigned long long seconds = 0;
   if (ready == server_count + controllers.size() && running) {
     ++timeSteps;
+    //usleep(100000);
     time_t now = time(NULL);
 		// Check if a second has passed
 		if(now > lastSecond) {
@@ -119,9 +120,9 @@ void checkNewStep() {
       if(seconds > interval) {
         // We have enough data to do stats
         float mean = ((float)total / (float)interval) / 2.0f;
-      
+
         cout << mean << " avg | ";
-      
+
         // Calculate standard deviation
         float sumOfSquares = 0;
         for(unsigned i = 0; i < interval; ++i) {
@@ -185,7 +186,7 @@ void handleHomes(int teams, int serverCount) {
 #endif
 					//get new coordinates
 					coord[0] = MINDISTANCEFROMHOME / 2 + rand() % (REGIONSIDELEN - MINDISTANCEFROMHOME);
-					
+
 					coord[1] = MINDISTANCEFROMHOME / 2 + rand() % (REGIONSIDELEN - MINDISTANCEFROMHOME);
 #ifdef DEBUG
 					cerr << "New house at (" + helper::toString(coord[0]) + ", " + helper::toString(coord[1]) + ")"
@@ -326,7 +327,7 @@ int main(int argc, char **argv) {
 			  ri->set_team((id-1)/robots_per_team);
 
 			  ri->set_x(i);
-			  ri->set_y(j); 
+			  ri->set_y(j);
 			  ++id;
 		    numRobots++;
 		  }
@@ -424,19 +425,19 @@ int main(int argc, char **argv) {
 								// For example, if 1 is above 4, then we set Position of
 								// 1 to be TOP.
 								if (numPositionedServers > 1) {
-								  
+
 								  //iterate through the world object, and add known neighbours that way.
 								  for(int i = 0; i < worldinfo.region_size(); i++)
 								  {
 								    //don't check ourselves
 								    if(worldinfo.region(i).id() == region->id())
 								      continue;
-								    
+
 								    RegionInfo otherRegion = worldinfo.region(i);
 								    //worldinfo.mutable_region(serverid)->add_position(RegionInfo_Position_TOP_LEFT);
 								    if(wrapX(region->draw_x() - 1) == otherRegion.draw_x() && wrapY(region->draw_y() - 1) == otherRegion.draw_y())
 								      worldinfo.mutable_region(otherRegion.id())->add_position(RegionInfo_Position_TOP_LEFT);
-								      
+
 								    if(region->draw_x() == otherRegion.draw_x() && wrapY(region->draw_y() - 1) == otherRegion.draw_y())
 								      worldinfo.mutable_region(otherRegion.id())->add_position(RegionInfo_Position_TOP);
 
@@ -448,18 +449,18 @@ int main(int argc, char **argv) {
 
 								    if(wrapX(region->draw_x() + 1) == otherRegion.draw_x() && region->draw_y() == otherRegion.draw_y())
 								      worldinfo.mutable_region(otherRegion.id())->add_position(RegionInfo_Position_RIGHT);
-								    
+
 								    if(wrapX(region->draw_x() - 1) == otherRegion.draw_x() && wrapY(region->draw_y() + 1) == otherRegion.draw_y())
 								      worldinfo.mutable_region(otherRegion.id())->add_position(RegionInfo_Position_BOTTOM_LEFT);
-								    
+
 								    if(region->draw_x() == otherRegion.draw_x() && wrapY(region->draw_y() + 1) == otherRegion.draw_y())
 								      worldinfo.mutable_region(otherRegion.id())->add_position(RegionInfo_Position_BOTTOM);
-								    
+
 								    if(wrapX(region->draw_x() + 1) == otherRegion.draw_x() && wrapY(region->draw_y() + 1) == otherRegion.draw_y())
 								      worldinfo.mutable_region(otherRegion.id())->add_position(RegionInfo_Position_BOTTOM_RIGHT);
-								    
+
 								  }
-								  
+
 								}
 
 								// Send WorldInfo to the new RegionServer
@@ -641,13 +642,13 @@ int main(int argc, char **argv) {
 				  //we need to only send the first timestep when all regions are connected to each other
 					ready = 0;
 					timestep.set_timestep(0);
-				
+
 					cout << "Running!" << endl;
 					// We don't care about stdin anymore.
 					standardinput.set_reading(false);
 					// Step continuously
 					running = true;
-					
+
 					// Send to regions
 					for (vector<RegionConnection*>::const_iterator i = regions.begin(); i != regions.end(); ++i) {
 						(*i)->queue.push(MSG_TIMESTEPUPDATE, timestep);

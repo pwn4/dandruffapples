@@ -671,7 +671,7 @@ gboolean drawingAreaExpose(GtkWidget *widget, GdkEventExpose *event, gpointer da
 void onZoomInClicked(GtkWidget *widgetDrawingArea, gpointer data) {
 	drawFactor += WVZOOMSPEED;
 
-	if (drawFactor >= WVMAXZOOMED) {
+	if (drawFactor > WVMAXZOOMED) {
 		drawFactor -= WVZOOMSPEED;
 		gtk_widget_set_sensitive(GTK_WIDGET(gtk_builder_get_object( builder, "ZoomIn" )), false);
 #ifdef DEBUG
@@ -692,7 +692,7 @@ void onZoomInClicked(GtkWidget *widgetDrawingArea, gpointer data) {
 //zoom out button hundler
 void onZoomOutClicked(GtkWidget *widgetDrawingArea, gpointer data) {
 	drawFactor -= WVZOOMSPEED;
-	if (drawFactor <= WVMINZOOMED) {
+	if (drawFactor < WVMINZOOMED) {
 		gtk_widget_set_sensitive(GTK_WIDGET(gtk_builder_get_object( builder, "ZoomOut" )), false);
 		drawFactor += WVZOOMSPEED;
 #ifdef DEBUG
