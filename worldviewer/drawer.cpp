@@ -55,12 +55,20 @@ void UnpackImage(cairo_t *cr, RegionRender* render, float drawFactor, double rob
 				curY++;
 			}
 
-			//set the color
-			color = colorFromTeam(curRobot.two);
 
-			cairo_set_source_rgba(cr, color.r, color.g, color.b, robotAlpha);
 			//cairo_rectangle(cr, curRobot.one, curY, 3, 3);
-			cairo_arc(cr, curRobot.one*drawFactor, curY*drawFactor, ROBOTDIAMETER/2*drawFactor, 0, 2 * M_PI);
+			if(curRobot.two == 65534 ){	//draw puck
+				cairo_set_source_rgba(cr, 0, 0, 0, robotAlpha);
+				//I wish I could PUCKDIAMETER/2
+				cairo_arc(cr, curRobot.one*drawFactor, curY*drawFactor, PUCKDIAMETER*drawFactor, 0, 2 * M_PI);
+			}
+			else{ //draw robot
+				//set the color
+				color = colorFromTeam(curRobot.two);
+				cairo_set_source_rgba(cr, color.r, color.g, color.b, robotAlpha);
+				cairo_arc(cr, curRobot.one*drawFactor, curY*drawFactor, ROBOTDIAMETER/2*drawFactor, 0, 2 * M_PI);
+			}
+
 			cairo_fill(cr);
 		}
 }

@@ -5,10 +5,10 @@
 //worldviewer constants
 #define IMAGEWIDTH 2500
 #define IMAGEHEIGHT 2500
-#define WVDRAWFACTOR 0.5
+#define WVDRAWFACTOR 1.0
 #define WVZOOMSPEED 0.05
-#define WVMINZOOMED 0.25
-#define WVMAXZOOMED 1
+#define WVMINZOOMED 0.1
+#define WVMAXZOOMED 10
 
 //enable regionserver logging to file
 //#define ENABLE_LOGGING
