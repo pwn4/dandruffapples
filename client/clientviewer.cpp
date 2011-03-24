@@ -161,8 +161,8 @@ gboolean drawingAreaExpose(GtkWidget *widgetDrawingArea, GdkEventExpose *event, 
 		int myTeam = passed->myTeam;
 		int numberOfRobots = passed->numberOfRobots;
 		int *drawFactor = passed->drawFactor;
-		int imageWidth = (VIEWDISTANCE * 2 + ROBOTDIAMETER) * (*drawFactor) / 4;
-		int imageHeight = (VIEWDISTANCE * 2 + ROBOTDIAMETER) * (*drawFactor) / 4;
+		int imageWidth = (VIEWDISTANCE+ROBOTDIAMETER) * (*drawFactor) * 2;
+		int imageHeight = (VIEWDISTANCE+ROBOTDIAMETER) * (*drawFactor) * 2;
 
 		//origin is the middle point where our viewed robot is located
 		int origin[] = { imageWidth / 2, imageHeight / 2 };
@@ -176,18 +176,12 @@ gboolean drawingAreaExpose(GtkWidget *widgetDrawingArea, GdkEventExpose *event, 
 		if (ownRobotDraw->homeRelX - ((HOMEDIAMETER / 2) + (ROBOTDIAMETER / 2)) < VIEWDISTANCE &&
 				ownRobotDraw->homeRelY - ((HOMEDIAMETER / 2) + (ROBOTDIAMETER / 2)) < VIEWDISTANCE) {
 			cairo_set_source_rgb(cr, 0, 0, 0);
-			cairo_arc(cr, origin[0] + (ownRobotDraw->homeRelX * *drawFactor)/4,
-					origin[1] + (ownRobotDraw->homeRelY * *drawFactor)/4, HOMEDIAMETER * *drawFactor / 8, 0, 2 * M_PI);
+			cairo_arc(cr, origin[0] + ownRobotDraw->homeRelX * *drawFactor,
+					origin[1] + ownRobotDraw->homeRelY * *drawFactor, HOMEDIAMETER * *drawFactor / 2, 0, 2 * M_PI);
 			cairo_stroke_preserve(cr);
 			cairo_set_source_rgb(cr, color.r, color.g, color.b);
 			cairo_fill(cr);
 		}
-
-		cairo_set_source_rgb(cr, 0, 0, 0);
-		cairo_arc(cr, origin[0], origin[1], ROBOTDIAMETER * *drawFactor / 8, 0, 2 * M_PI);
-		cairo_stroke_preserve(cr);
-		cairo_set_source_rgb(cr, color.r, color.g, color.b);
-		cairo_fill(cr);
 
 		//if the robot has a puck then actually draw the puck in its center
 		//WARNING: if a robot has a puck, does it still see the puck?
@@ -220,8 +214,8 @@ gboolean drawingAreaExpose(GtkWidget *widgetDrawingArea, GdkEventExpose *event, 
 		for (unsigned int i = 0; i < ownRobotDraw->seenRobots.size(); i++) {
 			color = colorFromTeam((ownRobotDraw->seenRobots.at(i)->id) / numberOfRobots);
 			cairo_set_source_rgb(cr, 0, 0, 0);
-			cairo_arc(cr, origin[0] + (ownRobotDraw->seenRobots.at(i)->relx * *drawFactor)/4,
-					origin[1] + (ownRobotDraw->seenRobots.at(i)->rely * *drawFactor)/4, ROBOTDIAMETER * *drawFactor / 8, 0,
+			cairo_arc(cr, origin[0] + ownRobotDraw->seenRobots.at(i)->relx * *drawFactor,
+					origin[1] + ownRobotDraw->seenRobots.at(i)->rely * *drawFactor, ROBOTDIAMETER * *drawFactor / 2, 0,
 					2 * M_PI);
 			cairo_stroke_preserve(cr);
 
@@ -232,11 +226,19 @@ gboolean drawingAreaExpose(GtkWidget *widgetDrawingArea, GdkEventExpose *event, 
 		//draw seen pucks
 		cairo_set_source_rgb(cr, 0, 0, 0);
 		for (unsigned int i = 0; i < ownRobotDraw->seenPucks.size(); i++) {
-			cairo_arc(cr, origin[0] + (ownRobotDraw->seenPucks.at(i)->relx * *drawFactor)/4,
-					origin[1] + (ownRobotDraw->seenPucks.at(i)->rely * *drawFactor)/4, PUCKDIAMETER * *drawFactor / 8, 0,
+			cairo_arc(cr, origin[0] + ownRobotDraw->seenPucks.at(i)->relx * *drawFactor,
+					origin[1] + ownRobotDraw->seenPucks.at(i)->rely * *drawFactor, PUCKDIAMETER * *drawFactor / 2, 0,
 					2 * M_PI);
 			cairo_fill(cr);
 		}
+
+		//draw the currently viewed robot
+		color = colorFromTeam(myTeam);
+		cairo_set_source_rgb(cr, 0, 0, 0);
+		cairo_arc(cr, origin[0], origin[1], ROBOTDIAMETER * *drawFactor / 2, 0, 2 * M_PI);
+		cairo_stroke_preserve(cr);
+		cairo_set_source_rgb(cr, color.r, color.g, color.b);
+		cairo_fill(cr);
 
 		//draw a rectangle around the drawing area
 		cairo_rectangle(cr, 0, 0, imageWidth, imageHeight);
@@ -255,8 +257,8 @@ gboolean drawingAreaExpose(GtkWidget *widgetDrawingArea, GdkEventExpose *event, 
 //resize the drawing area based on the drawFactor
 void resizeByDrawFactor(int drawFactor, GtkDrawingArea *drawingArea, GtkWidget *mainWindow) {
 	//drawing related variables
-	int imageWidth = (VIEWDISTANCE * 2 + ROBOTDIAMETER) * (drawFactor) / 4;
-	int imageHeight = (VIEWDISTANCE * 2 + ROBOTDIAMETER) * (drawFactor) / 4;
+	int imageWidth = (VIEWDISTANCE+ROBOTDIAMETER) * (drawFactor) * 2;
+	int imageHeight = (VIEWDISTANCE+ROBOTDIAMETER) * (drawFactor) * 2;
 
 #ifdef DEBUG
 	cout << "imageWidth is " << imageWidth << " and the imageHeight is " << imageHeight << endl;
@@ -272,15 +274,15 @@ void onZoomInClicked(GtkWidget *widgetDrawingArea, gpointer data) {
 	passToZoom *passed = (passToZoom*) data;
 	int *drawFactor = passed->drawFactor;
 
-	if (*drawFactor >= MAXZOOMED) {
+	if (*drawFactor >= CVMAXZOOMED) {
 		gtk_widget_set_sensitive(GTK_WIDGET(passed->zoomIn), false);
 	} else {
 		GtkWidget *zoomOut = GTK_WIDGET(passed->zoomOut);
-		*drawFactor = *drawFactor + ZOOMSPEED;
+		*drawFactor = *drawFactor + CVZOOMSPEED;
 
 		resizeByDrawFactor(*drawFactor, passed->drawingArea, passed->mainWindow);
 
-		if (!gtk_widget_get_sensitive(zoomOut) && *drawFactor <= MAXZOOMED)
+		if (!gtk_widget_get_sensitive(zoomOut) )
 			gtk_widget_set_sensitive(zoomOut, true);
 	}
 }
@@ -291,15 +293,15 @@ void onZoomOutClicked(GtkWidget *widgetDrawingArea, gpointer data) {
 	passToZoom *passed = (passToZoom*) data;
 	int *drawFactor = passed->drawFactor;
 
-	if (*drawFactor <= MINZOOMED) {
+	if (*drawFactor <= CVMINZOOMED) {
 		gtk_widget_set_sensitive(GTK_WIDGET(passed->zoomOut), false);
 	} else {
 		GtkWidget *zoomIn = GTK_WIDGET(passed->zoomIn);
-		*drawFactor = *drawFactor - ZOOMSPEED;
+		*drawFactor = *drawFactor - CVZOOMSPEED;
 
 		resizeByDrawFactor(*drawFactor, passed->drawingArea, passed->mainWindow);
 
-		if (!gtk_widget_get_sensitive(zoomIn) && *drawFactor <= MAXZOOMED)
+		if (!gtk_widget_get_sensitive(zoomIn))
 			gtk_widget_set_sensitive(zoomIn, true);
 	}
 }
@@ -326,8 +328,7 @@ void ClientViewer::initClientViewer(int numberOfRobots, int myTeam, int _drawFac
 	//drawing related variables
 	drawFactor = new int();
 	*drawFactor = _drawFactor;
-	int imageWidth = (VIEWDISTANCE * 2 + ROBOTDIAMETER) * (*drawFactor) / 4, imageHeight = (VIEWDISTANCE * 2
-			+ ROBOTDIAMETER) * (*drawFactor) / 4;
+	int imageWidth = (VIEWDISTANCE+ROBOTDIAMETER) * (*drawFactor) * 2, imageHeight = (VIEWDISTANCE + ROBOTDIAMETER) * (*drawFactor) * 2;
 
 #ifdef DEBUG
 	debug << "imageWidth is " << imageWidth << " and the imageHeight is " << imageHeight << endl;

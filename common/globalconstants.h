@@ -3,15 +3,19 @@
 
 
 //worldviewer constants
-#define IMAGEWIDTH 625
-#define IMAGEHEIGHT 625
+#define IMAGEWIDTH 2500
+#define IMAGEHEIGHT 2500
+#define WVDRAWFACTOR 0.5
+#define WVZOOMSPEED 0.05
+#define WVMINZOOMED 0.25
+#define WVMAXZOOMED 1
 
+//enable regionserver logging to file
+//#define ENABLE_LOGGING
 
 //printing of debug logs ( logmerger, clientviewer, worldivewer only )
 //#define DEBUG
-//enable regionserver logging to file
-//#define ENABLE_LOGGING
-#define DEBUG_COUT
+//#define DEBUG_COUT
 
 //areaengine constants
 #define REGIONSIDELEN 2500
@@ -26,10 +30,10 @@
 #define MINDISTANCEFROMHOME 120
 
 //client viewer constants
-#define DRAWFACTOR 40
-#define ZOOMSPEED 5
-#define MINZOOMED 5
-#define MAXZOOMED 80
+#define CVDRAWFACTOR 10
+#define CVZOOMSPEED 1
+#define CVMINZOOMED 5
+#define CVMAXZOOMED 20
 //draw every DRAWTIME microseconds
 #define DRAWTIME 100000
 

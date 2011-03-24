@@ -490,7 +490,7 @@ void run() {
 							generateImage = false;
 							//find out if we even need to generate an image
 							//generate an image every ( 100 milliseconds ) if we can
-							if ( (regionarea->curStep%2==1) && (timeCache.tv_sec*1000000 + timeCache.tv_usec) > (microTimeCache.tv_sec*1000000 + microTimeCache.tv_usec)+100000) {
+							if ( (regionarea->curStep%2==1) && (timeCache.tv_sec*1000000 + timeCache.tv_usec) > (microTimeCache.tv_sec*1000000 + microTimeCache.tv_usec)+DRAWTIME) {
 								for (vector<net::EpollConnection*>::const_iterator it = worldviewers.begin(); it
 										!= worldviewers.end(); ++it) {
 									if (sendMoreWorldViews[(*it)->fd].initialized == true

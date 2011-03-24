@@ -18,6 +18,6 @@ struct ColorObject{
 };
 
 ColorObject colorFromTeam(int teamId);
-void UnpackImage(cairo_t *cr, RegionRender* render, int robotSize, double robotAlpha, WorldInfo *worldinfo, unsigned int regionId);
+void UnpackImage(cairo_t *cr, RegionRender* render, float drawFactor, double robotAlpha, WorldInfo *worldinfo, unsigned int regionId);
 
 #endif /* DRAWER_H_ */

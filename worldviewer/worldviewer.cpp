@@ -87,12 +87,14 @@ map<int, unsigned int> fdToRegionId;
 int timeCache, lastSecond[] = { 0, 0, 0, 0 }, benchMessages[] = { 0, 0, 0, 0 };
 
 //read in from the config
-int robotSize = 1;
 double robotAlpha = 1.0;
 
 //cache this, so we don't have to retrieve it many times
 GtkToggleToolButton *InfoToolButton;
 
+//used for zooming in and out
+
+float drawFactor = WVDRAWFACTOR;
 /* Position in a grid:
  * ____
  * |0|1|
@@ -120,9 +122,6 @@ void loadConfigFile(const char *configFileName, char* clockip) {
 	}
 
 	strcpy(clockip, configuration["CLOCKIP"].c_str());
-
-	if (configuration.find("ROBOTSIZE") != configuration.end())
-		robotSize = atoi(configuration["ROBOTSIZE"].c_str());
 
 	if (configuration.find("ROBOTALPHA") != configuration.end())
 		robotAlpha = atof(configuration["ROBOTALPHA"].c_str());
@@ -190,13 +189,13 @@ void updateInfoWindow() {
 		tmp = "Frame positioned in the " + position + " corner";
 		gtk_label_set_text(frameNum, tmp.c_str());
 
-		tmp = helper::toString(viewedRegion[frame - 1].connection->info.address()) + ":"
-				+ helper::toString(viewedRegion[frame - 1].connection->info.renderport()) + " connected on fd = "
-				+ helper::toString(viewedRegion[frame - 1].connection->fd);
+		tmp = helper::toString(viewedRegion[frame - 1].connection->info.address()) + ":" + helper::toString(
+				viewedRegion[frame - 1].connection->info.renderport()) + " connected on fd = " + helper::toString(
+				viewedRegion[frame - 1].connection->fd);
 		gtk_label_set_text(frameserverAdd, tmp.c_str());
 
-		tmp = "Server located at: (" + helper::toString(viewedRegion[frame - 1].connection->info.draw_x()) + ", " + helper::toString(
-				viewedRegion[frame - 1].connection->info.draw_y()) + " )";
+		tmp = "Server located at: (" + helper::toString(viewedRegion[frame - 1].connection->info.draw_x()) + ", "
+				+ helper::toString(viewedRegion[frame - 1].connection->info.draw_y()) + " )";
 		gtk_label_set_text(frameserverLoc, tmp.c_str());
 	}
 }
@@ -238,11 +237,11 @@ void benchmarkMessages(regionConnection *region, int viewedRegionNum) {
 
 	//check if its time to output
 	if (timeCache > lastSecond[viewedRegionNum]) {
-		string tmp = "frame_serverId" + helper::toString(viewedRegionNum+1);
+		string tmp = "frame_serverId" + helper::toString(viewedRegionNum + 1);
 
 		GtkLabel *frameserverId = GTK_LABEL(gtk_builder_get_object( builder, tmp.c_str() ));
-		tmp = "Server: " + helper::toString(viewedRegion[viewedRegionNum].connection->info.id()) + " sending " + helper::toString(
-				benchMessages[viewedRegionNum]) + " images/second";
+		tmp = "Server: " + helper::toString(viewedRegion[viewedRegionNum].connection->info.id()) + " sending "
+				+ helper::toString(benchMessages[viewedRegionNum]) + " images/second";
 		gtk_label_set_text(frameserverId, tmp.c_str());
 
 		benchMessages[viewedRegionNum] = 0;
@@ -254,7 +253,7 @@ void benchmarkMessages(regionConnection *region, int viewedRegionNum) {
 gboolean regionMessage(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 	MessageType type;
 	const void *buffer;
-	int regionNum = 0, len, viewedRegionNum=-1;
+	int regionNum = 0, len, viewedRegionNum = -1;
 
 	//get the region number that we are receiving a world view from
 	for (vector<regionConnection*>::const_iterator it = regions.begin();
@@ -272,7 +271,7 @@ gboolean regionMessage(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 		worldServerRows++;
 		worldServerColumns++;
 
-		if ( worldServerRows * worldServerColumns < DRAWINGORIGINS)
+		if (worldServerRows * worldServerColumns < DRAWINGORIGINS)
 			throw SystemError("The World Viewer will not work with less that four region servers");
 
 		initializeToolbarButtons();
@@ -284,27 +283,25 @@ gboolean regionMessage(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 		render.ParseFromArray(buffer, len);
 
 		//we got an update from a region, but how what drawing area is responsible for that region?
-		for (int i= TOP_LEFT; i < DRAWINGORIGINS; i++) {
-			if (viewedRegion[i].regionNum == regionNum)
-			{
-				viewedRegionNum=i;
+		for (int i = TOP_LEFT; i < DRAWINGORIGINS; i++) {
+			if (viewedRegion[i].regionNum == regionNum) {
+				viewedRegionNum = i;
 				break;
 			}
 		}
 
 		//there is a delay between telling a region to stop sending and when it actually STOPS sending
-		if(viewedRegionNum==-1)
-		{
+		if (viewedRegionNum == -1) {
 #ifdef DEBUG
-		debug << "Received AN UNWANTED render update from server with fd=" << regions.at(regionNum)->fd << " skipping."<< endl;
+			debug << "Received AN UNWANTED render update from server with fd=" << regions.at(regionNum)->fd << " skipping."<< endl;
 #endif
 
-		return TRUE;
+			return TRUE;
 		}
 
 #ifdef DEBUG
 		debug << "Received render update from server with fd=" << regions.at(regionNum)->fd << " and the timestep is # "
-				<< render.timestep() << endl;
+		<< render.timestep() << endl;
 #endif
 		if (gtk_toggle_tool_button_get_active(InfoToolButton))
 			benchmarkMessages(regions.at(regionNum), viewedRegionNum);
@@ -406,7 +403,7 @@ gboolean clockMessage(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 		if (regionFd < 0) {
 #ifdef DEBUG
 			debug << "Critical Error: Failed to connect to a region server: " << regioninfo.address() << ":"
-					<< regioninfo.renderport() << endl;
+			<< regioninfo.renderport() << endl;
 #endif
 			exit(1);
 		}
@@ -415,7 +412,7 @@ gboolean clockMessage(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 		g_io_add_watch(g_io_channel_unix_new(regionFd), G_IO_IN, regionMessage, NULL);
 #ifdef DEBUG
 		debug << "Connected to region server fd=" << regionFd << " located at ( " << regioninfo.draw_x() << ", "
-				<< regioninfo.draw_y() << " )" << endl;
+		<< regioninfo.draw_y() << " )" << endl;
 #endif
 		break;
 	}
@@ -435,35 +432,49 @@ gboolean clockMessage(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 	return TRUE;
 }
 
+//call when we change the draw factor. Sends the new draw factor to all the currently viewed regions and resizes the drawing areas.
+void updateDrawFactor() {
+	for (int i = TOP_LEFT; i <= BOTTOM_RIGHT; i++) {
+		gtk_widget_set_size_request(GTK_WIDGET(worldDrawingArea.at(i)), IMAGEWIDTH * drawFactor,
+				IMAGEHEIGHT * drawFactor);
+
+	}
+
+#ifdef DEBUG
+	debug<<"Updating drawFactor to  "<<helper::toString(drawFactor)<<endl;
+#endif
+}
+
 //find and new regions to be drawn
 void setNewViewedRegion(int newViewed[][2]) {
 
 #ifdef DEBUG
 	debug << "Changing viewedRegion[TOP_LEFT] to (" << newViewed[0][0] << "," << newViewed[0][1]
-			<< "), changing viewedRegion[TOP_RIGHT] to (" << newViewed[1][0] << "," << newViewed[1][1]
-			<< "), changing viewedRegion[BOTTOM_LEFT] to (" << newViewed[2][0] << "," << newViewed[2][1]
-			<< "), changing viewedRegion[BOTTOM_RIGHT] to (" << newViewed[3][0] << "," << newViewed[3][1]<<")"<<endl;
+	<< "), changing viewedRegion[TOP_RIGHT] to (" << newViewed[1][0] << "," << newViewed[1][1]
+	<< "), changing viewedRegion[BOTTOM_LEFT] to (" << newViewed[2][0] << "," << newViewed[2][1]
+	<< "), changing viewedRegion[BOTTOM_RIGHT] to (" << newViewed[3][0] << "," << newViewed[3][1]<<")"<<endl;
 #endif
 
 	//update the world grid to have no currently viewed regions
 	updateWorldGrid("white");
 
 	for (int i = 0; i < (int) regions.size(); i++) {
-		if ((int)regions.at(i)->info.draw_x() == newViewed[TOP_LEFT][0] && (int)regions.at(i)->info.draw_y() == newViewed[TOP_LEFT][1]) {
+		if ((int) regions.at(i)->info.draw_x() == newViewed[TOP_LEFT][0] && (int) regions.at(i)->info.draw_y()
+				== newViewed[TOP_LEFT][1]) {
 			viewedRegion[TOP_LEFT].connection = regions.at(i);
-			viewedRegion[TOP_LEFT].regionNum=i;
-		}
-		else if ((int)regions.at(i)->info.draw_x() == newViewed[TOP_RIGHT][0] && (int)regions.at(i)->info.draw_y() == newViewed[TOP_RIGHT][1]) {
+			viewedRegion[TOP_LEFT].regionNum = i;
+		} else if ((int) regions.at(i)->info.draw_x() == newViewed[TOP_RIGHT][0] && (int) regions.at(i)->info.draw_y()
+				== newViewed[TOP_RIGHT][1]) {
 			viewedRegion[TOP_RIGHT].connection = regions.at(i);
-			viewedRegion[TOP_RIGHT].regionNum=i;
-		}
-		else if ((int)regions.at(i)->info.draw_x() == newViewed[BOTTOM_LEFT][0] && (int)regions.at(i)->info.draw_y() == newViewed[BOTTOM_LEFT][1]) {
+			viewedRegion[TOP_RIGHT].regionNum = i;
+		} else if ((int) regions.at(i)->info.draw_x() == newViewed[BOTTOM_LEFT][0] &&
+				(int) regions.at(i)->info.draw_y() == newViewed[BOTTOM_LEFT][1]) {
 			viewedRegion[BOTTOM_LEFT].connection = regions.at(i);
-			viewedRegion[BOTTOM_LEFT].regionNum=i;
-		}
-		else if ((int)regions.at(i)->info.draw_x() == newViewed[BOTTOM_RIGHT][0] && (int)regions.at(i)->info.draw_y() == newViewed[BOTTOM_RIGHT][1]) {
+			viewedRegion[BOTTOM_LEFT].regionNum = i;
+		} else if ((int) regions.at(i)->info.draw_x() == newViewed[BOTTOM_RIGHT][0] &&
+				(int) regions.at(i)->info.draw_y() == newViewed[BOTTOM_RIGHT][1]) {
 			viewedRegion[BOTTOM_RIGHT].connection = regions.at(i);
-			viewedRegion[BOTTOM_RIGHT].regionNum=i;
+			viewedRegion[BOTTOM_RIGHT].regionNum = i;
 		}
 	}
 
@@ -472,6 +483,8 @@ void setNewViewedRegion(int newViewed[][2]) {
 	//only update the info window if the its button is toggled
 	if (gtk_toggle_tool_button_get_active(InfoToolButton))
 		updateInfoWindow();
+
+	updateDrawFactor();
 }
 
 //up button handler
@@ -509,8 +522,8 @@ void onUpButtonClicked(GtkWidget *widget, gpointer window) {
 		newViewed[i][0] = viewedRegion[i].connection->info.draw_x();
 		newViewed[i][1] = viewedRegion[i].connection->info.draw_y() - 1;
 
-		if( newViewed[i][1] == -1 )
-			newViewed[i][1] = worldServerRows-1;
+		if (newViewed[i][1] == -1)
+			newViewed[i][1] = worldServerRows - 1;
 	}
 
 	//disable the sending of world views from regions that we are moving away from
@@ -536,8 +549,8 @@ void onBackButtonClicked(GtkWidget *widget, gpointer window) {
 		newViewed[i][0] = viewedRegion[i].connection->info.draw_x() - 1;
 		newViewed[i][1] = viewedRegion[i].connection->info.draw_y();
 
-		if( newViewed[i][0] == -1 )
-			newViewed[i][0] = worldServerColumns-1;
+		if (newViewed[i][0] == -1)
+			newViewed[i][0] = worldServerColumns - 1;
 	}
 
 	//disable the sending of world views from regions that we are moving away from
@@ -560,7 +573,7 @@ void onForwardButtonClicked(GtkWidget *widget, gpointer window) {
 	int newViewed[DRAWINGORIGINS][2];
 
 	for (int i = TOP_LEFT; i < DRAWINGORIGINS; i++) {
-		newViewed[i][0] = (viewedRegion[i].connection->info.draw_x()+1)% worldServerColumns;
+		newViewed[i][0] = (viewedRegion[i].connection->info.draw_x() + 1) % worldServerColumns;
 		newViewed[i][1] = viewedRegion[i].connection->info.draw_y();
 	}
 
@@ -644,7 +657,7 @@ gboolean drawingAreaExpose(GtkWidget *widget, GdkEventExpose *event, gpointer da
 	if (draw[(int) data]) {
 		cairo_t *cr = gdk_cairo_create(worldDrawingArea.at((int) data)->widget.window);
 
-		UnpackImage(cr, &renderDraw[(int) data], robotSize, robotAlpha, &worldInfo,
+		UnpackImage(cr, &renderDraw[(int) data], drawFactor, robotAlpha, &worldInfo,
 				fdToRegionId.at(viewedRegion[(int) data].connection->fd));
 
 		cairo_destroy(cr);
@@ -656,12 +669,44 @@ gboolean drawingAreaExpose(GtkWidget *widget, GdkEventExpose *event, gpointer da
 
 //zoom in button handler
 void onZoomInClicked(GtkWidget *widgetDrawingArea, gpointer data) {
+	drawFactor += WVZOOMSPEED;
 
+	if (drawFactor >= WVMAXZOOMED) {
+		drawFactor -= WVZOOMSPEED;
+		gtk_widget_set_sensitive(GTK_WIDGET(gtk_builder_get_object( builder, "ZoomIn" )), false);
+#ifdef DEBUG
+		debug<<"Failed to zoom in because we have passed the WVMAXZOOMED threshold"<<endl;
+#endif
+	} else {
+		if (!gtk_widget_get_sensitive(GTK_WIDGET(gtk_builder_get_object( builder, "ZoomOut" ))))
+			gtk_widget_set_sensitive(GTK_WIDGET(gtk_builder_get_object( builder, "ZoomOut" )), true);
+
+		updateDrawFactor();
+
+#ifdef DEBUG
+		debug<<"Zoomed In"<<endl;
+#endif
+	}
 }
 
 //zoom out button hundler
 void onZoomOutClicked(GtkWidget *widgetDrawingArea, gpointer data) {
+	drawFactor -= WVZOOMSPEED;
+	if (drawFactor <= WVMINZOOMED) {
+		gtk_widget_set_sensitive(GTK_WIDGET(gtk_builder_get_object( builder, "ZoomOut" )), false);
+		drawFactor += WVZOOMSPEED;
+#ifdef DEBUG
+		debug<<"Failed to zoom out because we have passed the WVMINZOOMED threshold"<<endl;
+#endif
+	} else {
+		if (!gtk_widget_get_sensitive(GTK_WIDGET(gtk_builder_get_object( builder, "ZoomIn" ))))
+			gtk_widget_set_sensitive(GTK_WIDGET(gtk_builder_get_object( builder, "ZoomIn" )), true);
 
+		updateDrawFactor();
+#ifdef DEBUG
+		debug<<"Zoomed Out"<<endl;
+#endif
+	}
 }
 
 //initializations and simple modifications for the things that will be drawn
@@ -710,12 +755,11 @@ void initWorldViewer() {
 	GtkDrawingArea* tmp;
 	string tmpStr;
 	//set default size, color and keep track of the drawing areas
-	for(int i=TOP_LEFT; i<=BOTTOM_RIGHT; i++ )
-	{
-		tmpStr="drawingarea"+helper::toString(i+1);
+	for (int i = TOP_LEFT; i <= BOTTOM_RIGHT; i++) {
+		tmpStr = "drawingarea" + helper::toString(i + 1);
 		tmp = GTK_DRAWING_AREA(gtk_builder_get_object( builder, tmpStr.c_str()));
-		gtk_widget_set_size_request(GTK_WIDGET(tmp), IMAGEWIDTH, IMAGEHEIGHT);
-		gtk_widget_modify_bg(GTK_WIDGET(tmp),GTK_STATE_NORMAL, &color);
+		gtk_widget_set_size_request(GTK_WIDGET(tmp), IMAGEWIDTH * drawFactor, IMAGEHEIGHT * drawFactor);
+		gtk_widget_modify_bg(GTK_WIDGET(tmp), GTK_STATE_NORMAL, &color);
 		worldDrawingArea.push_back(tmp);
 	}
 

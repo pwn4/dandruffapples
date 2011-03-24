@@ -386,7 +386,7 @@ gboolean Client::run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 
 		//create the client viewer GUI
 		if (runClientViewer)
-			viewer->initClientViewer(robotsPerTeam, myTeam, DRAWFACTOR );
+			viewer->initClientViewer(robotsPerTeam, myTeam, CVDRAWFACTOR );
 
 		// Claim our team
 		ClaimTeam claimteam;
@@ -606,7 +606,7 @@ gboolean Client::run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 					} else {
 						// Can see. Add, or update?
 						bool foundRobot = false;
-						for (vector<SeenRobot*>::iterator it = ownRobots[index]->seenRobots.begin(); it
+						for (vector<SeenRobot*>::const_iterator it = ownRobots[index]->seenRobots.begin(); it
 								!= ownRobots[index]->seenRobots.end() && !foundRobot; it++) {
 
 							if ((*it)->id == serverrobot.id()) {

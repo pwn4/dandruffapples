@@ -42,7 +42,6 @@
             <child>
               <object class="GtkToolButton" id="ZoomIn">
                 <property name="visible">True</property>
-                <property name="sensitive">False</property>
                 <property name="label" translatable="yes">Zoom In</property>
                 <property name="use_underline">True</property>
                 <property name="stock_id">gtk-zoom-in</property>
@@ -55,7 +54,6 @@
             <child>
               <object class="GtkToolButton" id="ZoomOut">
                 <property name="visible">True</property>
-                <property name="sensitive">False</property>
                 <property name="label" translatable="yes">Zoom Out</property>
                 <property name="use_underline">True</property>
                 <property name="stock_id">gtk-zoom-out</property>
