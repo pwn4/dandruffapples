@@ -672,6 +672,7 @@ gboolean Client::run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 						if ((*it)->stackSize <= 0 || puckstack.seespuckstack(i).viewlostid()) {
 							delete *it;
 							it = ownRobots[index]->seenPucks.erase(it);
+						  it--; // Compensates for it++ in for loop.
 						}
 					}
 				}
