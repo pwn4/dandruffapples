@@ -281,16 +281,31 @@ class ClientAi {
 public:
     virtual void make_command(ClientRobotCommand& command, OwnRobot* ownRobot) = 0;
     // Helpers
+
     SeenPuck* findPickUpablePuck(OwnRobot* ownRobot);
     SeenPuck* findClosestPuck(OwnRobot* ownRobot);
 		SeenPuck* findSecondClosestPuck(OwnRobot* ownRobot);
-    bool insideOurHome(OwnRobot* ownRobot);
-		bool puckInsideOurHome(SeenPuck* seenPuck, OwnRobot* ownRobot);
     SeenRobot* findClosestRobot(OwnRobot* ownRobot);
-    static double relDistance(double x1, double y1);
-		static bool sameCoordinates(double x1, double y1, double x2, double y2);
     bool hasCanPickUpPuckEvent(OwnRobot* ownRobot);
     bool hasNotMovingEvent(OwnRobot* ownRobot);
+		bool canPickUpPuck(OwnRobot* ownRobot);
+		bool closeToHome(OwnRobot* ownRobot);
+    bool insideOurHome(OwnRobot* ownRobot);
+		int numRobotsLeftOfMe(OwnRobot* ownRobot);
+		int numRobotsRightOfMe(OwnRobot* ownRobot);
+		int numRobotsTopOfMe(OwnRobot* ownRobot);
+		int numRobotsBottomOfMe(OwnRobot* ownRobot);
+		int canSeeNumRobots(OwnRobot* ownRobot);
+		SeenRobot* leftmostRobotToMe(OwnRobot* ownRobot);
+		SeenRobot* rightmostRobotToMe(OwnRobot* ownRobot);
+		SeenRobot* topmostRobotToMe(OwnRobot* ownRobot);
+		SeenRobot* bottommostRobotToMe(OwnRobot* ownRobot);
+
+		static SeenRobot* closestRobotDirection(OwnRobot* ownRobot, int direction);
+		static int numRobotsDirection(OwnRobot*, int direction);
+		static bool puckInsideOurHome(SeenPuck* seenPuck, OwnRobot* ownRobot);
+    static double relDistance(double x1, double y1);
+		static bool sameCoordinates(double x1, double y1, double x2, double y2);
 };
 
 #endif
