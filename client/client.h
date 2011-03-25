@@ -293,7 +293,7 @@ public:
     bool hasCanPickUpPuckEvent(OwnRobot* ownRobot);
     bool hasNotMovingEvent(OwnRobot* ownRobot);
 		bool canPickUpPuck(OwnRobot* ownRobot);
-		bool closeToHome(OwnRobot* ownRobot);
+		bool closeToHome(OwnRobot* ownRobot, double dist);
     bool insideOurHome(OwnRobot* ownRobot);
 		int canSeeNumPucks(OwnRobot* ownRobot);
 		int numRobotsLeftOfMe(OwnRobot* ownRobot);

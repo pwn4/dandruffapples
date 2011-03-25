@@ -51,11 +51,6 @@ SeenPuck* ClientAi::findSecondClosestPuck(OwnRobot* ownRobot) {
 	return *secondClosest;
 }
 
-//Is robot at home?
-bool ClientAi::insideOurHome(OwnRobot* ownRobot) {
-  return (relDistance(ownRobot->homeRelX, ownRobot->homeRelY) <= HOMEDIAMETER/2);
-}
-
 SeenPuck* ClientAi::findPickUpablePuck(OwnRobot* ownRobot) { //TODO:this function seems weird...robot could be over 2 pucks at same time? 
 	if (ownRobot->seenPucks.size() == 0)
 		return NULL;
@@ -125,14 +120,19 @@ SeenRobot* ClientAi::findClosestRobot(OwnRobot* ownRobot) {
 	return closestRobotDirection(ownRobot, ANY);
 }
 
-//Is robot one HOMEDIAMETER away from home?
-bool ClientAi::closeToHome(OwnRobot* ownRobot){
-	if(relDistance(ownRobot->homeRelX, ownRobot->homeRelY) <= HOMEDIAMETER){
+//Is robot dist distance away from home?
+bool ClientAi::closeToHome(OwnRobot* ownRobot, double dist){
+	if(relDistance(ownRobot->homeRelX, ownRobot->homeRelY) <= dist){
 		return true;
 	}
 	else{
 		return false;
 	}
+}
+
+//Is robot at home?
+bool ClientAi::insideOurHome(OwnRobot* ownRobot) {
+  return (relDistance(ownRobot->homeRelX, ownRobot->homeRelY) <= HOMEDIAMETER/2);
 }
 
 //How many pucks are around me?
