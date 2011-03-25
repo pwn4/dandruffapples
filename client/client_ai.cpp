@@ -135,6 +135,11 @@ bool ClientAi::insideOurHome(OwnRobot* ownRobot) {
   return (relDistance(ownRobot->homeRelX, ownRobot->homeRelY) <= HOMEDIAMETER/2);
 }
 
+//Is it an enemy robot?
+bool ClientAi::isEnemy(SeenRobot* seenRobot) {
+  return weControlRobot(seenRobot->id);
+}
+
 //How many pucks are around me?
 int ClientAi::canSeeNumPucks(OwnRobot* ownRobot){
 	return ownRobot->seenPucks.size();
