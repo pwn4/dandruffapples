@@ -89,6 +89,37 @@ bool ClientAi::canPickUpPuck(OwnRobot* ownRobot) {
 	return false;
 }
 
+//Am I closest to this puck?
+bool ClientAi::ImClosestToPuck(OwnRobot* ownRobot, SeenPuck* seenPuck) {
+	SeenRobot* closest = robotClosestToPuck(ownRobot, seenPuck);
+	if(closest == NULL){// I think I'm closest to the puck
+		return true;
+	}
+	else{
+		double hisDist = relDistance(closest->relx - seenPuck->relx, closest->rely - seenPuck->rely);
+		double myDist = relDistance(seenPuck->relx, seenPuck->rely);
+		return (myDist < hisDist);
+	}
+}
+
+//Which robot is closest to this puck?
+SeenRobot* ClientAi::robotClosestToPuck(OwnRobot* ownRobot, SeenPuck* seenPuck) {
+	if (ownRobot->seenRobots.size() == 0){ //I think I'm closest to the puck
+		return NULL;
+	}
+	vector<SeenRobot*>::iterator closest;
+	double minDistance = 9000.01; // Over nine thousand!
+	double tempDistance;
+	for (vector<SeenRobot*>::iterator it = ownRobot->seenRobots.begin(); it != ownRobot->seenRobots.end(); it++) {
+		tempDistance = relDistance((*it)->relx - seenPuck->relx, (*it)->rely - seenPuck->rely);
+		if (tempDistance < minDistance) {
+			minDistance = tempDistance;
+			closest = it;
+		}
+	}
+	return *closest;
+}
+
 //Get the closest robot to me in every direction
 SeenRobot* ClientAi::findClosestRobot(OwnRobot* ownRobot) {
 	return closestRobotDirection(ownRobot, ANY);

@@ -286,6 +286,8 @@ public:
     SeenPuck* findClosestPuck(OwnRobot* ownRobot);
 		SeenPuck* findSecondClosestPuck(OwnRobot* ownRobot);
     SeenRobot* findClosestRobot(OwnRobot* ownRobot);
+		SeenRobot* robotClosestToPuck(OwnRobot* ownRobot, SeenPuck* seenPuck);
+		bool ImClosestToPuck(OwnRobot* ownRobot, SeenPuck* seenPuck);
     bool hasCanPickUpPuckEvent(OwnRobot* ownRobot);
     bool hasNotMovingEvent(OwnRobot* ownRobot);
 		bool canPickUpPuck(OwnRobot* ownRobot);
