@@ -279,7 +279,7 @@ public:
   static double verifyAngle(double angle);
 };
 
-class ClientAi {
+class ClientAi : public Client{
 public:
     virtual void make_command(ClientRobotCommand& command, OwnRobot* ownRobot) = 0;
     // Helpers
