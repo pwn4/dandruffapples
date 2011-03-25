@@ -286,9 +286,9 @@ public:
 		SeenPuck* findSecondClosestPuck(OwnRobot* ownRobot);
     bool insideOurHome(OwnRobot* ownRobot);
 		bool puckInsideOurHome(SeenPuck* seenPuck, OwnRobot* ownRobot);
-    static double relDistance(double x1, double y1);
-    static bool sameCoordinates(double x1, double y1, double x2, double y2);
     SeenRobot* findClosestRobot(OwnRobot* ownRobot);
+    static double relDistance(double x1, double y1);
+		static bool sameCoordinates(double x1, double y1, double x2, double y2);
     bool hasCanPickUpPuckEvent(OwnRobot* ownRobot);
     bool hasNotMovingEvent(OwnRobot* ownRobot);
 };
