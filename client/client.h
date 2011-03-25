@@ -301,9 +301,9 @@ public:
 		SeenRobot* topmostRobotToMe(OwnRobot* ownRobot);
 		SeenRobot* bottommostRobotToMe(OwnRobot* ownRobot);
 
-		static SeenRobot* closestRobotDirection(OwnRobot* ownRobot, int direction);
-		static int numRobotsDirection(OwnRobot*, int direction);
-		static bool puckInsideOurHome(SeenPuck* seenPuck, OwnRobot* ownRobot);
+		SeenRobot* closestRobotDirection(OwnRobot* ownRobot, int direction);
+		int numRobotsDirection(OwnRobot*, int direction);
+		bool puckInsideOurHome(SeenPuck* seenPuck, OwnRobot* ownRobot);
     static double relDistance(double x1, double y1);
 		static bool sameCoordinates(double x1, double y1, double x2, double y2);
 };
