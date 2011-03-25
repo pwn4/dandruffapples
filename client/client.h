@@ -258,7 +258,6 @@ protected:
 	// Helper functions
 	unsigned int indexToRobotId(int index);
 	int robotIdToIndex(int robotId);
-	bool weControlRobot(int robotId);
 public:
 	Client() : writing(false),
 			   lastSecond(time(NULL)),
@@ -271,6 +270,7 @@ public:
 	void loadConfigFile(const char* configFileName, string& pathToExe);
 	void setControllerIp(string newcontrollerip);
 	void setMyTeam(int myTeam);
+	bool weControlRobot(int robotId);
 	gboolean run(GIOChannel *ioch, GIOCondition cond, gpointer data);
 	//TODO: user-defined AI code
 	ClientRobotCommand userAiCode(OwnRobot* ownrobot);
