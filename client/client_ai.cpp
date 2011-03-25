@@ -137,7 +137,7 @@ bool ClientAi::insideOurHome(OwnRobot* ownRobot) {
 
 //Is it an enemy robot?
 bool ClientAi::isEnemy(SeenRobot* seenRobot) {
-  return weControlRobot(seenRobot->id);
+  return !weControlRobot(seenRobot->id);
 }
 
 //How many pucks are around me?
