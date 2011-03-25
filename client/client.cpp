@@ -532,6 +532,9 @@ gboolean Client::run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 					// The serverrobot may or may not be on our team. Can we see it?
 					index = robotIdToIndex(serverrobot.seesserverrobot(i).seenbyid());
 					if (serverrobot.seesserverrobot(i).viewlostid()) {
+            // Deprecated. Client now calculates when it loses sight! 
+
+            /*
 						// Could see before, can't see anymore.
 						for (vector<SeenRobot*>::iterator it = ownRobots[index]->seenRobots.begin(); it
 								!= ownRobots[index]->seenRobots.end(); it++) {
@@ -546,6 +549,7 @@ gboolean Client::run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 								break;
 							}
 						}
+            */
 					} else {
 						// Can see. Add, or update?
 						bool foundRobot = false;
