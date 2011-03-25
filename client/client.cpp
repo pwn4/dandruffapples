@@ -125,6 +125,59 @@ double Client::relDistance(double x1, double y1) {
 	return (sqrt(x1 * x1 + y1 * y1));
 }
 
+// Make sure 0 <= angle < 2PI. If angle is outside this range, either add or
+// subtract by 2PI to put back in the range.
+double Client::verifyAngle(double angle) {
+  double twoPi = 6.283185307; // TODO: Should be a constant.
+  while (angle < 0) {
+    // Increment angle until it is in proper range.
+    angle += twoPi;
+  }
+  while (angle >= twoPi) {
+    // Decrement angle until it is in proper range.
+    angle -= twoPi;
+  }
+
+  return angle;
+}
+
+// If the robot is turning, then a) figure out if we want to be turning
+// clockwise or counter-clockwise and b) make sure that the angle is valid
+// after we increment/decrement it. 
+void Client::estimateRotation(OwnRobot* ownRobot) {
+  if (ownRobot->desiredAngle != ownRobot->angle) {
+    // We are turning!
+    double magicNumber = 0.1256637061; // 1/50 * 2PI
+    // TODO: Use a world global variable instead of magic numbers!
+    double cwRotation = verifyAngle(ownRobot->desiredAngle - ownRobot->angle);
+    double ccwRotation = verifyAngle((
+        ownRobot->angle - ownRobot->desiredAngle) * -1);
+    if (cwRotation < ccwRotation) {
+      // Turn clockwise!
+      ownRobot->angle = verifyAngle(ownRobot->angle + magicNumber);
+      cwRotation = verifyAngle(ownRobot->desiredAngle - ownRobot->angle);
+      ccwRotation = verifyAngle((
+        ownRobot->angle - ownRobot->desiredAngle) * -1);
+      if (cwRotation > ccwRotation 
+          || ownRobot->angle == ownRobot->desiredAngle) {
+        // Turned too far!
+        ownRobot->angle = ownRobot->desiredAngle;
+      }
+    } else {
+      // Turn counter-clockwise!
+      ownRobot->angle = verifyAngle(ownRobot->angle - magicNumber);
+      cwRotation = verifyAngle(ownRobot->desiredAngle - ownRobot->angle);
+      ccwRotation = verifyAngle((
+        ownRobot->angle - ownRobot->desiredAngle) * -1);
+      if (ccwRotation > cwRotation 
+          || ownRobot->angle == ownRobot->desiredAngle) {
+        // Turned too far!
+        ownRobot->angle = ownRobot->desiredAngle;
+      }
+    }
+  }
+}
+
 // Check if the two coordinates are the same, compensating for
 // doubleing-point errors.
 bool Client::sameCoordinates(double x1, double y1, double x2, double y2) {
@@ -146,94 +199,6 @@ ClientRobotCommand Client::userAiCode(OwnRobot* ownRobot) {
 	if (ownRobot->ai) // robots don't have ai at the first timestep?
 		ownRobot->ai->make_command(cmd, ownRobot);
 	return cmd;
-/*
-ClientRobotCommand userAiCode(OwnRobot* ownRobot) {
-	ClientRobotCommand command;
-
-	//init
-	if(state == NULL){
-	  state = new int[robotsPerTeam];
-	}
-
-	if(state[ownRobot->index] == 1){
-	  //go closer and slow down
-	  SeenPuck* closest = findClosestPuck(ownRobot);
-		if (closest != NULL)
-	  {
-	    command.sendCommand = true;
-
-			double vecLength = sqrt(closest->relx*closest->relx+ closest->rely*closest->rely);
-			vecLength = 1;
-			//watch that divide by zero
-			if(vecLength > 0.0000000001)
-			{
-			  command.changeVx = true;
-			  command.vx = closest->relx / (vecLength * vecLength);
-			  command.changeVy = true;
-			  command.vy = closest->rely / (vecLength * vecLength);
-		  }
-	  }
-
-	  //watch out for pucks
-	  if(ownRobot->hasPuck)
-	  {
-	    state[ownRobot->index] = 2;
-	    command.sendCommand = true;
-
-			//normalize
-			double vecLength = sqrt(ownRobot->homeRelX*ownRobot->homeRelX + ownRobot->homeRelY*ownRobot->homeRelY);
-			//watch that divide by zero
-			if(vecLength > 0.0000000001)
-			{
-			  command.changeVx = true;
-			  command.vx = ownRobot->homeRelX / vecLength;
-			  command.changeVy = true;
-			  command.vy = ownRobot->homeRelY / vecLength;
-		  }
-
-	    return command;
-    }
-
-	  //pick it up
-	  SeenPuck* pickup = findPickUpablePuck(ownRobot);
-		if (pickup != NULL) {
-			command.sendCommand = true;
-			command.changePuckPickup = true;
-			command.puckPickup = true;
-		}
-
-		return command;
-	}
-
-	if(state[ownRobot->index] == 0 && (abs(ownRobot->vx) <= 0.0001 && abs(ownRobot->vy) <= 0.0001)){
-	  //go in a random direction
-		command.sendCommand = true;
-		command.changeVx = true;
-		command.vx = (((rand() % 11) / 10.0) - 0.5);
-		command.changeVy = true;
-		command.vy = (((rand() % 11) / 10.0) - 0.5);
-
-		state[ownRobot->index] = 1;
-
-		return command;
-	}
-
-	if(state[ownRobot->index] == 2){
-	  //if we're here but not holding a puck, that's a problem. Go back to state 1
-	  if(ownRobot->hasPuck == false)
-	    state[ownRobot->index] = 0;
-
-	  //if we're home, drop it.
-	  if(ownRobot->homeRelX < HOMEDIAMETER/2 && ownRobot->homeRelY < HOMEDIAMETER/2)
-	  {
-			command.sendCommand = true;
-			command.changePuckPickup = true;
-			command.puckPickup = false;
-	  }
-
-	  return command;
-	} */
-
 }
 
 // Provides the framework needed to generate an AI command for a robot.
@@ -263,8 +228,11 @@ void Client::executeAi(OwnRobot* ownRobot, int index, net::connection &controlle
 			clientrobot.set_velocityx(command.vx);
 		if (command.changeVy)
 			clientrobot.set_velocityy(command.vy);
-		if (command.changeAngle)
+		if (command.changeAngle) {
+      command.angle = verifyAngle(command.angle); // 0 <= angle < 2PI 
 			clientrobot.set_angle(command.angle);
+      ownRobot->desiredAngle = command.angle; 
+    }
 		if (command.changePuckPickup) {
 			puckPickupMessages++; // debug message
 			clientrobot.set_puckpickup(command.puckPickup);
@@ -462,6 +430,9 @@ gboolean Client::run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 				  // Update rel distance of our home.
 				  ownRobots[i]->homeRelX -= ownRobots[i]->vx;
 				  ownRobots[i]->homeRelY -= ownRobots[i]->vy;
+
+          // Simulate our new angle if we are turning.
+          estimateRotation(ownRobots[i]);
 
 				  // Update rel distance of seenRobots.
 				  double minDistance = 9000.01;

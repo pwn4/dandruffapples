@@ -95,19 +95,19 @@ public:
 	bool pendingCommand;
 	int whenLastSent;
 	int closestRobotId;
-	// int behaviour;
 	vector<SeenRobot*> seenRobots;
 	vector<SeenPuck*> seenPucks;
 	double homeRelX;
 	double homeRelY;
 	vector<EventType> eventQueue;
+  double desiredAngle;
 
 	int index; // this is for AI memory
 	ClientAi* ai; // user-defined ai code
 
 	OwnRobot() :
 		Robot(), pendingCommand(false), whenLastSent(-1), closestRobotId(-1), homeRelX(0.0),
-				homeRelY(0.0), ai(NULL) {
+				homeRelY(0.0), desiredAngle(0.0), ai(NULL) {
 	}
 };
 
@@ -244,6 +244,7 @@ private:
 	bool writing;
 	double relDistance(double x1, double y1);
 	bool sameCoordinates(double x1, double y1, double x2, double y2);
+  void estimateRotation(OwnRobot* ownRobot);
 	vector< pair<ClientAi*, int> > clientAiList;
 protected:
 	// Stat variables
@@ -275,6 +276,7 @@ public:
 	//TODO: user-defined AI code
 	ClientRobotCommand userAiCode(OwnRobot* ownrobot);
 
+  static double verifyAngle(double angle);
 };
 
 class ClientAi {
