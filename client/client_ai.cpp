@@ -345,19 +345,3 @@ bool ClientAi::sameCoordinates(double x1, double y1, double x2, double y2) {
 	}
 	return true;
 }
-
-bool ClientAi::hasCanPickUpPuckEvent(OwnRobot* ownRobot) {
-	for (vector<EventType>::iterator it = ownRobot->eventQueue.begin(); it != ownRobot->eventQueue.end(); it++) {
-		if (*it == EVENT_CAN_PICKUP_PUCK)
-			return true;
-	}
-	return false;
-}
-
-bool ClientAi::hasNotMovingEvent(OwnRobot* ownRobot) {
-	for (vector<EventType>::iterator it = ownRobot->eventQueue.begin(); it != ownRobot->eventQueue.end(); it++) {
-		if (*it == EVENT_NOT_MOVING)
-			return true;
-	}
-	return false;
-}

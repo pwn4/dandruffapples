@@ -41,17 +41,6 @@ using namespace protobuf;
 class Client;
 class ClientAi;
 
-enum EventType {
-	EVENT_CLOSEST_ROBOT_STATE_CHANGE,
-	EVENT_NEW_CLOSEST_ROBOT,
-	EVENT_START_SEEING_PUCKS,
-	EVENT_END_SEEING_PUCKS,
-	EVENT_CAN_PICKUP_PUCK,
-	EVENT_NEAR_PUCK,
-	EVENT_NOT_MOVING,
-	EVENT_MAX
-};
-
 class SeenPuck {
 public:
 	double relx;
@@ -99,7 +88,6 @@ public:
 	vector<SeenPuck*> seenPucks;
 	double homeRelX;
 	double homeRelY;
-	vector<EventType> eventQueue;
   double desiredAngle;
 
 	int index; // this is for AI memory
@@ -290,8 +278,6 @@ public:
     SeenRobot* findClosestRobot(OwnRobot* ownRobot);
 		SeenRobot* robotClosestToPuck(OwnRobot* ownRobot, SeenPuck* seenPuck);
 		bool ImClosestToPuck(OwnRobot* ownRobot, SeenPuck* seenPuck);
-    bool hasCanPickUpPuckEvent(OwnRobot* ownRobot);
-    bool hasNotMovingEvent(OwnRobot* ownRobot);
 		bool canPickUpPuck(OwnRobot* ownRobot);
 		bool closeToHome(OwnRobot* ownRobot, double dist);
     bool insideOurHome(OwnRobot* ownRobot);

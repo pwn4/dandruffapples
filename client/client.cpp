@@ -437,7 +437,6 @@ gboolean Client::run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 				  // Update rel distance of seenRobots.
 				  double minDistance = 9000.01;
 				  double tempDistance;
-				  int newClosestRobotId = -1;
 				  for (vector<SeenRobot*>::iterator it = ownRobots[i]->seenRobots.begin(); it
 						  != ownRobots[i]->seenRobots.end(); it++) {
 					  (*it)->relx += (*it)->vx - ownRobots[i]->vx;
@@ -448,15 +447,7 @@ gboolean Client::run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 						  delete *it;
 						  it = ownRobots[i]->seenRobots.erase(it);
 						  it--; // Compensates for it++ in for loop.
-					  } else if (tempDistance < minDistance) {
-						  // Keep trying to find the closest robot!
-						  minDistance = tempDistance;
-						  newClosestRobotId = (*it)->id;
-					  }
-				  }
-				  if (newClosestRobotId != ownRobots[i]->closestRobotId) {
-					  ownRobots[i]->closestRobotId = newClosestRobotId;
-					  ownRobots[i]->eventQueue.push_back(EVENT_NEW_CLOSEST_ROBOT);
+					  } 
 				  }
 
 				  // Update rel distance of seenPucks.
@@ -471,35 +462,16 @@ gboolean Client::run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 						  delete *it;
 						  it = ownRobots[i]->seenPucks.erase(it);
 						  it--; // Compensates for it++ in for loop.
-					  } else if (sameCoordinates((*it)->relx, (*it)->rely, 0.0, 0.0)) {
-						  // If we can pickup this puck, throw event.
-						  //cout << "#" << i << " sees puck at relx="
-						  //     << (*it)->relx << ", rely=" <<(*it)->rely << endl;
-
-						  ownRobots[i]->eventQueue.push_back(EVENT_CAN_PICKUP_PUCK);
-					  } else if (tempDistance < 1.0) {
-						  // Close to puck, let AI refine velocities continuously.
-						  ownRobots[i]->eventQueue.push_back(EVENT_NEAR_PUCK);
-					  }
+					  } 
 				  }
 
-				  // Check if we're not moving
-				  if (ownRobots[i]->vx == 0.0 && ownRobots[i]->vy == 0.0) {
-					  ownRobots[i]->eventQueue.push_back(EVENT_NOT_MOVING);
-				  }
-
-				  // Check if any events exist; if so, call AI.
-				  //if (ownRobots[i]->eventQueue.size() > 0 && !ownRobots[i]->pendingCommand) {
 				  //robot AIs SHOULD execute every timestep
 				  if(!ownRobots[i]->pendingCommand){
 					  if(currentTimestep - ownRobots[i]->whenLastSent > 10){
 					    executeAi(ownRobots[i], i, controller);
-					    //initializeRobots(controller);
+					    //initializeRobots(controller); // Debug function call.
 					  }
 				  }
-
-				  // Clear the queue, wait for new events.
-				  ownRobots[i]->eventQueue.clear();
 
 				  //clear the collided flag so that the client, or ai, or whatever is refusing to forget about collisions after a period doesn't die forever
 				  ownRobots[i]->hasCollided = false;
@@ -585,37 +557,26 @@ gboolean Client::run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 								//cout << "Our #" << index << " update see "
 								//     << serverrobot.id() << " at relx: "
 								//     << serverrobot.seesserverrobot(i).relx() << endl;
-								bool stateChange = false;
 								if (serverrobot.has_velocityx() && (*it)->vx != serverrobot.velocityx()) {
 									(*it)->vx = serverrobot.velocityx();
-									stateChange = true;
 								}
 								if (serverrobot.has_velocityy() && (*it)->vy != serverrobot.velocityy()) {
 									(*it)->vy = serverrobot.velocityy();
-									stateChange = true;
 								}
 								if (serverrobot.has_angle() && (*it)->angle != serverrobot.angle()) {
 									(*it)->angle = serverrobot.angle();
-									stateChange = true;
 								}
 								if (serverrobot.has_haspuck() && (*it)->hasPuck != serverrobot.haspuck()) {
 									(*it)->hasPuck = serverrobot.haspuck();
-									stateChange = true;
 								}
 								if (serverrobot.has_hascollided() && (*it)->hasCollided != serverrobot.hascollided()) {
 									(*it)->hasCollided = serverrobot.hascollided();
-									stateChange = true;
 								}
 								if (serverrobot.seesserverrobot(i).has_relx())
 									(*it)->relx = serverrobot.seesserverrobot(i).relx();
 								if (serverrobot.seesserverrobot(i).has_rely())
 									(*it)->rely = serverrobot.seesserverrobot(i).rely();
 								(*it)->lastTimestepSeen = currentTimestep;
-
-								// If we updated the closest robot, tell the AI.
-								if (stateChange && serverrobot.id() == (unsigned)ownRobots[index]->closestRobotId) {
-									ownRobots[index]->eventQueue.push_back(EVENT_CLOSEST_ROBOT_STATE_CHANGE);
-								}
 							}
 						}
 
@@ -677,8 +638,6 @@ gboolean Client::run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 			// puck is a new, previously-unseen puck.
 			if (weControlRobot(puckstack.seespuckstack(i).seenbyid())) {
 				index = robotIdToIndex(puckstack.seespuckstack(i). seenbyid()); // Our robot that can see.
-				int oldSeenPuckSize = ownRobots[index]->seenPucks.size();
-
 				// Look through seenPuck list, check if the new puck's
 				// position is the same as one we already see. If so,
 				// update our stacksize.
@@ -727,14 +686,6 @@ gboolean Client::run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 			    	ownRobots[index]->hasPuck = false;
 
 					ownRobots[index]->seenPucks.push_back(p);
-				}
-
-				int newSeenPuckSize = ownRobots[index]->seenPucks.size();
-				// Check for seenPuck size changes to create events.
-				if (oldSeenPuckSize == 0 && newSeenPuckSize > 0) {
-					ownRobots[index]->eventQueue.push_back(EVENT_START_SEEING_PUCKS);
-				} else if (oldSeenPuckSize > 0 && newSeenPuckSize == 0) {
-					ownRobots[index]->eventQueue.push_back(EVENT_END_SEEING_PUCKS);
 				}
 			}
 		}
