@@ -135,6 +135,11 @@ bool ClientAi::closeToHome(OwnRobot* ownRobot){
 	}
 }
 
+//How many pucks are around me?
+int ClientAi::canSeeNumPucks(OwnRobot* ownRobot){
+	return ownRobot->seenPucks.size();
+}
+
 //STRICTLY LEFT Ignores robots on top and bottom with closer relative x coordinates
 int ClientAi::numRobotsLeftOfMe(OwnRobot* ownRobot){
 	return numRobotsDirection(ownRobot, LEFTMOST);
