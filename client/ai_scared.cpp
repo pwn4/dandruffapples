@@ -5,22 +5,12 @@ public:
 	void make_command(ClientRobotCommand& command, OwnRobot* ownRobot) {
 		// Scared robot. Run away from all enemy robots.
 
-		// Check if we are not moving
-			if (hasNotMovingEvent(ownRobot)) {
-				command.setVx(((rand() % 11) / 10.0) - 0.5);
-				command.setVy(((rand() % 11) / 10.0) - 0.5);
-				return;
-			}
-
-		// Are we interested in this event?
-		bool robotChange = false;
-		for (vector<EventType>::iterator it = ownRobot->eventQueue.begin(); it != ownRobot->eventQueue.end()
-				&& !robotChange; it++) {
-			if (*it == EVENT_CLOSEST_ROBOT_STATE_CHANGE || *it == EVENT_NEW_CLOSEST_ROBOT)
-				robotChange = true;
-		}
-		if (!robotChange)
-			return;
+    // Check if we are not moving
+    if (ownRobot->vx == 0.0 && ownRobot->vy == 0.0) {
+      command.setVx(((rand() % 11) / 10.0) - 0.5);
+      command.setVy(((rand() % 11) / 10.0) - 0.5);
+      return;
+    }
 
 		// Make robot move in opposite direction. TODO: Add trig!
 		SeenRobot* closest = findClosestRobot(ownRobot);

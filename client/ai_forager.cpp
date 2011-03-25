@@ -5,19 +5,16 @@ public:
 	void make_command(ClientRobotCommand& command, OwnRobot* ownRobot) {
 		// Forager robot. Pick up any pucks we can. Don't worry about enemy robots.
 
-		// Are we interested in EVENT_CAN_PICKUP_PUCK event?
 		// Check if we are on a puck. If so, just pick it up.
 		//DONT for now.
-		if (hasCanPickUpPuckEvent(ownRobot)) {
-			SeenPuck* pickup = findPickUpablePuck(ownRobot);
-			if (pickup != NULL) {
-        command.setPuckPickup(true);
-				return;
-			}
-		}
+    SeenPuck* pickup = findPickUpablePuck(ownRobot);
+    if (pickup != NULL) {
+      command.setPuckPickup(true);
+      return;
+    }
 
 		// Check if we are not moving
-		if (hasNotMovingEvent(ownRobot)) {
+    if (ownRobot->vx == 0.0 && ownRobot->vy == 0.0) {
 			command.setVx(((rand() % 11) / 10.0) - 0.5);
 			command.setVy(((rand() % 11) / 10.0) - 0.5);
 			return;
