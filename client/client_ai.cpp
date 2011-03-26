@@ -14,6 +14,7 @@ SeenPuck* ClientAi::findClosestPuck(OwnRobot* ownRobot) {
 	vector<SeenPuck*>::iterator closest;
 	double minDistance = 9000.01; // Over nine thousand!
 	double tempDistance;
+	bool found = false;
 	for (vector<SeenPuck*>::iterator it = ownRobot->seenPucks.begin(); it != ownRobot->seenPucks.end(); it++) {
 		tempDistance = relDistance((*it)->relx, (*it)->rely);
 		//Don't return pucks in our home
@@ -23,7 +24,11 @@ SeenPuck* ClientAi::findClosestPuck(OwnRobot* ownRobot) {
 		if (tempDistance < minDistance) {
 			minDistance = tempDistance;
 			closest = it;
+			found = true;
 		}
+	}
+	if(!found){
+		return NULL;
 	}
 	return *closest;
 }
@@ -37,6 +42,7 @@ SeenPuck* ClientAi::findSecondClosestPuck(OwnRobot* ownRobot) {
 	vector<SeenPuck*>::iterator secondClosest;
 	double minDistance = 9000.01; // Over nine thousand!
 	double tempDistance;
+	bool found = false;
 	for (vector<SeenPuck*>::iterator it = ownRobot->seenPucks.begin(); it != ownRobot->seenPucks.end(); it++) {
 		tempDistance = relDistance((*it)->relx, (*it)->rely);
 		//Don't return pucks in our home
@@ -46,7 +52,12 @@ SeenPuck* ClientAi::findSecondClosestPuck(OwnRobot* ownRobot) {
 		if (tempDistance < minDistance) {
 			minDistance = tempDistance;
 			secondClosest = it;
+			found = true;
 		}
+	}
+
+	if(!found){
+		return NULL;
 	}
 	return *secondClosest;
 }
