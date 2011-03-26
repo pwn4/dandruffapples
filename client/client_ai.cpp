@@ -107,6 +107,15 @@ bool ClientAi::ImClosestToPuck(OwnRobot* ownRobot, SeenPuck* seenPuck) {
 		return (myDist < hisDist);
 	}
 }
+//Am I STRICTLY SECOND closest to the puck?
+bool ClientAi::ImSecondClosestToPuck(OwnRobot* ownRobot, SeenPuck* seenPuck){
+	if (ownRobot->seenRobots.size() == 0){//I see no other robots. I AM THE CLOSEST
+	}
+	else if(robotSecondClosestToPuck(ownRobot, seenPuck) == NULL){
+		return true;
+	}
+	return false;
+}
 
 //Which robot is closest to this puck?
 SeenRobot* ClientAi::robotClosestToPuck(OwnRobot* ownRobot, SeenPuck* seenPuck) {
@@ -124,6 +133,54 @@ SeenRobot* ClientAi::robotClosestToPuck(OwnRobot* ownRobot, SeenPuck* seenPuck) 
 		}
 	}
 	return *closest;
+}
+
+//Which robot is second closest to this puck?
+//Return: NULL if I am second closest or there is no second closest robot
+//Return: SeenRobot second closest to puck otherwise
+SeenRobot* ClientAi::robotSecondClosestToPuck(OwnRobot* ownRobot, SeenPuck* seenPuck) {
+	if (ownRobot->seenRobots.size() == 0){ //There is no other robot around to be second closest
+		return NULL;
+	}
+
+	vector<SeenRobot*>::iterator closest2;
+	double minDistance = 9000.01; // Over nine thousand!
+	double tempDistance;
+	bool ImClosest = true;
+	SeenRobot* closest = NULL;
+	if(ImClosestToPuck(ownRobot, seenPuck)){//I think I'm closest to puck. Second closest is in SeenRobot
+	}
+	else{//some other robot is closest to the puck. so who's second closest?
+		ImClosest = false;
+		closest = robotClosestToPuck(ownRobot, seenPuck);
+	}
+
+	for (vector<SeenRobot*>::iterator it = ownRobot->seenRobots.begin(); it != ownRobot->seenRobots.end(); it++) {
+		if(!ImClosest && ((*it) == closest)){//skip the closet robot if I'm not the closest
+			continue;
+		}
+		tempDistance = relDistance((*it)->relx - seenPuck->relx, (*it)->rely - seenPuck->rely);
+		if (tempDistance < minDistance) {
+			minDistance = tempDistance;
+			closest2 = it;
+		}
+	}
+	//Got potential second closest robot.
+	//So, either I was the closest, then second closest is a SeenRobot
+	//OR some other robot was closest, and now either another robot is second closest or I am.
+	if(ImClosest){//I can't be the second closest
+		return *closest2;
+	}
+	else{
+		double hisDist = relDistance((*closest2)->relx - seenPuck->relx, (*closest2)->rely - seenPuck->rely);
+		double myDist = relDistance(seenPuck->relx, seenPuck->rely);
+		if(myDist < hisDist){//I'm second closest!
+			return NULL;
+		}
+		else{
+			return *closest2;
+		}
+	}
 }
 
 //Get the closest robot to me in every direction

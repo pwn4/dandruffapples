@@ -277,7 +277,9 @@ public:
 		SeenPuck* findSecondClosestPuck(OwnRobot* ownRobot);
     SeenRobot* findClosestRobot(OwnRobot* ownRobot);
 		SeenRobot* robotClosestToPuck(OwnRobot* ownRobot, SeenPuck* seenPuck);
+		SeenRobot* robotSecondClosestToPuck(OwnRobot* ownRobot, SeenPuck* seenPuck);
 		bool ImClosestToPuck(OwnRobot* ownRobot, SeenPuck* seenPuck);
+		bool ImSecondClosestToPuck(OwnRobot* ownRobot, SeenPuck* seenPuck);
 		bool canPickUpPuck(OwnRobot* ownRobot);
 		bool closeToHome(OwnRobot* ownRobot, double dist);
     bool insideOurHome(OwnRobot* ownRobot);
