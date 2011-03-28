@@ -1,6 +1,12 @@
+message HomeScore {
+  required uint32 team = 1;
+  required uint32 score = 2;
+}
+
 message RegionRender {
   required uint32 timestep = 1;
   repeated uint32 image = 2;
+  repeated HomeScore score = 3;
 }
 
 message SendMoreWorldViews{
