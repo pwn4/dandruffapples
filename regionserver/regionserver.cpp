@@ -871,11 +871,16 @@ void run() {
 					} catch (SystemError e) {
 						close(c->fd);
 						sendMoreWorldViews[c->fd].value = false;
-						cout << "world viewer with fd=" << c->fd << " disconnected" << endl;
 
 						// Remove from sets
 						worldviewers.erase(find(worldviewers.begin(), worldviewers.end(), c));
 						delete c;
+
+            if(e.number() == ECONNRESET) {
+              cout << "world viewer with fd=" << c->fd << " disconnected" << endl;
+            } else {
+              throw e;
+            }
 					}
 					break;
 				case net::connection::REGION:
