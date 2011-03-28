@@ -244,7 +244,7 @@ gboolean drawingAreaExpose(GtkWidget *widgetDrawingArea, GdkEventExpose *event, 
 		}
 
 		//draw a rectangle around the drawing area
-		cairo_rectangle(cr, 0, 0, imageWidth, imageHeight);
+		cairo_arc(cr, origin[0], origin[1], imageWidth, 0, 2 * M_PI);
 		cairo_stroke(cr);
 
 		cairo_destroy(cr);
