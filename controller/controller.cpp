@@ -451,8 +451,8 @@ int main(int argc, char** argv)
 	              }
 
 		            //force flush the message before we clear the backlog (OR ELSE)
-                while(robotServer->queue.remaining() != 0)
-                  robotServer->queue.doWrite();
+                // TODO: Don't block!
+                robotServer->queue.flush();
 
                 //NOW we can clear the backlog
                 robotBacklog->clear();
@@ -493,8 +493,8 @@ int main(int argc, char** argv)
 	                }
 
 		              //force flush the message before we clear the backlog (OR ELSE)
-                  while(robotServer->queue.remaining() != 0)
-                    robotServer->queue.doWrite();
+                  // TODO: Don't block!
+                  robotServer->queue.flush();
 
                   //NOW we can clear the backlog
                   robotBacklog->clear();
