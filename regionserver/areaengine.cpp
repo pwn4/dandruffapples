@@ -149,8 +149,11 @@ void AreaEngine::Step(bool generateImage){
   //I dunno if this is the right place
   for (int h = 0; h < homes.size(); h++) {
     if (homes[h]->puckTimers.size() > 0 && (homes[h]->puckTimers.front()->startTime + 300) < curStep) { 
-      //RemovePuck()
-      //AddRandomPuck()
+      PuckTimer *puckstack = *(homes[h]->puckTimers.begin());
+      RemovePuck(puckstack->x, puckstack->y, -1);
+      double newx = rand() % regionRatio;
+      double newy = rand() % regionRatio;
+      AddPuck(newx, newy);
       homes[h]->puckTimers.erase(homes[h]->puckTimers.begin());
       homes[h]->points++;
       cout << "TEAM " << homes[h]->team << " JUST GOT A POINT!! TOTAL: " << homes[h]->points << endl;
