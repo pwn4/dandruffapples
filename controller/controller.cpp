@@ -558,28 +558,22 @@ int main(int argc, char** argv)
           	c->set_writing(false);
           }
           if(flushing) {
-            bool incomplete = false;
-
             // Check for remaining data to write
 						vector<ServerConnection*>::iterator serversEnd = servers.end();
 						vector<ClientConnection*>::iterator clientsEnd = clients.end();
             for(vector<ServerConnection*>::iterator i = servers.begin();
                 i != serversEnd; ++i) {
-              incomplete = (*i)->queue.remaining();
-              if(incomplete) {
+              if((*i)->queue.remaining()) {
                 break;
               }
             }
             for(vector<ClientConnection*>::iterator i = clients.begin();
                 i != clientsEnd; ++i) {
-              incomplete = (*i)->queue.remaining();
-              if(incomplete) {
+              if((*i)->queue.remaining()) {
                 break;
               }
             }
-            if(incomplete) {
-              break;
-            }
+
             // Flush completed; Tell the clock we're done and resume reading
             flushing = false;
             clockconn.queue.push(MSG_TIMESTEPDONE, tsdone);
