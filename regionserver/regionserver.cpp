@@ -285,6 +285,10 @@ void run() {
 							worldinfo.ParseFromArray(buffer, len);
 							cout << "Got world info." << endl;
 
+							int lastRegionIndex = worldinfo.region_size() - 1;
+							myId = worldinfo.region(lastRegionIndex).id();
+							cout << "My id: " << myId << endl;				
+
 							//handle the homes
 							HomeInfo *homeinfo;
 							for(int i = 0; i < worldinfo.home_size(); i++ )
@@ -292,8 +296,9 @@ void run() {
 								homeinfo=worldinfo.mutable_home(i);
 								if (homeinfo->region_id() == myId )
 								{
-									myHomes.push_back(homeinfo);
-									cout<<"Tracking home at ("+helper::toString(homeinfo->home_x())+", "+helper::toString(homeinfo->home_y())+")"<<endl;
+									myHomes.push_back(homeinfo); 
+									regionarea->AddHome(homeinfo->home_x(), homeinfo->home_y(), homeinfo->team());
+									cout<<"Tracking home at ("+helper::toString(worldinfo.mutable_home(i)->home_x())+", "+helper::toString(worldinfo.mutable_home(i)->home_y())+")"<<endl;
 								}
 							}
 
@@ -323,10 +328,6 @@ void run() {
 									regionarea->AddPuck(a, b);
 									pucks++;
               					}
-
-								int lastRegionIndex = worldinfo.region_size() - 1;
-								myId = worldinfo.region(lastRegionIndex).id();
-								cout << "My id: " << myId << endl;
 
 							  // Draw this:
 							  // 00 | 01 | 02

@@ -51,6 +51,7 @@ AreaEngine::AreaEngine(int robotSize, int regionSize, int minElementSize, double
   render.set_timestep(curStep);
   sightSquare = (viewDist+robotRatio)*(viewDist+robotRatio);
   collisionSquare = robotRatio*robotRatio;
+  homeRadiusSquare = (HOMEDIAMETER) * (HOMEDIAMETER);
 
   //create our storage array with element size determined by our parameters
   //ensure regionSize can be split nicely
@@ -111,6 +112,14 @@ bool CompareCommand::operator()(Command* const &r1, Command* const &r2) // Retur
    return false;
 }
 
+//this method checks if a home at (x1,y1) has a puck at (x2,y2) @@@@@
+bool AreaEngine::Captures(double x1, double y1, double x2, double y2){
+//cout << "NUMBERS: " << (x1-x2)*(x1-x2) + (y1-y2)*(y1-y2) << endl;
+  if((x1-x2)*(x1-x2) + (y1-y2)*(y1-y2) <= homeRadiusSquare) //20 is the radius
+    return true;
+  return false;
+}
+
 //this method checks if a robot at (x1,y1) sees a robot at (x2,y2)
 bool AreaEngine::Sees(double x1, double y1, double x2, double y2){
 //assumes robots can see from any part of themselves
@@ -135,6 +144,18 @@ void AreaEngine::Step(bool generateImage){
   Index topLeft, botRight;
   map<int, RobotObject*>::iterator robotIt;
   map<int, bool> *nowSeenBy;
+
+  //Earn some Points Here
+  //I dunno if this is the right place
+  for (int h = 0; h < homes.size(); h++) {
+    if (homes[h]->puckTimers.size() > 0 && (homes[h]->puckTimers.front()->startTime + 300) < curStep) { 
+      //RemovePuck()
+      //AddRandomPuck()
+      homes[h]->puckTimers.erase(homes[h]->puckTimers.begin());
+      homes[h]->points++;
+      cout << "TEAM " << homes[h]->team << " JUST GOT A POINT!! TOTAL: " << homes[h]->points << endl;
+    }
+  }
 
   if(curStep % 2 == 1)
   {
@@ -180,6 +201,20 @@ void AreaEngine::Step(bool generateImage){
           {
             curRobot->holdingPuck = true;
             serverrobot.set_haspuck(true);
+            
+	    ////cout << "SOMEBODY IS PICKING UP A PUCK" << endl;
+            //check for home to cancel scoring @@@@@ Untested TODO
+            for (int l = 0; l < homes.size(); l++) {
+              if (Captures(homes[l]->x, homes[l]->y, curRobot->x, curRobot->y)) {
+                for (int m = 1; m < homes[l]->puckTimers.size(); m++) {
+                  if (homes[l]->puckTimers[m]->x == curRobot->x && homes[l]->puckTimers[m]->y == curRobot->y) {
+                    homes[l]->puckTimers.erase(homes[l]->puckTimers.begin() + m);
+		    break;
+	          }
+                }
+              }
+            }
+
           }
         }else if(newCommand->puckAction == 2)
         {
@@ -188,6 +223,17 @@ void AreaEngine::Step(bool generateImage){
             PuckStackObject * curStack = AddPuck(curRobot->x, curRobot->y, curRobot->id);
             curRobot->holdingPuck = false;
             serverrobot.set_haspuck(false);
+	    
+	    ////cout << "SOMEBODY IS DROPPING A PUCK" << endl;
+            //check for home to start scoring @@@@@ should have this as its own function?
+  	    for (int i = 0; i < homes.size(); i++) {
+		if (Captures(homes[i]->x, homes[i]->y, curRobot->x, curRobot->y)) {			
+			PuckTimer* newTimer = new PuckTimer(curRobot->x, curRobot->y, curStep);
+      			homes[i]->puckTimers.push_back(newTimer);
+      			////cout << "PUCK ENTERED QUEUE" << endl;
+    		}
+
+  	    }
 
             //tell the client
             PuckStack puckUpdate;
@@ -902,7 +948,7 @@ void AreaEngine::DropPuck(int robotId){
   newCommand->puckAction = 2;
 
   clientChangeQueue.push(newCommand);
-
+  
 }
 
 //set a puck stack in the system.
@@ -1089,6 +1135,13 @@ bool AreaEngine::RemovePuck(double x, double y, int robotId){
     }
 
   return false;
+}
+
+//Add a Home to the System.
+void AreaEngine::AddHome(double newx, double newy, int team) {
+  HomeObject* newhome = new HomeObject(newx, newy, team);
+  homes.push_back(newhome);
+  cout << "TEST TEAM: " << newhome->team << "X: " << newhome->x << "Y: " << newhome->y << endl;
 }
 
 //add a robot to the system.
