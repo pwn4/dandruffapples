@@ -48,17 +48,16 @@ struct RobotObject{
   double x, y;
   double angle;
   double vx, vy;
-  bool holdingPuck;
   Index arrayLocation;
   time_t lastCollision;
   map<int, bool> lastSeenBy;
   RobotObject * nextRobot;
   int controllerfd;
   int team;
+  bool holdingPuck;
 
-
-  RobotObject(int newid, double newx, double newy, double newa, Index aLoc, int curStep, int teamId) : id(newid), lastStep(curStep-1), x(newx), y(newy), angle(newa), vx(0), vy(0), arrayLocation(aLoc), lastCollision(time(NULL)), nextRobot(NULL), controllerfd(-1), team(teamId) {}
-  RobotObject(int newid, double newx, double newy, double newa, double newvx, double newvy, Index aLoc, int curStep, int teamId) : id(newid), lastStep(curStep-1), x(newx), y(newy), angle(newa), vx(newvx), vy(newvy), arrayLocation(aLoc), lastCollision(time(NULL)), nextRobot(NULL), controllerfd(-1), team(teamId) {}
+  RobotObject(int newid, double newx, double newy, double newa, Index aLoc, int curStep, int teamId, bool hasPuck) : id(newid), lastStep(curStep-1), x(newx), y(newy), angle(newa), vx(0), vy(0), arrayLocation(aLoc), lastCollision(time(NULL)), nextRobot(NULL), controllerfd(-1), team(teamId), holdingPuck(hasPuck) {}
+  RobotObject(int newid, double newx, double newy, double newa, double newvx, double newvy, Index aLoc, int curStep, int teamId, bool hasPuck) : id(newid), lastStep(curStep-1), x(newx), y(newy), angle(newa), vx(newvx), vy(newvy), arrayLocation(aLoc), lastCollision(time(NULL)), nextRobot(NULL), controllerfd(-1), team(teamId), holdingPuck(hasPuck) {}
 };
 
 struct PuckStackObject{
@@ -143,7 +142,7 @@ public:
   void SetPuckStack(double newx, double newy, int newc);
 
   void AddRobot(RobotObject * oldRobot);
-  RobotObject* AddRobot(int robotId, double newx, double newy, double newa, double newvx, double newvy, int atStep, int teamId, bool broadcast);
+  RobotObject* AddRobot(int robotId, double newx, double newy, double newa, double newvx, double newvy, int atStep, int teamId, bool hasPuck, bool broadcast);
 
   void RemoveRobot(int robotId, int xInd, int yInd, bool freeMem);
 
