@@ -468,7 +468,7 @@ void run() {
 									  myRobotTeams.push_back(i->team());
 
 									  //and add the robot! It's THAT easy!
-									  regionarea->AddRobot(i->id(), i->x()+MINELEMENTSIZE, i->y()+MINELEMENTSIZE, 0, 0, 0, 0, i->team(), true);
+									  regionarea->AddRobot(i->id(), i->x()+MINELEMENTSIZE, i->y()+MINELEMENTSIZE, 0, 0, 0, 0, i->team(), false, true);
 									  numRobots++;
 								  }
 							  }
