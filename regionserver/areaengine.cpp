@@ -554,6 +554,16 @@ void AreaEngine::Step(bool generateImage){
       int minY = 0;
       render.clear_image();
       render.set_timestep(curStep);
+      
+      //add homedata to the regionrender
+      render.clear_score();
+      for(vector<HomeObject*>::iterator homeIt = homes.begin(); homeIt != homes.end(); homeIt++)
+      {
+        HomeScore * newscore = render.add_score();
+        newscore->set_team((*homeIt)->team);
+        newscore->set_score((*homeIt)->points);
+      }
+      
       int curY = 0;
 
       map<PuckStackObject*, bool>::const_iterator puckIt;
