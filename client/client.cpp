@@ -627,12 +627,12 @@ gboolean Client::run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 		puckstack.ParseFromArray(buffer, len);
 
 		//temp fix
-		if(puckstack.stacksize() == -1)
+		/*if(puckstack.stacksize() == -1)
 		{
 		  if(weControlRobot(puckstack.robotmover()))
 		    ownRobots[robotIdToIndex(puckstack.robotmover())]->hasPuck=false;
 		  break;
-		}
+		}*/
 
 		int index;
 		int listSize = puckstack.seespuckstack_size();
@@ -653,7 +653,7 @@ gboolean Client::run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 					  if((*it)->stackSize > (int)puckstack.stacksize())
 					  {
 					    //check if our robot has picked it up
-					    //if(abs(puckstack.seespuckstack(i).relx()) < ROBOTDIAMETER/2 && abs(puckstack.seespuckstack(i).rely()) < ROBOTDIAMETER/2){
+					    //if(abs(puckstack.seespuckstack(i).relx()) < ROBOTDIAMETER/2 && abs(puckstack.seespuckstack(i).rely()) < ROBOTDIAMETER/2){				    
 					    if(puckstack.robotmover() == indexToRobotId(index))
 					    	ownRobots[index]->hasPuck = true;
 
