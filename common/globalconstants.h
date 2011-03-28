@@ -9,6 +9,7 @@
 #define WVZOOMSPEED 0.2
 #define WVMINZOOMED 0.1
 #define WVMAXZOOMED 10
+#define MINDIAMETER 1.0
 
 //enable regionserver logging to file
 //#define ENABLE_LOGGING
