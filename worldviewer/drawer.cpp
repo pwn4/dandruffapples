@@ -28,6 +28,11 @@ void UnpackImage(cairo_t *cr, RegionRender* render, float drawFactor, double rob
 	int curY = 0;
 	ColorObject color;
 
+  //we want those goddamn region boundaries, dammit!!
+  cairo_rectangle (cr, 0, 0, IMAGEWIDTH* drawFactor, IMAGEHEIGHT* drawFactor);
+  cairo_set_source_rgb(cr, .5, .5, .5);
+  cairo_stroke (cr);
+
 	//draw the homes separately
 	cairo_set_line_width(cr, 2);
 
