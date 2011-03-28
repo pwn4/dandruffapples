@@ -212,7 +212,7 @@ void AreaEngine::Step(bool generateImage){
           }
         }
 
-        serverrobot.set_laststep(-1); //for stray packet detection
+        serverrobot.set_laststep(curStep); //for stray packet detection
         //serverrobot.set_haspuck(robots[robotId]->holdingPuck);
 
         // Inform robots that can see this one of state change.
@@ -362,7 +362,7 @@ void AreaEngine::Step(bool generateImage){
 
       ServerRobot serverrobot;
       serverrobot.set_id(curRobot->id);
-      serverrobot.set_laststep(-1); //set this to -1 so that we can detect stray messages
+      serverrobot.set_laststep(curStep); //set this to curStep so that we can detect ill-timed messages
       serverrobot.set_velocityx(curRobot->vx);
       serverrobot.set_velocityy(curRobot->vy);
       serverrobot.set_angle(curRobot->angle);
@@ -614,7 +614,7 @@ void AreaEngine::Step(bool generateImage){
       //create the serverrobot object
       ServerRobot serverrobot;
       serverrobot.set_id(curRobot->id);
-      serverrobot.set_laststep(-1);   //allow stray msg detection
+      serverrobot.set_laststep(curStep);   //allow stray msg detection
       serverrobot.set_velocityx(curRobot->vx);
       serverrobot.set_velocityy(curRobot->vy);
       serverrobot.set_angle(curRobot->angle);
