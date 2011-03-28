@@ -642,9 +642,9 @@ void AreaEngine::Step(bool generateImage){
               throw SystemError("AreaEngine: Draw Size requested too large");
 
             render.add_image(BytePack(pdrawX, 65534));  //let 65534 be reserved for pucks
-            puckIt++;
-            paintPuck = (*puckIt).first;
           }
+          puckIt++;
+          paintPuck = (*puckIt).first;
         }
       }
     }
