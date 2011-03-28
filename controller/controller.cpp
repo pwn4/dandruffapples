@@ -565,17 +565,17 @@ int main(int argc, char** argv)
 						vector<ClientConnection*>::iterator clientsEnd = clients.end();
             for(vector<ServerConnection*>::iterator i = servers.begin();
                 i != serversEnd; ++i) {
+              incomplete = (*i)->queue.remaining();
               if(incomplete) {
                 break;
               }
-              incomplete = (*i)->queue.remaining();
             }
             for(vector<ClientConnection*>::iterator i = clients.begin();
                 i != clientsEnd; ++i) {
+              incomplete = (*i)->queue.remaining();
               if(incomplete) {
                 break;
               }
-              incomplete = (*i)->queue.remaining();
             }
             if(incomplete) {
               break;
