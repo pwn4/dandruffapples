@@ -449,12 +449,6 @@ int main(int argc, char** argv)
                   robotServer->queue.push(MSG_CLIENTROBOT, (*robotBacklog)[i]);
 		              robotServer->set_writing(true);
 	              }
-
-		            //force flush the message before we clear the backlog (OR ELSE)
-                // TODO: Don't block!
-                robotServer->queue.flush();
-
-                //NOW we can clear the backlog
                 robotBacklog->clear();
               }
 
@@ -491,12 +485,6 @@ int main(int argc, char** argv)
                     robotServer->queue.push(MSG_CLIENTROBOT, (*robotBacklog)[i]);
 		                robotServer->set_writing(true);
 	                }
-
-		              //force flush the message before we clear the backlog (OR ELSE)
-                  // TODO: Don't block!
-                  robotServer->queue.flush();
-
-                  //NOW we can clear the backlog
                   robotBacklog->clear();
                 }
               }
