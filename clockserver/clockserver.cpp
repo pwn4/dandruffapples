@@ -136,7 +136,7 @@ void checkNewStep() {
       }
       cout << endl;
 		}
-
+//usleep(10000);
 		// All servers are ready, prepare to send next step
 		ready = 0;
 		timestep.set_timestep(step++);
@@ -152,7 +152,6 @@ void checkNewStep() {
 			(*i)->set_writing(true);
 		}
 	}
-
 }
 
 //handle the drawing of home
@@ -288,7 +287,7 @@ int main(int argc, char **argv) {
 
 	bool *teamclaimed;
 	// Create initial world state
-	worldinfo.set_numpucks(1000);//send the number of pucks in the region
+	worldinfo.set_numpucks(12346);//send the number of pucks in the region
 	unsigned teams = atoi(configuration["TEAMS"].c_str());
 	unsigned robots_per_team = atoi(configuration["ROBOTS_PER_TEAM"].c_str());
   unsigned teamsLeft = teams;
