@@ -5,6 +5,7 @@
 #include <cairo.h>
 #include <stdio.h>
 #include <cmath>
+#include <algorithm>
 #include "../common/globalconstants.h"
 #include "../common/regionrender.pb.h"
 #include "../common/worldinfo.pb.h"
