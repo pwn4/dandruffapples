@@ -122,6 +122,17 @@ char *parse_port(char *input) {
 	}
 }
 
+//must declare these up here
+TimestepDone tsdone;
+
+void transmitTsdone(net::EpollConnection* dest){
+  //inform controllers that we're done as well so they can sync
+
+  //Respond with done message
+  dest->queue.push(MSG_TIMESTEPDONE, tsdone);
+  dest->set_writing(true);
+}
+
 //the main function
 void run() {
 	map<int, Bool> sendMoreWorldViews;
@@ -204,7 +215,6 @@ void run() {
 	MessageWriter logWriter(logfd);
 #endif
 	TimestepUpdate timestep;
-	TimestepDone tsdone;
 	tsdone.set_done(true);
 	WorldInfo worldinfo;
 	RegionInfo regioninfo;
@@ -435,10 +445,13 @@ void run() {
 							}
 
 							//send the timestepdone packet to tell the clock server we're ready
-							writer.init(MSG_TIMESTEPDONE, tsdone);
+							/*writer.init(MSG_TIMESTEPDONE, tsdone);
 							for (bool complete = false; !complete;) {
 								complete = writer.doWrite();
-							}
+							}*/
+							for(vector<net::EpollConnection*>::iterator i = controllers.begin(); i != controllers.end(); i++)
+							  transmitTsdone(*i);
+							transmitTsdone(&clockconn);
 
 							//NOW you can start the clock
 							cout << "Connected to neighbours! Ready for simulation to begin." << endl;
@@ -555,8 +568,11 @@ void run() {
 
 	            if((ready && sendTsdone)){
                 //Respond with done message
-                clockconn.queue.push(MSG_TIMESTEPDONE, tsdone);
-                clockconn.set_writing(true);
+                for(vector<net::EpollConnection*>::iterator i = controllers.begin(); i != controllers.end(); i++)
+							    transmitTsdone(*i);
+                
+                transmitTsdone(&clockconn);
+                
                 sendTsdone = false;
               }
 
@@ -668,8 +684,11 @@ void run() {
 
 		            if((ready && sendTsdone)){
                   //Respond with done message
-	                clockconn.queue.push(MSG_TIMESTEPDONE, tsdone);
-	                clockconn.set_writing(true);
+	                for(vector<net::EpollConnection*>::iterator i = controllers.begin(); i != controllers.end(); i++)
+							      transmitTsdone(*i);
+							  
+	                transmitTsdone(&clockconn);
+	                
 	                sendTsdone = false;
                 }
 
