@@ -179,6 +179,7 @@ void AreaEngine::Step(bool generateImage){
           if(RemovePuck(curRobot->x, curRobot->y, curRobot->id))  //can pick up a puck
           {
             curRobot->holdingPuck = true;
+            serverrobot.set_haspuck(true);
           }
         }else if(newCommand->puckAction == 2)
         {
@@ -186,6 +187,7 @@ void AreaEngine::Step(bool generateImage){
           {
             PuckStackObject * curStack = AddPuck(curRobot->x, curRobot->y, curRobot->id);
             curRobot->holdingPuck = false;
+            serverrobot.set_haspuck(false);
 
             //tell the client
             PuckStack puckUpdate;
@@ -234,7 +236,7 @@ void AreaEngine::Step(bool generateImage){
           (*it)->set_writing(true);
         }
 
-        // Broadcast velocity change to other servers - BroadcastRobot checks if robot is in border cell
+        // Broadcast velocity and other changes to other servers - BroadcastRobot checks if robot is in border cell
         BroadcastRobot(curRobot, Index(regionBounds/2, regionBounds/2), curRobot->arrayLocation, curStep, regionUpdate);
 
         delete newCommand;
@@ -881,28 +883,7 @@ void AreaEngine::DropPuck(int robotId){
   RobotObject * curRobot = robots.find(robotId)->second;
 
   if(!curRobot->holdingPuck) //dont have a puck
-  {
-  //temp fix
-  //tell the client
-  PuckStack puckUpdate;
-  puckUpdate.set_stacksize(-1);
-  puckUpdate.set_robotmover(curRobot->id);
-
-  SeesPuckStack* seesPuckStack = puckUpdate.add_seespuckstack();
-  seesPuckStack->set_viewlostid(false);
-  seesPuckStack->set_seenbyid(curRobot->id);
-  seesPuckStack->set_relx(0);
-  seesPuckStack->set_rely(0);
-
-  for (vector<EpollConnection*>::const_iterator it =
-       controllers.begin(); it != controllers.end(); it++) {
-    (*it)->queue.push(MSG_PUCKSTACK, puckUpdate);
-    (*it)->set_writing(true);
-  }
-
-  //cout << "YOU DONT HAVE A PUCK DAMMIT" << endl;
-  return;
-  }
+    return;
 
   //Add the puck
   //AddPuck(curRobot->x, curRobot->y);
@@ -1128,11 +1109,11 @@ void AreaEngine::AddRobot(RobotObject * oldRobot){
 
 }
 
-RobotObject* AreaEngine::AddRobot(int robotId, double newx, double newy, double newa, double newvx, double newvy, int atStep, int teamId, bool broadcast){
+RobotObject* AreaEngine::AddRobot(int robotId, double newx, double newy, double newa, double newvx, double newvy, int atStep, int teamId, bool hasPuck, bool broadcast){
   //O(1) insertion
   Index robotIndices = getRobotIndices(newx, newy, true);
 
-  RobotObject* newRobot = new RobotObject(robotId, newx, newy, newa, newvx, newvy, robotIndices, atStep, teamId);
+  RobotObject* newRobot = new RobotObject(robotId, newx, newy, newa, newvx, newvy, robotIndices, atStep, teamId, hasPuck);
 
   //add the robot to our robots vector (used for timestepping)
   robots.insert(pair<int, RobotObject*>(robotId, newRobot));
@@ -1288,7 +1269,7 @@ void AreaEngine::GotServerRobot(ServerRobot message){
       return;
     }
 
-    AddRobot(message.id(), message.x(), message.y(), message.angle(), message.velocityx(), message.velocityy(), message.laststep(), message.team(), false);
+    AddRobot(message.id(), message.x(), message.y(), message.angle(), message.velocityx(), message.velocityy(), message.laststep(), message.team(), message.haspuck(), false);
   }else{
     //modify existing;
 
@@ -1296,7 +1277,9 @@ void AreaEngine::GotServerRobot(ServerRobot message){
     if(message.laststep() < curStep-1)
     {
       //please comment spammy debugs before commiting
-      //cout << "Received out of sync serverrobot mod (dropping it): msgstep " << message.laststep() << ", curstep " << curStep << ", x " << message.x() << ", y " << message.y() << ", marker " << marker << endl;
+      //Not a spammy debug. Supposed to be a freak occurrence. If it's spammy, then something is seriously wrong.
+      //Although, not necessarily 'quite' wrong enough to stop the simulation.
+      cout << "Received out of sync serverrobot mod (dropping it): msgstep " << message.laststep() << ", curstep " << curStep << ", x " << message.x() << ", y " << message.y() << endl;
 
       //throw "AreaEngine: ServerRobot received late. Impossible desync occurred.";
       return;
@@ -1315,6 +1298,10 @@ void AreaEngine::GotServerRobot(ServerRobot message){
 
       if(message.has_angle())
         newCommand->angle = message.angle();
+        
+      //puck holding states "shouldn't" need to be timed. Process immediately.
+      if(message.has_haspuck())
+        robots[message.id()]->holdingPuck = message.haspuck();
 
       serverChangeQueue.push(newCommand);
     }
@@ -1337,9 +1324,11 @@ void AreaEngine::BroadcastRobot(RobotObject *curRobot, Index oldIndices, Index n
   infoTemplate.set_team(curRobot->team);
   infoTemplate.set_velocityx(curRobot->vx);
   infoTemplate.set_velocityy(curRobot->vy);
-
+  infoTemplate.set_haspuck(curRobot->holdingPuck);
   infoTemplate.set_laststep(step);
 
+  //note, we aren't sending seesserverrobot Information. This means after every region change,
+  //clients are informed of their neighbours again. This may be an area for optimization later if necessary.
 
   if(newIndices.x == 1){
     if(oldIndices.x > 1){
