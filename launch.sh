@@ -132,22 +132,12 @@ do
     echo "- Trying $HOST"
     #check for host being up
     INUSE=""
-    if ! INUSE=`$SSHCOMMAND $HOST "w | awk ' {if(NR>2 && \$1!=wai && !(\$5 ~ /.*m/ || \$5 ~ /.*days/)) print \$1} ' wai=\`whoami\`"`
+    if ! $SSHCOMMAND $HOST "true"
     then
 	echo "- Skipping unresponsive host $HOST"
         continue
     fi
 
-    #check for host being used
-    INUSE=${INUSE//[[:space:]]}
-    OTHERS=$INUSE #old artifact left in for the time being
-    OTHERS=${OTHERS//[[:space:]]}
-    if [ "$OTHERS" != "" ]
-    then
-        echo "- Skipping in-use host $HOST, active users $OTHERS"
-        continue
-    fi
-    
     if [ $CONTROLLERS_LEFT -gt 0 ]
     then
         sleep 0.1
