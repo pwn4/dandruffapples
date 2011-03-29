@@ -51,7 +51,7 @@ AreaEngine::AreaEngine(int robotSize, int regionSize, int minElementSize, double
   render.set_timestep(curStep);
   sightSquare = (viewDist+robotRatio)*(viewDist+robotRatio);
   collisionSquare = robotRatio*robotRatio;
-  homeRadiusSquare = (HOMEDIAMETER) * (HOMEDIAMETER);
+  homeRadiusSquare = (HOMEDIAMETER/2) * (HOMEDIAMETER/2);
 
   //create our storage array with element size determined by our parameters
   //ensure regionSize can be split nicely
@@ -148,7 +148,7 @@ void AreaEngine::Step(bool generateImage){
   //Earn some Points Here
   //I dunno if this is the right place
   for (unsigned int h = 0; h < homes.size(); h++) {
-    if (homes[h]->puckTimers.size() > 0 && (homes[h]->puckTimers.front()->startTime + 300) < curStep) { 
+    while (homes[h]->puckTimers.size() > 0 && (homes[h]->puckTimers.front()->startTime + 2) < curStep) { 
       PuckTimer *puckstack = *(homes[h]->puckTimers.begin());
       RemovePuck(puckstack->x, puckstack->y, -1);
       double newx = rand() % regionRatio;
@@ -243,10 +243,11 @@ void AreaEngine::Step(bool generateImage){
 	    ////cout << "SOMEBODY IS DROPPING A PUCK" << endl;
             //check for home to start scoring @@@@@ should have this as its own function?
   	    for (unsigned int i = 0; i < homes.size(); i++) {
-		if (Captures(homes[i]->x, homes[i]->y, curRobot->x, curRobot->y)) {			
-			PuckTimer* newTimer = new PuckTimer(curRobot->x, curRobot->y, curStep);
+		if (Captures(homes[i]->x, homes[i]->y, curStack->x, curStack->y)) {			
+			PuckTimer* newTimer = new PuckTimer(curStack->x, curStack->y, curStep);
       			homes[i]->puckTimers.push_back(newTimer);
       			////cout << "PUCK ENTERED QUEUE" << endl;
+      			break;
     		}
 
   	    }
