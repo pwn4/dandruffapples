@@ -11,6 +11,11 @@ int currentTimestep = 0;
 int lastTimestep = 0;
 int robotsPerTeam;
 
+
+////////////////////////////////////////////////////////////////////////
+// Client
+////////////////////////////////////////////////////////////////////////
+
 //this function loads the config file so that the server parameters don't need to be added every time
 void Client::loadConfigFile(const char* configFileName, string& pathToExe) {
 	//open the config file
@@ -821,7 +826,32 @@ void Client::initClient(int argc, char* argv[], string pathToExe, bool runClient
 	gtk_main();
 }
 
-//this is the main loop for the client
+////////////////////////////////////////////////////////////////////////
+// Own Robot
+////////////////////////////////////////////////////////////////////////
+void OwnRobot::destAppend(pair<double, double>& p) {
+	destinations.push_back(p);
+}
+
+void OwnRobot::destPush(pair<double, double>& p) {
+	destinations.push_front(p);
+}
+
+pair<double, double>& OwnRobot::destFront() {
+	return destinations.front();
+}
+
+void OwnRobot::destPopFront() {
+	destinations.pop_front();
+}
+
+bool OwnRobot::hasDestination() {
+	return destinations.size() > 0;
+}
+
+////////////////////////////////////////////////////////////////////////
+// Main Loop
+////////////////////////////////////////////////////////////////////////
 int main(int argc, char* argv[]) {
 	bool runClientViewer = false;
 	srand( time(NULL));

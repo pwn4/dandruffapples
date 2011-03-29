@@ -1,7 +1,35 @@
 #include "client.h"
 
 class Vaughan: public ClientAi {
+private:
+	double defaultSpeed;
+
+	void nextDestination(ClientRobotCommand& command, OwnRobot* ownRobot) {
+		// when we have destinations
+		while (ownRobot->hasDestination()) {
+			pair<double, double> top = ownRobot->destFront();
+			// if i'm already at the destination, ignore it
+			if (sameCoordinates(ownRobot->homeRelX, ownRobot->homeRelY, top.first, top.second)) {
+				ownRobot->destPopFront();
+				continue;
+			} else {
+			// else, go towards the destination
+				pair<double, double> v = normalize(top, defaultSpeed);
+				command.setVx(v.first);
+				command.setVy(v.second);
+				return;
+			}
+		}
+
+		// we don't have destinations
+		// TODO: maybe choose a puck that's closest to our home as the next destination?
+		// for now, randomly move
+		pair<double, double> v = polar2cartesian(defaultSpeed, degree2radian(rand()%360));
+		command.setVx(v.first);
+		command.setVy(v.second);
+	}
 public:
+	Vaughan() : defaultSpeed(8.0) {}
 	void make_command(ClientRobotCommand& command, OwnRobot* ownRobot) {
 		// Behaviour:
 		//   1. If we have no puck

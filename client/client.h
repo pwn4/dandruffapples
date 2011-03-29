@@ -14,6 +14,7 @@
 #include <math.h>
 #include <string>
 #include <map>
+#include <list>
 #include <stdlib.h>
 #include <fstream>
 #include <sys/time.h>
@@ -40,6 +41,8 @@
 using namespace std;
 using namespace google;
 using namespace protobuf;
+
+const double PI = 3.1415926535897932;
 
 class Client;
 class ClientAi;
@@ -91,15 +94,25 @@ public:
 	vector<SeenPuck*> seenPucks;
 	double homeRelX;
 	double homeRelY;
-  double desiredAngle;
+	double desiredAngle;
 
 	int index; // this is for AI memory
 	ClientAi* ai; // user-defined ai code
+
+	// Patrolling support
+	void destPush(pair<double, double>& p); // push to the next visit point
+	void destAppend(pair<double, double>& p); // append to the end of list
+	pair<double, double>& destFront(); // get the next destination
+	void destPopFront(); // remove the next destination
+	bool hasDestination(); // return true if has destination
 
 	OwnRobot() :
 		Robot(), pendingCommand(false), whenLastSent(-1), closestRobotId(-1), homeRelX(0.0),
 				homeRelY(0.0), desiredAngle(0.0), ai(NULL) {
 	}
+protected:
+	pair<double, double> temp_destination; // temporary destination, overrides destinations (used for resolving collision?)
+	list<pair<double, double> > destinations; // a series of points that robot visits one by one
 };
 
 class ClientRobotCommand {
@@ -327,6 +340,9 @@ public:
 
 	static double relDistance(double x1, double y1);
 	static bool sameCoordinates(double x1, double y1, double x2, double y2);
+	static pair<double, double> polar2cartesian(double rho, double theta);
+	static double degree2radian(double d);
+	static pair<double, double> normalize(pair<double, double> coords, double scale);
 };
 
 #endif

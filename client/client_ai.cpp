@@ -413,3 +413,22 @@ bool ClientAi::sameCoordinates(double x1, double y1, double x2, double y2) {
 	}
 	return true;
 }
+
+pair<double, double> ClientAi::polar2cartesian(double rho, double theta) {
+	double x = rho * cos(theta);
+	double y = rho * sin(theta);
+	return make_pair(x, y);
+}
+
+double ClientAi::degree2radian(double d) {
+	return d * PI / 180;
+}
+
+pair<double, double> ClientAi::normalize(pair<double, double> coords, double scale) {
+	if (coords.first == 0.0 && coords.second == 0.0) {
+		return make_pair(0, 0);
+	} else {
+		double l = sqrt(coords.first*coords.first + coords.second*coords.second);
+		return make_pair(coords.first/l*scale, coords.second/l*scale);
+	}
+}
