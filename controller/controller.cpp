@@ -28,33 +28,32 @@
 #include "../common/messagequeue.h"
 #include "../common/parseconf.h"
 #include "../common/net.h"
-#include "../common/mssconnection.h"
 #include "../common/except.h"
 #include "../common/helper.h"
 
 using namespace std;
 
 
-class ClientConnection : public net::MSSConnection {
+class ClientConnection : public net::EpollConnection {
 public:
 	size_t id;
 
-	ClientConnection(int id_, int epoll, int flags, int fd, Type type) : net::MSSConnection(epoll, flags, fd, type), id(id_) {}
+	ClientConnection(int id_, int epoll, int flags, int fd, Type type) : net::EpollConnection(epoll, flags, fd, type), id(id_) {}
 };
 
-class ServerConnection : public net::MSSConnection {
+class ServerConnection : public net::EpollConnection {
 public:
 	size_t id;
 
-	ServerConnection(int id_, int epoll, int flags, int fd, Type type) : net::MSSConnection(epoll, flags, fd, type), id(id_) {}
+	ServerConnection(int id_, int epoll, int flags, int fd, Type type) : net::EpollConnection(epoll, flags, fd, type), id(id_) {}
 };
 
 struct RobotConnection{
   vector<ClientRobot> bouncedMessages;
-  net::MSSConnection* client;
-  net::MSSConnection* server;
+  net::EpollConnection* client;
+  net::EpollConnection* server;
 
-  RobotConnection(net::MSSConnection* c, net::MSSConnection* s) : client(c), server(s) {}
+  RobotConnection(net::EpollConnection* c, net::EpollConnection* s) : client(c), server(s) {}
 };
 
 //When looking up a robot id, you can figure out which server and client it belongs to
@@ -127,7 +126,7 @@ int main(int argc, char** argv)
   int epoll = epoll_create(1000);
 
   // Add clock and client sockets to epoll
-  net::MSSConnection clockconn(epoll, EPOLLIN, clockfd, net::connection::CLOCK),
+  net::EpollConnection clockconn(epoll, EPOLLIN, clockfd, net::connection::CLOCK),
     listenconn(epoll, EPOLLIN, listenfd, net::connection::CLIENT_LISTEN);
 
   TimestepUpdate timestep;
@@ -137,8 +136,8 @@ int main(int argc, char** argv)
   tsdone.set_done(true);
   vector<ClientConnection*> clients;	//can access by client id
   vector<ServerConnection*> servers;
-	set<net::MSSConnection*> seenbyidset;		//to determine who to forward serverrobot msg to
-	pair<set<net::MSSConnection*>::iterator,bool> ret; //return value of insertion
+	set<net::EpollConnection*> seenbyidset;		//to determine who to forward serverrobot msg to
+	pair<set<net::EpollConnection*>::iterator,bool> ret; //return value of insertion
   bool flushing = false;
   unsigned regionsdone = 0;
 
@@ -172,7 +171,7 @@ int main(int argc, char** argv)
     }
 
     for(size_t i = 0; i < (unsigned)eventcount; ++i) {
-      net::MSSConnection *c = (net::MSSConnection*)events[i].data.ptr;
+      net::EpollConnection *c = (net::EpollConnection*)events[i].data.ptr;
       if(events[i].events & EPOLLIN) {
         switch(c->type) {
         case net::connection::CLOCK:
@@ -264,7 +263,8 @@ int main(int argc, char** argv)
 							vector<ClientConnection*>::iterator clientsEnd = clients.end();
               for(vector<ClientConnection*>::iterator i = clients.begin();
                   i != clientsEnd; ++i) {
-                (*i)->push(MSG_TIMESTEPUPDATE, timestep);
+                (*i)->queue.push(MSG_TIMESTEPUPDATE, timestep);
+                (*i)->set_writing(true);
               }
               break;
             }
@@ -296,8 +296,9 @@ int main(int argc, char** argv)
               }
               // Notify client of acceptance/rejection
               claimteam.clear_clientid();
-              clients[client]->push(MSG_CLAIMTEAM, claimteam);
-              clients[client]->force_writing();
+              clients[client]->queue.push(MSG_CLAIMTEAM, claimteam);
+              clients[client]->set_writing(true);
+
               break;
             }
 
@@ -323,13 +324,14 @@ int main(int argc, char** argv)
               ClientRobot clientrobot;
               clientrobot.ParseFromArray(buffer, len);
 
-              net::MSSConnection *server = (robots.find(clientrobot.id()))->second.server;
+              net::EpollConnection *server = (robots.find(clientrobot.id()))->second.server;
 							if(server == NULL){//this should not happen...
 								cout << "Ugh, robot#" << clientrobot.id() << "does not belong to a server?"
 										 << endl;
 							}
 							else{
-		            server->push(MSG_CLIENTROBOT, clientrobot);
+		            server->queue.push(MSG_CLIENTROBOT, clientrobot);
+		            server->set_writing(true);
                 sentClientRobot++;
 							}
               break;
@@ -347,8 +349,8 @@ int main(int argc, char** argv)
 
               claimteam.set_clientid(((ClientConnection*)c)->id);
 
-              clockconn.push(MSG_CLAIMTEAM, claimteam);
-              clockconn.force_writing();
+              clockconn.queue.push(MSG_CLAIMTEAM, claimteam);
+              clockconn.set_writing(true);
               break;
             }
 
@@ -376,11 +378,12 @@ int main(int argc, char** argv)
 							seenbyidset.clear();	//clear for next serverrobot msg
 
 							// Forward to the client, and any clients in the seenbyid
-              net::MSSConnection *client = (robots.find(serverrobot.id()))->second.client;
+              net::EpollConnection *client = (robots.find(serverrobot.id()))->second.client;
               if (client != NULL) {
 								ret = seenbyidset.insert(client);
 								if(ret.second){
-		              client->push(MSG_SERVERROBOT, serverrobot);
+		              client->queue.push(MSG_SERVERROBOT, serverrobot);
+		              client->set_writing(true);
 	                sentServerRobot++;
 								}
               }
@@ -392,7 +395,8 @@ int main(int argc, char** argv)
                 if (client != NULL) {
                   ret = seenbyidset.insert(client);
 									if(ret.second){
-										client->push(MSG_SERVERROBOT, serverrobot);
+										client->queue.push(MSG_SERVERROBOT, serverrobot);
+				            client->set_writing(true);
 			              sentServerRobot++;
 									}
                 }
@@ -407,7 +411,7 @@ int main(int argc, char** argv)
               puckstack.ParseFromArray(buffer, len);
 
               seenbyidset.clear();
-              net::MSSConnection *client;
+              net::EpollConnection *client;
 							int seenbyidsize = puckstack.seespuckstack_size();
               for(int i=0; i<seenbyidsize; i++){
                 client = (robots.find(puckstack.seespuckstack(i).seenbyid()))->
@@ -415,7 +419,8 @@ int main(int argc, char** argv)
                 if (client != NULL) {
                   ret = seenbyidset.insert(client);
                   if(ret.second){
-                    client->push(MSG_PUCKSTACK, puckstack);
+                    client->queue.push(MSG_PUCKSTACK, puckstack);
+                    client->set_writing(true);
                   }
                 }
               }
@@ -437,12 +442,12 @@ int main(int argc, char** argv)
               //we check to see if the robot has backed up bounced messages
               if((robots.find(claimrobot.id()))->second.bouncedMessages.size() > 0)
               {
-                net::MSSConnection* robotServer = (robots.find(claimrobot.id()))->second.server;
+                net::EpollConnection* robotServer = (robots.find(claimrobot.id()))->second.server;
                 vector<ClientRobot> * robotBacklog = &((robots.find(claimrobot.id()))->second.bouncedMessages);
                 for(unsigned int i = 0; i < robotBacklog->size(); i++)
                 {
-                  robotServer->push(MSG_CLIENTROBOT, (*robotBacklog)[i]);
-                  robotServer->force_writing();
+                  robotServer->queue.push(MSG_CLIENTROBOT, (*robotBacklog)[i]);
+		              robotServer->set_writing(true);
 	              }
                 robotBacklog->clear();
               }
@@ -472,13 +477,13 @@ int main(int argc, char** argv)
                 //then the server has changed, so
                 if((robots.find(bouncedrobot.clientrobot().id()))->second.bouncedMessages.size() > 0)
                 {
-                  net::MSSConnection* robotServer = (robots.find(bouncedrobot.clientrobot().id()))->second.server;
+                  net::EpollConnection* robotServer = (robots.find(bouncedrobot.clientrobot().id()))->second.server;
                   vector<ClientRobot> * robotBacklog = &((robots.find(bouncedrobot.clientrobot().id()))->second.bouncedMessages);
 									unsigned int robotBacklogSize = robotBacklog->size();
                   for(unsigned int i = 0; i < robotBacklogSize; i++)
                   {
-                    robotServer->push(MSG_CLIENTROBOT, (*robotBacklog)[i]);
-                    robotServer->force_writing();
+                    robotServer->queue.push(MSG_CLIENTROBOT, (*robotBacklog)[i]);
+		                robotServer->set_writing(true);
 	                }
                   robotBacklog->clear();
                 }
@@ -518,20 +523,15 @@ int main(int argc, char** argv)
                   for(vector<ClientConnection*>::iterator i = clients.begin();
                       i != clients.end(); ++i) {
                     (*i)->set_reading(false);
-                    if((*i)->queue.remaining()) {
-                      (*i)->force_writing();
-                    }
                   }
                   for(vector<ServerConnection*>::iterator i = servers.begin();
                       i != servers.end(); ++i) {
                     (*i)->set_reading(false);
-                    if((*i)->queue.remaining()) {
-                      (*i)->force_writing();
-                    }
                   }
                 } else {
                   // Continue!
-                  clockconn.push(MSG_TIMESTEPDONE, tsdone);
+                  clockconn.queue.push(MSG_TIMESTEPDONE, tsdone);
+                  clockconn.set_writing(true);
                 }
               }
               break;
@@ -559,7 +559,8 @@ int main(int argc, char** argv)
 
           // Pass WorldInfo to client so it can calculate how many robots
           // per team, and how many teams there are.
-          newconn->push(MSG_WORLDINFO, worldinfo);
+          newconn->queue.push(MSG_WORLDINFO, worldinfo);
+          newconn->set_writing(true);
 
           break;
         }
@@ -598,8 +599,8 @@ int main(int argc, char** argv)
 
             // Flush completed; Tell the clock we're done and resume reading
             flushing = false;
-            clockconn.push(MSG_TIMESTEPDONE, tsdone);
-            clockconn.force_writing();
+            clockconn.queue.push(MSG_TIMESTEPDONE, tsdone);
+            clockconn.set_writing(true);
             for(vector<ServerConnection*>::iterator i = servers.begin();
                 i != serversEnd; ++i) {
               (*i)->set_reading(true);
