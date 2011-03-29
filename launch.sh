@@ -87,8 +87,14 @@ then
     DEBUGGER="gdb -quiet -ex run --args"
 fi
 
-# Clobber logs
-rm "$LOGDIR/*"
+
+if [ ! -e "$HOSTFILE" ]
+then
+    # Clobber logs
+    rm "$LOGDIR/*"
+else
+    mkdir -p "$LOGDIR"
+fi
 
 echo "Starting clock server locally."
 CLOCKSERVER=`host \`hostname\`|cut -d ' ' -f 4`
