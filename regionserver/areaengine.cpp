@@ -147,7 +147,7 @@ void AreaEngine::Step(bool generateImage){
 
   //Earn some Points Here
   //I dunno if this is the right place
-  for (int h = 0; h < homes.size(); h++) {
+  for (unsigned int h = 0; h < homes.size(); h++) {
     if (homes[h]->puckTimers.size() > 0 && (homes[h]->puckTimers.front()->startTime + 300) < curStep) { 
       PuckTimer *puckstack = *(homes[h]->puckTimers.begin());
       RemovePuck(puckstack->x, puckstack->y, -1);
@@ -207,9 +207,9 @@ void AreaEngine::Step(bool generateImage){
             
 	    ////cout << "SOMEBODY IS PICKING UP A PUCK" << endl;
             //check for home to cancel scoring @@@@@ Untested TODO
-            for (int l = 0; l < homes.size(); l++) {
+            for (unsigned int l = 0; l < homes.size(); l++) {
               if (Captures(homes[l]->x, homes[l]->y, curRobot->x, curRobot->y)) {
-                for (int m = 1; m < homes[l]->puckTimers.size(); m++) {
+                for (unsigned int m = 1; m < homes[l]->puckTimers.size(); m++) {
                   if (homes[l]->puckTimers[m]->x == curRobot->x && homes[l]->puckTimers[m]->y == curRobot->y) {
                     homes[l]->puckTimers.erase(homes[l]->puckTimers.begin() + m);
 		    break;
@@ -229,7 +229,7 @@ void AreaEngine::Step(bool generateImage){
 	    
 	    ////cout << "SOMEBODY IS DROPPING A PUCK" << endl;
             //check for home to start scoring @@@@@ should have this as its own function?
-  	    for (int i = 0; i < homes.size(); i++) {
+  	    for (unsigned int i = 0; i < homes.size(); i++) {
 		if (Captures(homes[i]->x, homes[i]->y, curRobot->x, curRobot->y)) {			
 			PuckTimer* newTimer = new PuckTimer(curRobot->x, curRobot->y, curStep);
       			homes[i]->puckTimers.push_back(newTimer);
