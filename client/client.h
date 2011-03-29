@@ -13,6 +13,7 @@
 #include <cmath>
 #include <math.h>
 #include <string>
+#include <map>
 #include <stdlib.h>
 #include <fstream>
 #include <sys/time.h>
@@ -33,6 +34,8 @@
 #include "../common/helper.h"
 #include "../common/globalconstants.h"
 #include "../worldviewer/drawer.h"
+
+#include "variant.h"
 
 using namespace std;
 using namespace google;
@@ -268,38 +271,62 @@ public:
 };
 
 class ClientAi : public Client{
+private:
+	map<string, variant> knowledge;
 public:
     virtual void make_command(ClientRobotCommand& command, OwnRobot* ownRobot) = 0;
     // Helpers
 
+    // Team knowledge
+    template<typename T> void setTeamKnowledge(string key, T value) {
+    	knowledge[key] = variant(value);
+    }
+    template<typename T> T getTeamKnowledge(string key) {
+    	return knowledge[key];
+    }
+    template<typename T> const T & getTeamKnowledgeRef(string key) {
+    	return knowledge[key].get<T>();
+    }
+    void eraseTeamKnowledge(string key) {
+    	knowledge.erase(key);
+    }
+    bool hasTeamKnowledge(string key) {
+    	return knowledge.find(key) != knowledge.end();
+    }
+
     SeenPuck* findPickUpablePuck(OwnRobot* ownRobot);
     SeenPuck* findClosestPuck(OwnRobot* ownRobot);
-		SeenPuck* findSecondClosestPuck(OwnRobot* ownRobot);
-    SeenRobot* findClosestRobot(OwnRobot* ownRobot);
-		SeenRobot* robotClosestToPuck(OwnRobot* ownRobot, SeenPuck* seenPuck);
-		SeenRobot* robotSecondClosestToPuck(OwnRobot* ownRobot, SeenPuck* seenPuck);
-		bool ImClosestToPuck(OwnRobot* ownRobot, SeenPuck* seenPuck);
-		bool ImSecondClosestToPuck(OwnRobot* ownRobot, SeenPuck* seenPuck);
-		bool canPickUpPuck(OwnRobot* ownRobot);
-		bool closeToHome(OwnRobot* ownRobot, double dist);
-    bool insideOurHome(OwnRobot* ownRobot);
-		bool isEnemy(SeenRobot* seenRobot);
-		int canSeeNumPucks(OwnRobot* ownRobot);
-		int numRobotsLeftOfMe(OwnRobot* ownRobot);
-		int numRobotsRightOfMe(OwnRobot* ownRobot);
-		int numRobotsTopOfMe(OwnRobot* ownRobot);
-		int numRobotsBottomOfMe(OwnRobot* ownRobot);
-		int canSeeNumRobots(OwnRobot* ownRobot);
-		SeenRobot* leftmostRobotToMe(OwnRobot* ownRobot);
-		SeenRobot* rightmostRobotToMe(OwnRobot* ownRobot);
-		SeenRobot* topmostRobotToMe(OwnRobot* ownRobot);
-		SeenRobot* bottommostRobotToMe(OwnRobot* ownRobot);
+	SeenPuck* findSecondClosestPuck(OwnRobot* ownRobot);
 
-		SeenRobot* closestRobotDirection(OwnRobot* ownRobot, int direction);
-		int numRobotsDirection(OwnRobot*, int direction);
-		bool puckInsideOurHome(SeenPuck* seenPuck, OwnRobot* ownRobot);
-    static double relDistance(double x1, double y1);
-		static bool sameCoordinates(double x1, double y1, double x2, double y2);
+    SeenRobot* findClosestRobot(OwnRobot* ownRobot);
+	SeenRobot* robotClosestToPuck(OwnRobot* ownRobot, SeenPuck* seenPuck);
+	SeenRobot* robotSecondClosestToPuck(OwnRobot* ownRobot, SeenPuck* seenPuck);
+
+	bool ImClosestToPuck(OwnRobot* ownRobot, SeenPuck* seenPuck);
+	bool ImSecondClosestToPuck(OwnRobot* ownRobot, SeenPuck* seenPuck);
+	bool canPickUpPuck(OwnRobot* ownRobot);
+	bool closeToHome(OwnRobot* ownRobot, double dist);
+    bool insideOurHome(OwnRobot* ownRobot);
+	bool isEnemy(SeenRobot* seenRobot);
+	int canSeeNumPucks(OwnRobot* ownRobot);
+
+	int numRobotsLeftOfMe(OwnRobot* ownRobot);
+	int numRobotsRightOfMe(OwnRobot* ownRobot);
+	int numRobotsTopOfMe(OwnRobot* ownRobot);
+	int numRobotsBottomOfMe(OwnRobot* ownRobot);
+	int canSeeNumRobots(OwnRobot* ownRobot);
+
+	SeenRobot* leftmostRobotToMe(OwnRobot* ownRobot);
+	SeenRobot* rightmostRobotToMe(OwnRobot* ownRobot);
+	SeenRobot* topmostRobotToMe(OwnRobot* ownRobot);
+	SeenRobot* bottommostRobotToMe(OwnRobot* ownRobot);
+
+	SeenRobot* closestRobotDirection(OwnRobot* ownRobot, int direction);
+	int numRobotsDirection(OwnRobot*, int direction);
+	bool puckInsideOurHome(SeenPuck* seenPuck, OwnRobot* ownRobot);
+
+	static double relDistance(double x1, double y1);
+	static bool sameCoordinates(double x1, double y1, double x2, double y2);
 };
 
 #endif
