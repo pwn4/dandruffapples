@@ -18,6 +18,13 @@ ColorObject colorFromTeam(int teamId) {
 		//set puck color
 		coloringMap[65534] = ColorObject(0, 0, 0);
 
+		// set colors for the first few teams so that when there are only 2 teams we can tell the difference
+		coloringMap[0] = ColorObject(0.094, 0.353, 0.420);
+		coloringMap[1] = ColorObject(0.698, 0.051, 0.263);
+		coloringMap[2] = ColorObject(0.898, 0.839, 0.157);
+		coloringMap[3] = ColorObject(0.424, 0.698, 0.051);
+		coloringMap[4] = ColorObject(0.039, 0.149, 0.176);
+
 		colorMapInitialized = true;
 	}
 
