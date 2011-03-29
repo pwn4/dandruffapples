@@ -118,7 +118,7 @@ do
     echo "- Trying $HOST"
     #check for host being up
     INUSE=""
-    if (! nc -z -w 1 $HOST $SSHPORT >/dev/null 2>/dev/null) || INUSE=`$SSHCOMMAND $HOST "w | awk ' {if(NR>2 && \$1!=wai && !(\$5 ~ /.*m/ || \$5 ~ /.*days/)) print \$1} ' wai=\`whoami\` && false" >/dev/null & sleep 7 && ! kill $!`
+    if ! INUSE=`$SSHCOMMAND $HOST "w | awk ' {if(NR>2 && \$1!=wai && !(\$5 ~ /.*m/ || \$5 ~ /.*days/)) print \$1} ' wai=\`whoami\`"`
     then
 	echo "- Skipping unresponsive host $HOST"
         continue
