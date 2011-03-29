@@ -188,7 +188,6 @@ then
    HOSTIDX=1
    while [ $CLIENTS_LEFT -gt 0 ]
    do
-       sleep 0.1
        CLIENTS_LEFT=$[$CLIENTS_LEFT - $QUOTIENT]
        EXTRA=0
        if [ $REMAINDER -gt 0 ]
