@@ -88,6 +88,17 @@ bool Sees(double x1, double y1){
   return false;
 }
 
+bool InViewAngle(float myangle, double x1, double y1)
+{
+  //get the angle to x1 and y1
+  float theirangle = hack_angleFromVelocity(x1, y1);
+  
+  if(abs(myangle - theirangle) < VIEWANGLE)
+    return true;
+  
+  return false;
+}
+
 // Adds a new controller address to the client's known list of controllers.
 void Client::setControllerIp(string newControllerIp) {
 	controllerips.clear();
@@ -144,7 +155,7 @@ double Client::verifyAngle(double angle) {
 // If the robot is turning, then a) figure out if we want to be turning
 // clockwise or counter-clockwise and b) make sure that the angle is valid
 // after we increment/decrement it. 
-void Client::estimateRotation(OwnRobot* ownRobot) {
+/*void Client::estimateRotation(OwnRobot* ownRobot) {
   if (ownRobot->desiredAngle != ownRobot->angle) {
     // We are turning!
     double magicNumber = 0.1256637061; // 1/50 * 2PI
@@ -176,7 +187,7 @@ void Client::estimateRotation(OwnRobot* ownRobot) {
       }
     }
   }
-}
+}*/
 
 // Check if the two coordinates are the same, compensating for
 // doubleing-point errors.
@@ -219,9 +230,42 @@ void Client::executeAi(OwnRobot* ownRobot, int index, net::connection &controlle
 	clientrobot.set_id(indexToRobotId(index));
 	clientrobot.set_velocityx(ownRobot->vx);
 	clientrobot.set_velocityy(ownRobot->vy);
-	clientrobot.set_angle(ownRobot->angle);
+ 	//clientrobot.set_angle(ownRobot->angle);
 
   // Allow the user AI code to run.
+  
+  //but let's just be cheapo and only give the AI the robots it can actually see
+	vector<SeenRobot*> tmpRobots;
+	vector<SeenPuck*> tmpPucks;
+	
+	//yeah, it's slow. But if its good enough, its good enough.
+	vector<SeenRobot*>::iterator robotFilter = ownRobot->seenRobots.begin();
+	vector<SeenPuck*>::iterator puckFilter = ownRobot->seenPucks.begin();
+	
+	//only trim if we're moving. Otherwise, show all
+	if(ownRobot->vx != 0 || ownRobot->vy != 0)
+	{
+	  for(; robotFilter != ownRobot->seenRobots.end(); )
+	  {  
+	    if(!InViewAngle(ownRobot->angle, (*robotFilter)->relx, (*robotFilter)->rely)){
+	      tmpRobots.push_back(*robotFilter);
+	      robotFilter = ownRobot->seenRobots.erase(robotFilter);
+	      continue;
+	    }
+	    robotFilter++;
+    }
+	    
+    for(; puckFilter != ownRobot->seenPucks.end();)
+	  {
+	    if(!InViewAngle(ownRobot->angle, (*puckFilter)->relx, (*puckFilter)->rely)){
+	      tmpPucks.push_back(*puckFilter);
+	      puckFilter = ownRobot->seenPucks.erase(puckFilter);
+	      continue;
+	    }		    
+	    puckFilter++;
+    }
+  }
+  
 	ClientRobotCommand command = userAiCode(ownRobot);
 	if (command.sendCommand) {
 		if (command.changeVx)
@@ -243,8 +287,15 @@ void Client::executeAi(OwnRobot* ownRobot, int index, net::connection &controlle
 
 		ownRobot->whenLastSent = currentTimestep;
 		sentMessages++; // debug message
-		ownRobot->pendingCommand = true;
+		ownRobot->pendingCommand = true;   
 	}
+	
+		//then restore those robots
+	for(robotFilter = tmpRobots.begin(); robotFilter != tmpRobots.end(); robotFilter++)
+    ownRobot->seenRobots.push_back(*robotFilter);
+  
+  for(puckFilter = tmpPucks.begin(); puckFilter != tmpPucks.end(); puckFilter++)
+    ownRobot->seenPucks.push_back(*puckFilter);
 }
 
 // Sends an initial ClientRobot message for each robot, allowing us to
@@ -431,8 +482,9 @@ gboolean Client::run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 				  ownRobots[i]->homeRelX -= ownRobots[i]->vx;
 				  ownRobots[i]->homeRelY -= ownRobots[i]->vy;
 
+          //Let the AI do this work
           // Simulate our new angle if we are turning.
-          estimateRotation(ownRobots[i]);
+          //estimateRotation(ownRobots[i]);
 
 				  // Update rel distance of seenRobots.
 				  double minDistance = 9000.01;
@@ -516,8 +568,14 @@ gboolean Client::run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 				{
 					ownRobots[index]->vy = serverrobot.velocityy();
 				}
-				if (serverrobot.has_angle())
-					ownRobots[index]->angle = serverrobot.angle();
+				//if (serverrobot.has_angle())
+				//	ownRobots[index]->angle = serverrobot.angle();
+				
+				//set the angle based on the velocity
+				float newangle = hack_angleFromVelocity(ownRobots[index]->vx, -1*ownRobots[index]->vy);
+				if(newangle != -1)
+				  ownRobots[index]->angle = newangle;
+				
 				if (serverrobot.has_haspuck())
 					ownRobots[index]->hasPuck = serverrobot.haspuck();
 				if (serverrobot.has_hascollided())
@@ -567,9 +625,13 @@ gboolean Client::run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 								if (serverrobot.has_velocityy() && (*it)->vy != serverrobot.velocityy()) {
 									(*it)->vy = serverrobot.velocityy();
 								}
-								if (serverrobot.has_angle() && (*it)->angle != serverrobot.angle()) {
+								/*if (serverrobot.has_angle() && (*it)->angle != serverrobot.angle()) {
 									(*it)->angle = serverrobot.angle();
-								}
+								}*/
+								float newangle = hack_angleFromVelocity((*it)->vx, -1*(*it)->vy);
+				        if(newangle != -1)
+				          (*it)->angle = newangle;
+				          
 								if (serverrobot.has_haspuck() && (*it)->hasPuck != serverrobot.haspuck()) {
 									(*it)->hasPuck = serverrobot.haspuck();
 								}
@@ -597,8 +659,12 @@ gboolean Client::run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 							{
 								r->vy = serverrobot.velocityy();
 							}
-							if (serverrobot.has_angle())
-								r->angle = serverrobot.angle();
+							/*if (serverrobot.has_angle())
+								r->angle = serverrobot.angle();*/
+							float newangle = hack_angleFromVelocity(r->vx, -1*r->vy);
+				      if(newangle != -1)
+				        r->angle = newangle;
+				  
 							if (serverrobot.has_haspuck())
 								r->hasPuck = serverrobot.haspuck();
 							if (serverrobot.has_hascollided())
