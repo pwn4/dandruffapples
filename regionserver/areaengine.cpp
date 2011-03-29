@@ -737,7 +737,10 @@ void AreaEngine::Step(bool generateImage){
             //we have an a[][] element again.
             ArrayObject * element = &robotArray[j][k];
 
-            //do robots
+            //do robots IF we're in a border
+            if(j == topLeft.x || j == botRight.x || k == topLeft.y || k == botRight.y)
+            {
+            
             otherRobot = element->robots;
 
             while(otherRobot != NULL) {
@@ -759,6 +762,8 @@ void AreaEngine::Step(bool generateImage){
               }
 
               otherRobot = otherRobot->nextRobot;
+            }
+            
             }
 
             //do pucks

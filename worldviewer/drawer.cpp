@@ -28,6 +28,10 @@ ColorObject colorFromTeam(int teamId) {
 		colorMapInitialized = true;
 	}
 
+  //protection
+  if(teamId < 0 || teamId > 65535)
+    return coloringMap[55555];
+
 	return coloringMap[teamId];
 }
 void UnpackImage(cairo_t *cr, RegionRender* render, float drawFactor, double robotAlpha, WorldInfo *worldinfo,
