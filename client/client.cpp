@@ -487,7 +487,7 @@ gboolean Client::run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
           //estimateRotation(ownRobots[i]);
 
 				  // Update rel distance of seenRobots.
-				  double minDistance = 9000.01;
+				  //double minDistance = 9000.01;
 				  double tempDistance;
 				  for (vector<SeenRobot*>::iterator it = ownRobots[i]->seenRobots.begin(); it
 						  != ownRobots[i]->seenRobots.end(); it++) {
@@ -692,16 +692,9 @@ gboolean Client::run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 		PuckStack puckstack;
 		puckstack.ParseFromArray(buffer, len);
 
-		//temp fix
-		/*if(puckstack.stacksize() == -1)
-		{
-		  if(weControlRobot(puckstack.robotmover()))
-		    ownRobots[robotIdToIndex(puckstack.robotmover())]->hasPuck=false;
-		  break;
-		}*/
-
 		int index;
 		int listSize = puckstack.seespuckstack_size();
+		SeenPuck* deleteStack = NULL;
 		for (int i = 0; i < listSize; i++) {
 			// Check if one of our robots is in the list. If it is,
 			// add the puck to its seenPuck list. Pretend that every
@@ -722,7 +715,6 @@ gboolean Client::run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 					    //if(abs(puckstack.seespuckstack(i).relx()) < ROBOTDIAMETER/2 && abs(puckstack.seespuckstack(i).rely()) < ROBOTDIAMETER/2){				    
 					    if(puckstack.robotmover() == indexToRobotId(index))
 					    	ownRobots[index]->hasPuck = true;
-
 					  }
 					  if((*it)->stackSize < (int)puckstack.stacksize())
 					  {
@@ -736,7 +728,8 @@ gboolean Client::run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 						(*it)->stackSize = puckstack.stacksize();
 						foundPuck = true;
 						if ((*it)->stackSize <= 0 || puckstack.seespuckstack(i).viewlostid()) {
-							delete *it;
+						  deleteStack = (*it);
+							//lol DONT delete it here. What if other people on our team are watching it too? They won't be able to forget it. LOL
 							it = ownRobots[index]->seenPucks.erase(it);
 						  it--; // Compensates for it++ in for loop.
 						}
@@ -760,6 +753,9 @@ gboolean Client::run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 				}
 			}
 		}
+		
+		if(deleteStack != NULL)
+		  delete deleteStack;
 
 		break;
 	}
