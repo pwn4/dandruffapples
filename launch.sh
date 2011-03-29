@@ -152,25 +152,14 @@ do
         CONTROLHOSTS="$CONTROLHOSTS $HOST"
     elif [ $REGIONS_LEFT -gt 0 ]
     then
-        echo "Launching $REGIONS_PER_HOST regions on $HOST"
-        DECREMENTED=$[$REGIONS_LEFT - $REGIONS_PER_HOST]
-        CONFIDX=1
-        while [ $REGIONS_LEFT -gt $DECREMENTED -a $REGIONS_LEFT -gt 0 ]
-        do
-            NUM=$[$REGIONS_LEFT - $DECREMENTED]
-            if [ $CONFIDX -eq 1 ]
-            then
-		sleep 0.1
-                wrap $SSHCOMMAND $HOST "bash -c \"cd '$PROJDIR/regionserver' && LD_LIBRARY_PATH='$PROJDIR/sharedlibs' $DEBUGGER ./regionserver -l $CLOCKSERVER -c config\"" > "$LOGDIR/region.out.$HOST.$NUM.log" 2> "$LOGDIR/region.err.$HOST.$NUM.log"  &
-                SSHPROCS="$SSHPROCS $!"
-            else
-		sleep 0.1
-                wrap $SSHCOMMAND $HOST "bash -c \"cd '$PROJDIR/regionserver' && LD_LIBRARY_PATH='$PROJDIR/sharedlibs' $DEBUGGER ./regionserver -l $CLOCKSERVER -c config${CONFIDX}\"" > "$LOGDIR/region.out.$HOST.$NUM.log" 2> "$LOGDIR/region.err.$HOST.$NUM.log" &
-                SSHPROCS="$SSHPROCS $!"
-            fi
-            CONFIDX=$[CONFIDX + 1]
-            REGIONS_LEFT=$[$REGIONS_LEFT - 1]
-        done
+        REGIONCOUNT=$REGIONS_PER_HOST
+        if [ $REGIONS_LEFT -lt $REGIONS_PER_HOST ]
+        then
+            REGIONCOUNT=$REGIONS_LEFT
+        fi
+        echo "Launching $REGIONCOUNT regions on $HOST"
+        wrap $SSHCOMMAND $HOST "bash -c \"cd '$PROJDIR' && ./start-n-regions.sh $COUNT $CLOCKSERVER\"" > "$LOGDIR/regiongroup.out.$HOST.log" 2> "$LOGDIR/regiongroup.err.$HOST.log" &
+        REGIONS_LEFT=$[$REGIONS_LEFT - $REGIONCOUNT]
         # if [ $REGIONS_LEFT -eq 0 ]
         # then
         #     sleep 4
