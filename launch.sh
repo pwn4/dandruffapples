@@ -91,10 +91,9 @@ fi
 if [ -e "$LOGDIR" ]
 then
     # Clobber logs
-    rm "$LOGDIR/*"
-else
-    mkdir -p "$LOGDIR"
+    rm -rf "$LOGDIR"
 fi
+mkdir -p "$LOGDIR"
 
 echo "Starting clock server locally."
 CLOCKSERVER=`host \`hostname\`|cut -d ' ' -f 4`
