@@ -86,3 +86,25 @@ TwoInt ByteUnpack(unsigned int data) {
 	return TwoInt(first, second);
 
 }
+
+//This will allow us to restrict our simulation to work liek Vaughan's without adding any angle data or interaction.
+//Is fast to code, keeps things clean, and preserves the angle infrastructure in place so that in future we may do this
+//properly if we so desired, or disable it to allow strafing robots, etc etc
+float hack_angleFromVelocity(double x, double y){
+  //angle is in radians, from standard theta=0 in a circle
+  /*     ###
+        #   #
+       #  ####
+        #   #
+         ###
+  */
+  
+  if(x == 0 && y == 0)
+    return -1;
+    
+  float rtn = atan2(y, x);
+  if(rtn < 0)
+    rtn += 2 * M_PI;
+    
+  return rtn;
+}
