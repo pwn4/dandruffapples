@@ -102,7 +102,7 @@ then
     exit 1
 fi
 
-SSHCOMMAND="ssh -o StrictHostKeyChecking=no -o ConnectTimeout=2 -p $SSHPORT"
+SSHCOMMAND="ssh -o StrictHostKeyChecking=no -o PasswordAuthentication=no -o ConnectTimeout=2 -p $SSHPORT"
 
 REGIONS_LEFT=$[$COLS * $ROWS]
 CONTROLLERS_LEFT=0;
@@ -117,14 +117,14 @@ for HOST in `grep -hv \`hostname\` "$HOSTFILE"`
 do
     echo "- Trying $HOST"
     #check for host being up
-    if (! host "$HOST" >/dev/null) || (! nc -w 1 -z "$HOST" $SSHPORT)
+    INUSE=""
+    if INUSE=`$SSHCOMMAND $HOST "w | awk ' {if(NR>2 && \$1!=wai && !(\$5 ~ /.*m/ || \$5 ~ /.*days/)) print \$1} ' wai=\`whoami\`" >/dev/null & sleep 1 && kill -9 $!`
     then
 	echo "- Skipping unresponsive host $HOST"
         continue
     fi
 
     #check for host being used
-    INUSE=$($SSHCOMMAND $HOST "w | awk ' {if(NR>2 && \$1!=wai && !(\$5 ~ /.*m/ || \$5 ~ /.*days/)) print \$1} ' wai=`whoami`")
     INUSE=${INUSE//[[:space:]]}
     OTHERS=$INUSE #old artifact left in for the time being
     OTHERS=${OTHERS//[[:space:]]}
