@@ -12,8 +12,8 @@ namespace net {
   void set_blocking(int fd, bool state);
   bool get_blocking(int fd);
   
-  int do_connect(const char *address, int port);
-  int do_connect(struct in_addr address, int port);
+  int do_connect(const char *address, int port, unsigned timeout = 0);
+  int do_connect(struct in_addr address, int port, unsigned timeout = 0);
   int do_listen(int port);
   int get_mss(int socket);
 
