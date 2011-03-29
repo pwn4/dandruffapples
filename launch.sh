@@ -160,7 +160,7 @@ do
         fi
         REGIONS_LEFT=$[$REGIONS_LEFT - $REGIONCOUNT]
         echo "Launching $REGIONCOUNT regions on $HOST ($REGIONS_LEFT remaining)"
-        wrap $SSHCOMMAND $HOST "bash -c \"cd '$PROJDIR' && ./start-n-regions.sh $COUNT $CLOCKSERVER\"" > "$LOGDIR/regiongroup.out.$HOST.log" 2> "$LOGDIR/regiongroup.err.$HOST.log" &
+        wrap $SSHCOMMAND $HOST "bash -c \"cd '$PROJDIR' && ./start-n-regions.sh $REGIONCOUNT $CLOCKSERVER\"" > "$LOGDIR/regiongroup.out.$HOST.log" 2> "$LOGDIR/regiongroup.err.$HOST.log" &
     fi
 
     if [ $CONTROLLERS_LEFT -eq 0 ] && [ $REGIONS_LEFT -eq 0 ]
