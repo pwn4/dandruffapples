@@ -145,10 +145,10 @@ do
     
     if [ $CONTROLLERS_LEFT -gt 0 ]
     then
-        echo "Launching controller on $HOST"
+        CONTROLLERS_LEFT=$[$CONTROLLERS_LEFT - 1]
+        echo "Launching controller on $HOST ($CONTROLLERS_LEFT remaining)"
         wrap $SSHCOMMAND $HOST "bash -c \"cd '$PROJDIR/controller' && LD_LIBRARY_PATH='$PROJDIR/sharedlibs' $DEBUGGER ./controller -l $CLOCKSERVER\"" > "$LOGDIR/controller.out.$HOST.log" 2> "$LOGDIR/controller.err.$HOST.log" &
         SSHPROCS="$SSHPROCS $!"
-        CONTROLLERS_LEFT=$[$CONTROLLERS_LEFT - 1]
         CONTROLHOSTS="$CONTROLHOSTS $HOST"
     elif [ $REGIONS_LEFT -gt 0 ]
     then
@@ -157,28 +157,9 @@ do
         then
             REGIONCOUNT=$REGIONS_LEFT
         fi
-        echo "Launching $REGIONCOUNT regions on $HOST"
-        wrap $SSHCOMMAND $HOST "bash -c \"cd '$PROJDIR' && ./start-n-regions.sh $COUNT $CLOCKSERVER\"" > "$LOGDIR/regiongroup.out.$HOST.log" 2> "$LOGDIR/regiongroup.err.$HOST.log" &
         REGIONS_LEFT=$[$REGIONS_LEFT - $REGIONCOUNT]
-        # if [ $REGIONS_LEFT -eq 0 ]
-        # then
-        #     sleep 4
-        # fi
-    # elif [ $CLIENTS_LEFT -gt 0 ] && [ $CONTROLLERS -gt 0 ]
-    # then
-    #     HOSTNUM=`echo $CONTROLHOSTS |wc -w`
-    #     for i in {1..$CLIENTSPERHOST}
-    #     do
-    #       if [ $CLIENTS_LEFT -gt 0 ]
-    #       then
-    #         sleep 0.1
-    #         CLIENTS_LEFT=$[CLIENTS_LEFT - 1]
-    #         CTRLHOST=`echo $CONTROLHOSTS |cut -d ' ' -f $[$CLIENTS_LEFT % $HOSTNUM + 1]`
-    #         CTRLHOST=`host $CTRLHOST|cut -d ' ' -f 4`
-    #         wrap $SSHCOMMAND $HOST "bash -c \"cd '$PROJDIR/client' && LD_LIBRARY_PATH='$PROJDIR/sharedlibs' $DEBUGGER ./client -l $CTRLHOST -t $CLIENTS_LEFT\"" > /dev/null &
-    #         SSHPROCS="$SSHPROCS $!"
-    #       fi
-    #     done
+        echo "Launching $REGIONCOUNT regions on $HOST ($REGIONS_LEFT remaining)"
+        wrap $SSHCOMMAND $HOST "bash -c \"cd '$PROJDIR' && ./start-n-regions.sh $COUNT $CLOCKSERVER\"" > "$LOGDIR/regiongroup.out.$HOST.log" 2> "$LOGDIR/regiongroup.err.$HOST.log" &
     else
         echo "All regions and controllers launched!"
         break
