@@ -144,6 +144,7 @@ do
     
     if [ $CONTROLLERS_LEFT -gt 0 ]
     then
+        sleep 0.1
         CONTROLLERS_LEFT=$[$CONTROLLERS_LEFT - 1]
         echo "Launching controller on $HOST ($CONTROLLERS_LEFT remaining)"
         wrap $SSHCOMMAND $HOST "bash -c \"cd '$PROJDIR/controller' && LD_LIBRARY_PATH='$PROJDIR/sharedlibs' $DEBUGGER ./controller -l $CLOCKSERVER\"" > "$LOGDIR/controller.out.$HOST.log" 2> "$LOGDIR/controller.err.$HOST.log" &
@@ -151,6 +152,7 @@ do
         CONTROLHOSTS="$CONTROLHOSTS $HOST"
     elif [ $REGIONS_LEFT -gt 0 ]
     then
+        sleep 0.1
         REGIONCOUNT=$REGIONS_PER_HOST
         if [ $REGIONS_LEFT -lt $REGIONS_PER_HOST ]
         then
@@ -186,6 +188,7 @@ then
    HOSTIDX=1
    while [ $CLIENTS_LEFT -gt 0 ]
    do
+       sleep 0.1
        CLIENTS_LEFT=$[$CLIENTS_LEFT - $QUOTIENT]
        EXTRA=0
        if [ $REMAINDER -gt 0 ]
@@ -196,7 +199,7 @@ then
        fi
        
        HOST=`echo $CONTROLHOSTS |cut -d ' ' -f $HOSTIDX`
-       echo "Launching $[$QUOTIENT + $EXTRA] clients on controller $HOST"
+       echo "Launching $[$QUOTIENT + $EXTRA] clients on controller $HOST ($CLIENTS_LEFT remaining)"
        wrap $SSHCOMMAND $HOST "bash -c \"cd '$PROJDIR' && ./start-n-clients.sh $[$QUOTIENT + $EXTRA] $CLIENTS_LEFT\"" > "$LOGDIR/clientgroup.out.$HOST.log" 2> "$LOGDIR/clientgroup.err.$HOST.log" &
        SSHPROCS="$SSHPROCS $!"
        HOSTIDX=$[$HOSTIDX+1]
