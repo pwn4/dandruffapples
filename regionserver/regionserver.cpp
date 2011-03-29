@@ -876,7 +876,7 @@ void run() {
 						worldviewers.erase(find(worldviewers.begin(), worldviewers.end(), c));
 						delete c;
 
-            if(e.number() == ECONNRESET) {
+            if(e.number() == ECONNRESET || e.number() == EPIPE) {
               cout << "world viewer with fd=" << c->fd << " disconnected" << endl;
             } else {
               throw e;

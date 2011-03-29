@@ -789,7 +789,8 @@ void Client::initClient(int argc, char* argv[], string pathToExe, bool runClient
 
 	while (controllerfd < 0) {
 		cout << "Attempting to connect to controller " << controllerips.at(currentController) << "..." << flush;
-		controllerfd = net::do_connect(controllerips.at(currentController).c_str(), CLIENTS_PORT);
+    // One minute connect timeout
+		controllerfd = net::do_connect(controllerips.at(currentController).c_str(), CLIENTS_PORT, 60);
 
 		if (0 > controllerfd) {
 			throw SystemError("Failed to connect to controller");

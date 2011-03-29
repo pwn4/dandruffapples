@@ -75,7 +75,7 @@ namespace net {
         return sock;
     }
 
-  int do_connect(const char *address, int port) {
+  int do_connect(const char *address, int port, unsigned timeout) {
     struct in_addr binary_addr;
     if(0 == inet_pton(AF_INET, address, &binary_addr)) {
       return 0;
@@ -83,10 +83,23 @@ namespace net {
     return do_connect(binary_addr, port);
   }
 
-  int do_connect(struct in_addr address, int port) {
+  int do_connect(struct in_addr address, int port, unsigned timeout) {
     int fd = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
     if(0 > fd) {
         return fd;
+    }
+
+    if(timeout != 0) {
+      // Configure timeout
+      struct timeval t;
+      t.tv_sec = timeout;
+      t.tv_usec = 0;
+      if(-1 == setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &t, sizeof(t))) {
+        int tmp = errno;
+        close(fd);
+        errno = tmp;
+        return -1;
+      }
     }
 
     // Configure address and port
