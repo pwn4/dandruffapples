@@ -173,7 +173,7 @@ then
     exit 1
 fi
 
-sleep 3
+sleep 10
 if [ $CONTROLLERS ]
 then
    echo "Launching $TEAMS clients across $CONTROLLERS machines"
