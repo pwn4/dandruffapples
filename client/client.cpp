@@ -1,6 +1,10 @@
 #include "client.h"
 #include <dlfcn.h>
 #include <sstream>
+
+// Seconds
+#define CONNECT_TIMEOUT 480
+
 typedef ClientAi* (*FUNCPTR_AI)();
 
 /////////////////Variables and Declarations/////////////////
@@ -794,8 +798,7 @@ void Client::initClient(int argc, char* argv[], string pathToExe, bool runClient
 
 	while (controllerfd < 0) {
 		cout << "Attempting to connect to controller " << controllerips.at(currentController) << "..." << flush;
-    // One minute connect timeout
-		controllerfd = net::do_connect(controllerips.at(currentController).c_str(), CLIENTS_PORT, 60);
+		controllerfd = net::do_connect(controllerips.at(currentController).c_str(), CLIENTS_PORT, CONNECT_TIMEOUT);
 
 		if (0 > controllerfd) {
 			throw SystemError("Failed to connect to controller");
