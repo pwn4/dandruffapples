@@ -297,7 +297,7 @@ int main(int argc, char** argv)
               // Notify client of acceptance/rejection
               claimteam.clear_clientid();
               clients[client]->push(MSG_CLAIMTEAM, claimteam);
-
+              clients[client]->force_writing();
               break;
             }
 
@@ -442,6 +442,7 @@ int main(int argc, char** argv)
                 for(unsigned int i = 0; i < robotBacklog->size(); i++)
                 {
                   robotServer->push(MSG_CLIENTROBOT, (*robotBacklog)[i]);
+                  robotServer->force_writing();
 	              }
                 robotBacklog->clear();
               }
@@ -477,6 +478,7 @@ int main(int argc, char** argv)
                   for(unsigned int i = 0; i < robotBacklogSize; i++)
                   {
                     robotServer->push(MSG_CLIENTROBOT, (*robotBacklog)[i]);
+                    robotServer->force_writing();
 	                }
                   robotBacklog->clear();
                 }
