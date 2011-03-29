@@ -115,7 +115,8 @@ void updateInfoWindow(OwnRobot* ownRobotDraw, GtkBuilder* builder) {
 				+ helper::toString(ownRobotDraw->homeRelY) + " (x,y) relative to its home";
 		gtk_label_set_text(GTK_LABEL(gtk_builder_get_object( builder, "labHome" )), tmp.c_str());
 
-		tmp = "Traveling with at an angle of " + helper::toString(ownRobotDraw->angle);
+		//tmp = "Traveling with at an angle of " + helper::toString(ownRobotDraw->angle);
+		tmp = "Traveling with an angle of " + helper::toString(hack_angleFromVelocity(ownRobotDraw->vx, -1*ownRobotDraw->vy));
 		gtk_label_set_text(GTK_LABEL(gtk_builder_get_object( builder, "labAngle" )), tmp.c_str());
 
 		if (ownRobotDraw->hasPuck)
@@ -224,7 +225,7 @@ gboolean drawingAreaExpose(GtkWidget *widgetDrawingArea, GdkEventExpose *event, 
 			double x1, y1, x2, y2;
 			calcVertexes(origin[0], origin[1], endX, endY, *drawFactor, x1, y1, x2, y2);
 
-			cairo_set_source_rgb(cr, 0, 0, 0);
+			cairo_set_source_rgba(cr, 0, 0, 0, 0.6);
 			cairo_move_to(cr, origin[0], origin[1]);
 			cairo_line_to(cr, endX, endY);
 			cairo_line_to(cr, x1, y1);
@@ -243,9 +244,20 @@ gboolean drawingAreaExpose(GtkWidget *widgetDrawingArea, GdkEventExpose *event, 
 			cairo_stroke(cr);
 		}
 
-		//draw a rectangle around the drawing area
-		cairo_arc(cr, origin[0], origin[1], imageWidth/2, 0, 2 * M_PI);
-		cairo_stroke(cr);
+		//draw the viewing area - cairo angles are stupid
+		//bonus: not moving? 360 degree view
+		cairo_set_source_rgba(cr, 0, 0, 0, 0.75);
+		if(ownRobotDraw->vx == 0 && ownRobotDraw->vy == 0)
+		{
+		  //draw the circle
+		  cairo_arc(cr, origin[0], origin[1], imageWidth/2, 0, 2 * M_PI);
+		}else{
+		  //draw the cone
+		  cairo_move_to(cr, origin[0], origin[1]);
+		  cairo_arc_negative(cr, origin[0], origin[1], imageWidth/2, (VIEWANGLE / 2.0) - ownRobotDraw->angle, (2 * M_PI) - (VIEWANGLE/2.0) - ownRobotDraw->angle);
+		  cairo_line_to(cr, origin[0], origin[1]);
+    }
+    cairo_stroke(cr);
 
 		cairo_destroy(cr);
 		*draw = false;
