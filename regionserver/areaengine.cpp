@@ -148,7 +148,7 @@ void AreaEngine::Step(bool generateImage){
   //Earn some Points Here
   //I dunno if this is the right place
   for (unsigned int h = 0; h < homes.size(); h++) {
-    while (homes[h]->puckTimers.size() > 0 && (homes[h]->puckTimers.front()->startTime + 2) < curStep) { 
+    while (homes[h]->puckTimers.size() > 0 && (homes[h]->puckTimers.front()->startTime + 300) < curStep) { 
       PuckTimer *puckstack = *(homes[h]->puckTimers.begin());
       RemovePuck(puckstack->x, puckstack->y, -1);
       double newx = rand() % regionRatio;
@@ -243,12 +243,12 @@ void AreaEngine::Step(bool generateImage){
 	    ////cout << "SOMEBODY IS DROPPING A PUCK" << endl;
             //check for home to start scoring @@@@@ should have this as its own function?
   	    for (unsigned int i = 0; i < homes.size(); i++) {
-		if (Captures(homes[i]->x, homes[i]->y, curStack->x, curStack->y)) {			
-			PuckTimer* newTimer = new PuckTimer(curStack->x, curStack->y, curStep);
-      			homes[i]->puckTimers.push_back(newTimer);
-      			////cout << "PUCK ENTERED QUEUE" << endl;
-      			break;
-    		}
+		      if (Captures(homes[i]->x, homes[i]->y, curStack->x, curStack->y)) {			
+			      PuckTimer* newTimer = new PuckTimer(curStack->x, curStack->y, curStep);
+            			homes[i]->puckTimers.push_back(newTimer);
+            			//cout << "PUCK ENTERED QUEUE" << endl;
+            			break;
+          		}
 
   	    }
 
@@ -958,10 +958,6 @@ void AreaEngine::DropPuck(int robotId){
   if(!curRobot->holdingPuck) //dont have a puck
     return;
 
-  //Add the puck
-  //AddPuck(curRobot->x, curRobot->y);
-  //curRobot->holdingPuck = false;
-
   int appliedStep = curStep+1;
   if(appliedStep % 2 == 0)
     appliedStep++;
@@ -1166,7 +1162,7 @@ bool AreaEngine::RemovePuck(double x, double y, int robotId){
 
 //Add a Home to the System.
 void AreaEngine::AddHome(double newx, double newy, int team) {
-  HomeObject* newhome = new HomeObject(newx, newy, team);
+  HomeObject* newhome = new HomeObject(newx+elementSize, newy+elementSize, team);
   homes.push_back(newhome);
   cout << "TEST TEAM: " << newhome->team << "X: " << newhome->x << "Y: " << newhome->y << endl;
 }
