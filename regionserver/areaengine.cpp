@@ -148,7 +148,7 @@ void AreaEngine::Step(bool generateImage){
   //Earn some Points Here
   //I dunno if this is the right place
   for (unsigned int h = 0; h < homes.size(); h++) {
-    while (homes[h]->puckTimers.size() > 0 && (homes[h]->puckTimers.front()->startTime + 300) < curStep) { 
+    while (homes[h]->puckTimers.size() > 0 && (homes[h]->puckTimers.front()->startTime + 200) < curStep) { 
       PuckTimer *puckstack = *(homes[h]->puckTimers.begin());
       RemovePuck(puckstack->x, puckstack->y, -1);
       double newx = rand() % regionRatio;
@@ -272,7 +272,8 @@ void AreaEngine::Step(bool generateImage){
               (*it)->queue.push(MSG_PUCKSTACK, puckUpdate);
               (*it)->set_writing(true);
             }
-          }
+          }else
+            cout << "Warning: puckAction command on empty robot" << endl;
         }
 
         serverrobot.set_laststep(curStep); //for stray packet detection
@@ -956,7 +957,10 @@ void AreaEngine::DropPuck(int robotId){
   RobotObject * curRobot = robots.find(robotId)->second;
 
   if(!curRobot->holdingPuck) //dont have a puck
+  {
+    cout << "Warning: Puck drop request from robot without puck" << endl;
     return;
+  }
 
   int appliedStep = curStep+1;
   if(appliedStep % 2 == 0)
