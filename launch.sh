@@ -115,6 +115,7 @@ CONTROLHOSTS=""
 echo "Launching $CONTROLLERS_LEFT controllers and $REGIONS_LEFT regions"
 for HOST in `grep -hv \`hostname\` "$HOSTFILE"`
 do
+    echo "- Trying $HOST"
     #check for host being up
     if (! host "$HOST" >/dev/null) || (! nc -w 1 -z "$HOST" $SSHPORT)
     then
@@ -129,7 +130,7 @@ do
     OTHERS=${OTHERS//[[:space:]]}
     if [ "$OTHERS" != "" ]
     then
-        echo "Skipping in-use host $HOST, active users $OTHERS"
+        echo "- Skipping in-use host $HOST, active users $OTHERS"
         continue
     fi
     
