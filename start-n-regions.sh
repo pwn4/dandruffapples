@@ -2,6 +2,7 @@
 
 COUNT=$1
 CLOCK=$2
+echo "Launching $COUNT regions towards clock $CLOCK"
 
 IDX=1
 PIDS=""
