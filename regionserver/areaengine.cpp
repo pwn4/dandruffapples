@@ -153,6 +153,19 @@ void AreaEngine::Step(bool generateImage){
       RemovePuck(puckstack->x, puckstack->y, -1);
       double newx = rand() % regionRatio;
       double newy = rand() % regionRatio;
+      bool captures = true;
+      while (captures) {			
+        captures = false;
+        for (unsigned int i = 0; i < homes.size(); i++) {
+          if(Captures(homes[i]->x, homes[i]->y, newx, newy))
+          {
+            newx = rand() % regionRatio;
+            newy = rand() % regionRatio;
+            captures = true;
+            break;
+          }
+        }
+  		}
       AddPuck(newx, newy);
       homes[h]->puckTimers.erase(homes[h]->puckTimers.begin());
       homes[h]->points++;
