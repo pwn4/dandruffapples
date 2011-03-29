@@ -88,7 +88,7 @@ then
 fi
 
 
-if [ ! -e "$HOSTFILE" ]
+if [ -e "$LOGDIR" ]
 then
     # Clobber logs
     rm "$LOGDIR/*"
