@@ -162,7 +162,7 @@ do
         wrap $SSHCOMMAND $HOST "bash -c \"cd '$PROJDIR' && ./start-n-regions.sh $COUNT $CLOCKSERVER\"" > "$LOGDIR/regiongroup.out.$HOST.log" 2> "$LOGDIR/regiongroup.err.$HOST.log" &
     fi
 
-    if [ $CONTROLLERS_LEFT -eq 0 ] && [ $REGIONS_LEFT -eq 0]
+    if [ $CONTROLLERS_LEFT -eq 0 ] && [ $REGIONS_LEFT -eq 0 ]
     then
         echo "All regions and controllers launched!"
         break
