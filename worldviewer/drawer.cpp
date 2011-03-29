@@ -28,6 +28,11 @@ void UnpackImage(cairo_t *cr, RegionRender* render, float drawFactor, double rob
 	int curY = 0;
 	ColorObject color;
 
+  //we want those goddamn region boundaries, dammit!!
+  cairo_rectangle (cr, 0, 0, IMAGEWIDTH* drawFactor, IMAGEHEIGHT* drawFactor);
+  cairo_set_source_rgb(cr, .5, .5, .5);
+  cairo_stroke (cr);
+
 	//draw the homes separately
 	cairo_set_line_width(cr, 2);
 
@@ -41,6 +46,27 @@ void UnpackImage(cairo_t *cr, RegionRender* render, float drawFactor, double rob
 			cairo_set_source_rgb(cr, color.r, color.g, color.b);
 			cairo_arc(cr, homeInfo->home_x() * drawFactor, homeInfo->home_y() * drawFactor, HOMEDIAMETER/2 * drawFactor, 0, 2 * M_PI);
 			cairo_stroke(cr);
+			
+			//draw the home's score just below it. Yes, even if that shit cuts off. Egor, wanna make this better?
+			cairo_text_extents_t te;
+			cairo_set_source_rgba(cr, color.r, color.g, color.b, 0.6);
+			cairo_select_font_face (cr, "Arial", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_BOLD);
+      cairo_set_font_size (cr, 30);
+
+			for(int i = 0; i < render->score_size(); i++)
+			{
+			  if(render->score(i).team() == homeInfo->team())
+			  {
+			    std::ostringstream scoreString;
+	        scoreString << render->score(i).score();
+	        
+          cairo_text_extents (cr, scoreString.str().c_str(), &te);
+          cairo_move_to (cr, (homeInfo->home_x() - (te.width/2) - te.x_bearing) * drawFactor, (homeInfo->home_y() - (te.height/2) - te.y_bearing) * drawFactor);
+	        
+          cairo_show_text (cr, scoreString.str().c_str());
+          break;
+        }
+      }
 		}
 	}
 

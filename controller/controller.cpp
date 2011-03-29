@@ -139,6 +139,7 @@ int main(int argc, char** argv)
 	set<net::EpollConnection*> seenbyidset;		//to determine who to forward serverrobot msg to
 	pair<set<net::EpollConnection*>::iterator,bool> ret; //return value of insertion
   bool flushing = false;
+  unsigned regionsdone = 0;
 
   #define MAX_EVENTS 128
   struct epoll_event events[MAX_EVENTS];
@@ -255,11 +256,8 @@ int main(int argc, char** argv)
 
             case MSG_TIMESTEPUPDATE:
             {
-              // Parsing this is strictly a waste of CPU.
+              // FIXME: Parsing this is strictly a waste of CPU.
               timestep.ParseFromArray(buffer, len);
-
-              // Begin output buffer flush
-              flushing = true;
 
               // Enqueue update to all clients
 							vector<ClientConnection*>::iterator clientsEnd = clients.end();
@@ -267,15 +265,6 @@ int main(int argc, char** argv)
                   i != clientsEnd; ++i) {
                 (*i)->queue.push(MSG_TIMESTEPUPDATE, timestep);
                 (*i)->set_writing(true);
-                // No more reading until we've finished flushing
-                (*i)->set_reading(false);
-              }
-
-              // No more reading until we've finished flushing
-							vector<ServerConnection*>::iterator serversEnd = servers.end();
-              for(vector<ServerConnection*>::iterator i = servers.begin();
-                  i != serversEnd; ++i) {
-                (*i)->set_reading(false);
               }
               break;
             }
@@ -460,12 +449,6 @@ int main(int argc, char** argv)
                   robotServer->queue.push(MSG_CLIENTROBOT, (*robotBacklog)[i]);
 		              robotServer->set_writing(true);
 	              }
-
-		            //force flush the message before we clear the backlog (OR ELSE)
-                while(robotServer->queue.remaining() != 0)
-                  robotServer->queue.doWrite();
-
-                //NOW we can clear the backlog
                 robotBacklog->clear();
               }
 
@@ -502,18 +485,58 @@ int main(int argc, char** argv)
                     robotServer->queue.push(MSG_CLIENTROBOT, (*robotBacklog)[i]);
 		                robotServer->set_writing(true);
 	                }
-
-		              //force flush the message before we clear the backlog (OR ELSE)
-                  while(robotServer->queue.remaining() != 0)
-                    robotServer->queue.doWrite();
-
-                  //NOW we can clear the backlog
                   robotBacklog->clear();
                 }
               }
 
               break;
             }
+
+            case MSG_TIMESTEPDONE: {
+              ++regionsdone;
+              if(regionsdone == servers.size()) {
+                regionsdone = 0;
+
+                bool datawaiting = false;
+                for(vector<ServerConnection*>::iterator i = servers.begin();
+                    i != servers.end(); ++i) {
+                  if((*i)->queue.remaining()) {
+                    datawaiting = true;
+                    break;
+                  }
+                }
+                if(!datawaiting) {
+                  for(vector<ClientConnection*>::iterator i = clients.begin();
+                      i != clients.end(); ++i) {
+                    if((*i)->queue.remaining()) {
+                      datawaiting = true;
+                      break;
+                    }
+                  }
+                }
+
+                if(datawaiting) {
+                  // Begin output buffer flush
+                  flushing = true;
+
+                  // No more reading until we've finished flushing
+                  for(vector<ClientConnection*>::iterator i = clients.begin();
+                      i != clients.end(); ++i) {
+                    (*i)->set_reading(false);
+                  }
+                  for(vector<ServerConnection*>::iterator i = servers.begin();
+                      i != servers.end(); ++i) {
+                    (*i)->set_reading(false);
+                  }
+                } else {
+                  // Continue!
+                  clockconn.queue.push(MSG_TIMESTEPDONE, tsdone);
+                  clockconn.set_writing(true);
+                }
+              }
+              break;
+            }
+              
             default:
               cerr << "Unexpected readable socket from region!" << endl;
               break;
@@ -558,28 +581,22 @@ int main(int argc, char** argv)
           	c->set_writing(false);
           }
           if(flushing) {
-            bool incomplete = false;
-
             // Check for remaining data to write
 						vector<ServerConnection*>::iterator serversEnd = servers.end();
 						vector<ClientConnection*>::iterator clientsEnd = clients.end();
             for(vector<ServerConnection*>::iterator i = servers.begin();
                 i != serversEnd; ++i) {
-              if(incomplete) {
+              if((*i)->queue.remaining()) {
                 break;
               }
-              incomplete = (*i)->queue.remaining();
             }
             for(vector<ClientConnection*>::iterator i = clients.begin();
                 i != clientsEnd; ++i) {
-              if(incomplete) {
+              if((*i)->queue.remaining()) {
                 break;
               }
-              incomplete = (*i)->queue.remaining();
             }
-            if(incomplete) {
-              break;
-            }
+
             // Flush completed; Tell the clock we're done and resume reading
             flushing = false;
             clockconn.queue.push(MSG_TIMESTEPDONE, tsdone);

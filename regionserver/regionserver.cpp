@@ -122,6 +122,17 @@ char *parse_port(char *input) {
 	}
 }
 
+//must declare these up here
+TimestepDone tsdone;
+
+void transmitTsdone(net::EpollConnection* dest){
+  //inform controllers that we're done as well so they can sync
+
+  //Respond with done message
+  dest->queue.push(MSG_TIMESTEPDONE, tsdone);
+  dest->set_writing(true);
+}
+
 //the main function
 void run() {
 	map<int, Bool> sendMoreWorldViews;
@@ -204,7 +215,6 @@ void run() {
 	MessageWriter logWriter(logfd);
 #endif
 	TimestepUpdate timestep;
-	TimestepDone tsdone;
 	tsdone.set_done(true);
 	WorldInfo worldinfo;
 	RegionInfo regioninfo;
@@ -285,6 +295,10 @@ void run() {
 							worldinfo.ParseFromArray(buffer, len);
 							cout << "Got world info." << endl;
 
+							int lastRegionIndex = worldinfo.region_size() - 1;
+							myId = worldinfo.region(lastRegionIndex).id();
+							cout << "My id: " << myId << endl;				
+
 							//handle the homes
 							HomeInfo *homeinfo;
 							for(int i = 0; i < worldinfo.home_size(); i++ )
@@ -292,8 +306,9 @@ void run() {
 								homeinfo=worldinfo.mutable_home(i);
 								if (homeinfo->region_id() == myId )
 								{
-									myHomes.push_back(homeinfo);
-									cout<<"Tracking home at ("+helper::toString(homeinfo->home_x())+", "+helper::toString(homeinfo->home_y())+")"<<endl;
+									myHomes.push_back(homeinfo); 
+									regionarea->AddHome(homeinfo->home_x(), homeinfo->home_y(), homeinfo->team());
+									cout<<"Tracking home at ("+helper::toString(worldinfo.mutable_home(i)->home_x())+", "+helper::toString(worldinfo.mutable_home(i)->home_y())+")"<<endl;
 								}
 							}
 
@@ -323,10 +338,6 @@ void run() {
 									regionarea->AddPuck(a, b);
 									pucks++;
               					}
-
-								int lastRegionIndex = worldinfo.region_size() - 1;
-								myId = worldinfo.region(lastRegionIndex).id();
-								cout << "My id: " << myId << endl;
 
 							  // Draw this:
 							  // 00 | 01 | 02
@@ -434,10 +445,13 @@ void run() {
 							}
 
 							//send the timestepdone packet to tell the clock server we're ready
-							writer.init(MSG_TIMESTEPDONE, tsdone);
+							/*writer.init(MSG_TIMESTEPDONE, tsdone);
 							for (bool complete = false; !complete;) {
 								complete = writer.doWrite();
-							}
+							}*/
+							for(vector<net::EpollConnection*>::iterator i = controllers.begin(); i != controllers.end(); i++)
+							  transmitTsdone(*i);
+							transmitTsdone(&clockconn);
 
 							//NOW you can start the clock
 							cout << "Connected to neighbours! Ready for simulation to begin." << endl;
@@ -554,8 +568,11 @@ void run() {
 
 	            if((ready && sendTsdone)){
                 //Respond with done message
-                clockconn.queue.push(MSG_TIMESTEPDONE, tsdone);
-                clockconn.set_writing(true);
+                for(vector<net::EpollConnection*>::iterator i = controllers.begin(); i != controllers.end(); i++)
+							    transmitTsdone(*i);
+                
+                transmitTsdone(&clockconn);
+                
                 sendTsdone = false;
               }
 
@@ -667,8 +684,11 @@ void run() {
 
 		            if((ready && sendTsdone)){
                   //Respond with done message
-	                clockconn.queue.push(MSG_TIMESTEPDONE, tsdone);
-	                clockconn.set_writing(true);
+	                for(vector<net::EpollConnection*>::iterator i = controllers.begin(); i != controllers.end(); i++)
+							      transmitTsdone(*i);
+							  
+	                transmitTsdone(&clockconn);
+	                
 	                sendTsdone = false;
                 }
 
@@ -851,11 +871,16 @@ void run() {
 					} catch (SystemError e) {
 						close(c->fd);
 						sendMoreWorldViews[c->fd].value = false;
-						cout << "world viewer with fd=" << c->fd << " disconnected" << endl;
 
 						// Remove from sets
 						worldviewers.erase(find(worldviewers.begin(), worldviewers.end(), c));
 						delete c;
+
+            if(e.number() == ECONNRESET) {
+              cout << "world viewer with fd=" << c->fd << " disconnected" << endl;
+            } else {
+              throw e;
+            }
 					}
 					break;
 				case net::connection::REGION:

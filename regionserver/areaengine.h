@@ -43,6 +43,22 @@ struct Index{
   Index(int newx, int newy) : x(newx), y(newy) {}
 };
 
+struct PuckTimer{ //@@@@@
+  double x, y;
+  int startTime;
+
+  PuckTimer(double newx, double newy, int time) : x(newx), y(newy), startTime(time) {}
+};
+
+struct HomeObject{ //@@@@@
+  double x, y;
+  int team;
+  vector<PuckTimer*> puckTimers;
+  int points;
+
+  HomeObject(double newx, double newy, int teamnum) : x(newx), y(newy), team(teamnum), points(0) {}
+};
+
 struct RobotObject{
   int id, lastStep;
   double x, y;
@@ -119,6 +135,9 @@ priority_queue<Command*, vector<Command*>, CompareCommand> clientChangeQueue;
 map<PuckStackObject*, bool, ComparePuckStackObject> puckq;
 //for collision
 double sightSquare, collisionSquare;
+int homeRadiusSquare;
+//for scoring @@@@@
+vector<HomeObject*> homes; //@@@@@
 
   void BroadcastRobot(RobotObject *curRobot, Index oldIndices, Index newIndices, int step, RegionUpdate * regionHandle);
   void BroadcastPuckStack(PuckStackObject *curStack, RegionUpdate * regionHandle);
@@ -130,6 +149,8 @@ public:
 
   void Step(bool generateImage);
 
+  bool Captures(double x1, double y1, double x2, double y2);
+
   bool Sees(double x1, double y1, double x2, double y2);
 
   bool Collides(double x1, double y1, double x2, double y2);
@@ -140,6 +161,8 @@ public:
   PuckStackObject* AddPuck(double newx, double newy);
   bool RemovePuck(double x, double y, int RobotId);
   void SetPuckStack(double newx, double newy, int newc);
+
+  void AddHome(double newx, double newy, int team); //@@@@@
 
   void AddRobot(RobotObject * oldRobot);
   RobotObject* AddRobot(int robotId, double newx, double newy, double newa, double newvx, double newvy, int atStep, int teamId, bool hasPuck, bool broadcast);

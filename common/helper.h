@@ -48,4 +48,6 @@ const unsigned int bytePackClear = 65535;
 unsigned int BytePack(int a, int b);
 TwoInt ByteUnpack(unsigned int data);
 
+float hack_angleFromVelocity(double x, double y);
+
 #endif
