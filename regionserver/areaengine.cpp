@@ -97,9 +97,11 @@ class CompareRobotObject {
 
 //comparator for puck rendering
 //its weird. > sorts ascending for robots, but descending for pucks... it's very weird.
-bool ComparePuckStackObject::operator()(PuckStackObject* const &r1, PuckStackObject* const &r2) // Returns true if t1 is later than t2
+//I'm pretty sure its 'cause robots use a priority queue, and pucks a map
+//bool ComparePuckStackObject::operator()(PuckStackObject* const &r1, PuckStackObject* const &r2) // Returns true if t1 is later than t2
+bool ComparePuckStackObject::operator()(pair<int, int> const &r1, pair<int, int> const &r2) // Returns true if t1 is later than t2
 {
-   if (r1->y < r2->y) return true;
+   if (r1.second < r2.second) return true;
 
    return false;
 }
@@ -239,7 +241,7 @@ void AreaEngine::Step(bool generateImage){
             PuckStackObject * curStack = AddPuck(curRobot->x, curRobot->y, curRobot->id);
             curRobot->holdingPuck = false;
             serverrobot.set_haspuck(false);
-	    
+            
 	    ////cout << "SOMEBODY IS DROPPING A PUCK" << endl;
             //check for home to start scoring @@@@@ should have this as its own function?
   	    for (unsigned int i = 0; i < homes.size(); i++) {
@@ -584,8 +586,8 @@ void AreaEngine::Step(bool generateImage){
       
       int curY = 0;
 
-      map<PuckStackObject*, bool>::const_iterator puckIt;
-      map<PuckStackObject*, bool>::const_iterator puckEnd = puckq.end();
+      map<pair <int, int>, PuckStackObject*>::const_iterator puckIt;
+      map<pair <int, int>, PuckStackObject*>::const_iterator puckEnd = puckq.end();
 
       puckIt=puckq.begin();
       RobotObject* paintRobot = NULL;
@@ -593,7 +595,7 @@ void AreaEngine::Step(bool generateImage){
         paintRobot = pq.top();
       PuckStackObject* paintPuck = NULL;
       if(puckIt != puckEnd)
-        paintPuck = (*puckIt).first;
+        paintPuck = (*puckIt).second;
 
       //we have to iterate through robots and pucks at the same time... it's TRICKAY! TRICKY TRICKY TRICKY TRICKY
       while(true)
@@ -659,7 +661,7 @@ void AreaEngine::Step(bool generateImage){
             render.add_image(BytePack(pdrawX, 65534));  //let 65534 be reserved for pucks
           }
           puckIt++;
-          paintPuck = (*puckIt).first;
+          paintPuck = (*puckIt).second;
         }
       }
     }
@@ -1007,7 +1009,7 @@ void AreaEngine::SetPuckStack(double newx, double newy, int newc){
       lastStack->nextStack = curStack->nextStack;
     }
 
-    puckq.erase(curStack);
+    puckq.erase(make_pair(curStack->x, curStack->y));
     delete curStack;
 
   }else if(newc != 0){
@@ -1018,7 +1020,8 @@ void AreaEngine::SetPuckStack(double newx, double newy, int newc){
       curStack = new PuckStackObject(x, y);
       curStack->nextStack = element->pucks;
       element->pucks = curStack;
-      puckq[curStack] = true;
+
+      puckq[make_pair(curStack->x, curStack->y)] = curStack;
     }
 
     curStack->count = newc;
@@ -1049,7 +1052,8 @@ PuckStackObject* AreaEngine::AddPuck(double newx, double newy, int robotId){
     curStack = new PuckStackObject(x, y);
     curStack->nextStack = element->pucks;
     element->pucks = curStack;
-    puckq[curStack] = true;
+
+    puckq[make_pair(curStack->x, curStack->y)] = curStack;
   }else{
     //increment
     curStack->count++;
@@ -1154,7 +1158,7 @@ bool AreaEngine::RemovePuck(double x, double y, int robotId){
         else{
           lastStack->nextStack = curStack->nextStack;
         }
-        puckq.erase(curStack);
+        puckq.erase(make_pair(curStack->x, curStack->y));
         delete curStack;
       }
 

@@ -317,8 +317,8 @@ void run() {
               					int a=0, b=0;
               					while(pucks < worldinfo.numpucks() ){
           							// populate the world with numpucks which are randomly distributed over the region
-          							a = (2 * ROBOTDIAMETER)+MINELEMENTSIZE + rand() % (REGIONSIDELEN-2*((2 * ROBOTDIAMETER)+MINELEMENTSIZE));
-									b = (2 * ROBOTDIAMETER)+MINELEMENTSIZE + rand() % (REGIONSIDELEN-2*((2 * ROBOTDIAMETER)+MINELEMENTSIZE));
+          							a = (2 * ROBOTDIAMETER)+MINELEMENTSIZE + (rand() % (REGIONSIDELEN-((2 * ROBOTDIAMETER)+MINELEMENTSIZE)));
+									b = (2 * ROBOTDIAMETER)+MINELEMENTSIZE + (rand() % (REGIONSIDELEN-((2 * ROBOTDIAMETER)+MINELEMENTSIZE)));
 
               						//make sure that the newly generated puck is at least PUCK_MINDISTANCEFROMHOME units away from the home
               						for(unsigned i=0; i<myHomes.size(); i++ )
@@ -327,8 +327,8 @@ void run() {
 										{
 											cout<<"Failed creating puck at ("+helper::toString(a)+", "+helper::toString(b)+"). Retrying."<<endl;
 
-											a = (2 * ROBOTDIAMETER)+MINELEMENTSIZE + rand() % (REGIONSIDELEN-2*((2 * ROBOTDIAMETER)+MINELEMENTSIZE));
-											b = (2 * ROBOTDIAMETER)+MINELEMENTSIZE + rand() % (REGIONSIDELEN-2*((2 * ROBOTDIAMETER)+MINELEMENTSIZE));
+											a = (2 * ROBOTDIAMETER)+MINELEMENTSIZE + (rand() % (REGIONSIDELEN-((2 * ROBOTDIAMETER)+MINELEMENTSIZE)));
+											b = (2 * ROBOTDIAMETER)+MINELEMENTSIZE + (rand() % (REGIONSIDELEN-((2 * ROBOTDIAMETER)+MINELEMENTSIZE)));
 
 											i=-1;
 											continue;
