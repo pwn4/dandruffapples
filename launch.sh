@@ -102,7 +102,7 @@ then
     exit 1
 fi
 
-SSHCOMMAND="ssh -o StrictHostKeyChecking=no -o PasswordAuthentication=no -o ConnectTimeout=2 -p $SSHPORT"
+SSHCOMMAND="ssh -o StrictHostKeyChecking=no -o PasswordAuthentication=no -o ConnectTimeout=1 -p $SSHPORT"
 
 REGIONS_LEFT=$[$COLS * $ROWS]
 CONTROLLERS_LEFT=0;
@@ -118,7 +118,7 @@ do
     echo "- Trying $HOST"
     #check for host being up
     INUSE=""
-    if INUSE=`$SSHCOMMAND $HOST "w | awk ' {if(NR>2 && \$1!=wai && !(\$5 ~ /.*m/ || \$5 ~ /.*days/)) print \$1} ' wai=\`whoami\`" >/dev/null & sleep 1 && kill -9 $!`
+    if (! nc -z -w 1 $HOST $SSHPORT >/dev/null 2>/dev/null) || INUSE=`$SSHCOMMAND $HOST "w | awk ' {if(NR>2 && \$1!=wai && !(\$5 ~ /.*m/ || \$5 ~ /.*days/)) print \$1} ' wai=\`whoami\` && false" >/dev/null & sleep 7 && ! kill $!`
     then
 	echo "- Skipping unresponsive host $HOST"
         continue
