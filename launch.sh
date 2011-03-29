@@ -123,6 +123,12 @@ CONTROLHOSTS=""
 echo "Launching $CONTROLLERS_LEFT controllers and $REGIONS_LEFT regions"
 for HOST in `grep -hv \`hostname\` "$HOSTFILE"`
 do
+    if [ ! -e /proc/$CLOCKID ]
+    then
+        echo "Clock server died!  Halting."
+        cleanup
+        exit 1
+    fi
     echo "- Trying $HOST"
     #check for host being up
     INUSE=""
@@ -188,6 +194,12 @@ then
    HOSTIDX=1
    while [ $CLIENTS_LEFT -gt 0 ]
    do
+       if [ ! -e /proc/$CLOCKID ]
+       then
+           echo "Clock server died!  Halting."
+           cleanup
+           exit 1
+       fi
        CLIENTS_LEFT=$[$CLIENTS_LEFT - $QUOTIENT]
        EXTRA=0
        if [ $REMAINDER -gt 0 ]
