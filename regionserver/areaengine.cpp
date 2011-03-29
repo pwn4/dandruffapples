@@ -867,66 +867,6 @@ void AreaEngine::flushBuffers(){
     }
 }
 
-void AreaEngine::flushNeighbours(){
-  //FORCE all updates to neighbors to occur before we finish the step (necessary for synchronization)
-  for(int i = 0; i < 8; i++)
-  {
-    if(neighbours[i] != NULL){
-      neighbours[i]->set_writing(true);
-      while(neighbours[i]->queue.remaining() != 0)
-        neighbours[i]->queue.doWrite();
-
-      neighbours[i]->set_writing(false);
-    }
-  }
-}
-
-void AreaEngine::flushControllers(){
-  //Force all Claim messages to controllers in this step!
-  for (vector<EpollConnection*>::const_iterator it =
-       controllers.begin(); it != controllers.end(); it++) {
-    while((*it)->queue.remaining() != 0)
-      (*it)->queue.doWrite();
-  }
-}
-
-void AreaEngine::forceUpdates(){
-  MessageType type;
-	int len;
-	const void *buffer;
-
-  //FORCE all updates FROM neighbors to be entered before we start the step (necessary for synchronization)
-  for(int i = 0; i < 8; i++)
-  {
-    if(neighbours[i] != NULL){
-      neighbours[i]->set_reading(true);
-      while(neighbours[i]->reader.doRead(&type, &len, &buffer))
-      {
-        switch (type) {
-			    case MSG_SERVERROBOT: {
-			      ServerRobot serverrobot;
-			      serverrobot.ParseFromArray(buffer, len);
-			      GotServerRobot(serverrobot);
-			      break;
-			    }
-			    case MSG_PUCKSTACK: {
-			      PuckStack puckstack;
-			      puckstack.ParseFromArray(buffer, len);
-			      GotPuckStack(puckstack);
-			      break;
-			    }
-
-		      default:
-				  cerr << "Unexpected readable message from Region\n";
-				  break;
-			  }
-      }
-
-      neighbours[i]->set_reading(false);
-    }
-  }
-}
-
 //these are the robot puck handling methods - if the action is not possible they will
 //gracefully fail. Since puck updates don't require sync precision, we can notify best effort
 //Also, this method is blunt right now. Just pick up any pick beneath you.
