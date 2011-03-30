@@ -436,7 +436,7 @@ gboolean clockMessage(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 void updateDrawFactor(bool zoomIn) {
 	GtkViewport *viewport=GTK_VIEWPORT(gtk_builder_get_object( builder, "viewport" ));
 	GtkAdjustment *hAdjustment=gtk_viewport_get_hadjustment(viewport), *vAdjustment=gtk_viewport_get_vadjustment(viewport);
-	float percentH=gtk_adjustment_get_value(hAdjustment)/gtk_adjustment_get_upper(hAdjustment), percentV=gtk_adjustment_get_value(vAdjustment)/gtk_adjustment_get_upper(vAdjustment);
+	double percentH=gtk_adjustment_get_value(hAdjustment)/gtk_adjustment_get_upper(hAdjustment), percentV=gtk_adjustment_get_value(vAdjustment)/gtk_adjustment_get_upper(vAdjustment);
 
 	for (int i = TOP_LEFT; i <= BOTTOM_RIGHT; i++) {
 		gtk_widget_set_size_request(GTK_WIDGET(worldDrawingArea.at(i)), IMAGEWIDTH * drawFactor,
@@ -446,13 +446,13 @@ void updateDrawFactor(bool zoomIn) {
 	//change the position of the viewport to correspond to the zoom in/zoom out
 	if( zoomIn )
 	{
-		gtk_adjustment_set_value(hAdjustment, ( gtk_adjustment_get_upper(hAdjustment) + IMAGEWIDTH*(WVZOOMSPEED)*2 ) * (percentH));
-		gtk_adjustment_set_value(vAdjustment, ( gtk_adjustment_get_upper(vAdjustment) + IMAGEHEIGHT*(WVZOOMSPEED)*2 ) * (percentV));
+		gtk_adjustment_set_value(hAdjustment, ( gtk_adjustment_get_upper(hAdjustment) + ((double)IMAGEWIDTH)*(WVZOOMSPEED)*2.0 ) * (percentH));
+		gtk_adjustment_set_value(vAdjustment, ( gtk_adjustment_get_upper(vAdjustment) + ((double)IMAGEHEIGHT)*(WVZOOMSPEED)*2.0 ) * (percentV));
 	}
 	else
 	{
-		gtk_adjustment_set_value(hAdjustment, ( gtk_adjustment_get_upper(hAdjustment) - IMAGEWIDTH*(WVZOOMSPEED)*2 ) * (percentH));
-		gtk_adjustment_set_value(vAdjustment, ( gtk_adjustment_get_upper(vAdjustment) - IMAGEHEIGHT*(WVZOOMSPEED)*2 ) * (percentV));
+		gtk_adjustment_set_value(hAdjustment, ( gtk_adjustment_get_upper(hAdjustment) - ((double)IMAGEWIDTH)*(WVZOOMSPEED)*2.0 ) * (percentH));
+		gtk_adjustment_set_value(vAdjustment, ( gtk_adjustment_get_upper(vAdjustment) - ((double)IMAGEHEIGHT)*(WVZOOMSPEED)*2.0 ) * (percentV));
 	}
 
 #ifdef DEBUG
