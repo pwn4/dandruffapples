@@ -58,7 +58,6 @@ echo "Found \"${1,,}\" argument"
     sleepTime=0.5
   elif [ "${1,,}" == "-all" ]; then
     clockserver=true
-    worldviewer=true
     regionserver=true
     controller=true
     client=true

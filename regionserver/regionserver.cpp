@@ -54,6 +54,8 @@ char clockip[40] = "127.0.0.1";
 int controllerPort = CONTROLLERS_PORT;
 int worldviewerPort = WORLD_VIEWER_PORT;
 int regionPort = REGIONS_PORT;
+
+AreaEngine* regionarea;
 ////////////////////////////////////////////////////////////
 
 //need to tell whether a bool has been initialized or not
@@ -176,15 +178,6 @@ void run() {
 	int worldviewerfd = net::do_listen(worldviewerPort);
 	net::set_blocking(worldviewerfd, false);
 
-	//create a new file for logging
-	string logName = helper::getNewName("/tmp/" + helper::defaultLogName);
-	int logfd = open(logName.c_str(), O_WRONLY | O_CREAT, 0644);
-
-	if (logfd < 0) {
-		perror("Failed to create log file");
-		exit(1);
-	}
-
 	//create epoll
 	int epoll = epoll_create(16); //9 adjacents, log file, the clock, and a few controllers
 	if (epoll < 0) {
@@ -209,7 +202,6 @@ void run() {
 	ClientRobot clientrobot;
 
 	//server variables
-	MessageWriter logWriter(logfd);
 	TimestepUpdate timestep;
 	tsdone.set_done(true);
 	WorldInfo worldinfo;
@@ -220,7 +212,7 @@ void run() {
 	int round = 0;
 	bool sendTsdone = false;
 
-	AreaEngine* regionarea = new AreaEngine(ROBOTDIAMETER,REGIONSIDELEN, MINELEMENTSIZE, VIEWDISTANCE, VIEWANGLE,
+	regionarea = new AreaEngine(ROBOTDIAMETER,REGIONSIDELEN, MINELEMENTSIZE, VIEWDISTANCE, VIEWANGLE,
 			MAXSPEED, MAXROTATE);
 	//create robots for benchmarking!
 	int numRobots = 0;
@@ -464,8 +456,8 @@ void run() {
 							//do our initializations here in the init step
 							if(!initialized)
 							{
-                //ready the engine buffers
-                regionarea->clearBuffers();
+								//ready the engine buffers
+								regionarea->clearBuffers();
 
 								// Find our robots, and add to the simulation
 							  vector<int> myRobotIds;
@@ -483,8 +475,8 @@ void run() {
 								  }
 							  }
 
-                //tell the engine to send its buffer contents
-                regionarea->flushBuffers();
+							  //tell the engine to send its buffer contents
+							  regionarea->flushBuffers();
 
 							  cout << numRobots << " robots created." << endl;
 
@@ -514,9 +506,9 @@ void run() {
 
 							regionarea->Step(generateImage);
 
-              //async 'flush'
-              round++;  //we need to ensure we get all neighbour data before continuing
-              sendTsdone = true;
+							//async 'flush'
+							round++;  //we need to ensure we get all neighbour data before continuing
+							sendTsdone = true;
 
 							timeSteps++; //Note: only use this for this temp stat taking. use regionarea->curStep for syncing
 
@@ -887,8 +879,58 @@ void run() {
 	close(worldviewerfd);
 }
 
+//log the home scores for the scorekeeper to read
+void logTheScore(int param)
+{
+
+	//create a new file for logging
+	string logName = helper::getNewName(helper::scoreKeeperLogName);
+	int logfd = open(logName.c_str(), O_WRONLY | O_CREAT, 0644);
+
+	if (logfd < 0) {
+		cerr<<"Failed to create log file"<<endl;
+		exit(1);
+	}
+
+	//server variables
+	MessageWriter scoreWriter(logfd);
+	HomeScore homescore;
+
+	for (int i = 0; i < regionarea->render.score_size(); i++) {
+		homescore=regionarea->render.score(i);
+		scoreWriter.init(MSG_HOMESCORE, homescore);
+
+		for (bool complete = false; !complete;) {
+			complete = scoreWriter.doWrite();
+		}
+	}
+
+	exit(1);
+}
+
 //this is the main loop for the server
 int main(int argc, char* argv[]) {
+	//ctrl+c
+	if(	signal(SIGINT, logTheScore) == SIG_ERR )
+	{
+		cerr<<"Fatal Error: unable to set a handler for SIGINT"<<endl;
+		return 1;
+	}
+
+	//ctrl+\							_
+	if(	signal(SIGQUIT, logTheScore) == SIG_ERR )
+	{
+		cerr<<"Fatal Error: unable to set a handler for SIGQUIT"<<endl;
+		return 1;
+	}
+
+	//kill and killall
+	if(	signal(SIGTERM, logTheScore) == SIG_ERR )
+	{
+		cerr<<"Fatal Error: unable to set a handler for SIGTERM"<<endl;
+		return 1;
+	}
+
 	//Print a starting message
 	printf("--== Region Server Software ==-\n");
 
@@ -908,7 +950,14 @@ int main(int argc, char* argv[]) {
 
 	printf("Server Running!\n");
 
-	run();
+	try{
+		run();
+	}
+	catch(exception e)
+	{
+		logTheScore(NULL);
+	}
+
 
 	printf("Server Shutting Down ...\n");
 

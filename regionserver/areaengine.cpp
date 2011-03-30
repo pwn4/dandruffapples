@@ -150,13 +150,13 @@ void AreaEngine::Step(bool generateImage){
   //Earn some Points Here
   //I dunno if this is the right place
   for (unsigned int h = 0; h < homes.size(); h++) {
-    while (homes[h]->puckTimers.size() > 0 && (homes[h]->puckTimers.front()->startTime + 200) < curStep) { 
+    while (homes[h]->puckTimers.size() > 0 && (homes[h]->puckTimers.front()->startTime + 200) < curStep) {
       PuckTimer *puckstack = *(homes[h]->puckTimers.begin());
       RemovePuck(puckstack->x, puckstack->y, -1);
       double newx = rand() % regionRatio;
       double newy = rand() % regionRatio;
       bool captures = true;
-      while (captures) {			
+      while (captures) {
         captures = false;
         for (unsigned int i = 0; i < homes.size(); i++) {
           if(Captures(homes[i]->x, homes[i]->y, newx, newy))
@@ -171,7 +171,7 @@ void AreaEngine::Step(bool generateImage){
       AddPuck(newx, newy);
       homes[h]->puckTimers.erase(homes[h]->puckTimers.begin());
       homes[h]->points++;
-      cout << "TEAM " << homes[h]->team << " JUST GOT A POINT!! TOTAL: " << homes[h]->points << endl;
+      //cout << "TEAM " << homes[h]->team << " JUST GOT A POINT!! TOTAL: " << homes[h]->points << endl;
     }
   }
 
@@ -219,7 +219,7 @@ void AreaEngine::Step(bool generateImage){
           {
             curRobot->holdingPuck = true;
             serverrobot.set_haspuck(true);
-            
+
 	    ////cout << "SOMEBODY IS PICKING UP A PUCK" << endl;
             //check for home to cancel scoring @@@@@ Untested TODO
             for (unsigned int l = 0; l < homes.size(); l++) {
@@ -241,11 +241,11 @@ void AreaEngine::Step(bool generateImage){
             PuckStackObject * curStack = AddPuck(curRobot->x, curRobot->y, curRobot->id);
             curRobot->holdingPuck = false;
             serverrobot.set_haspuck(false);
-            
+
 	    ////cout << "SOMEBODY IS DROPPING A PUCK" << endl;
             //check for home to start scoring @@@@@ should have this as its own function?
   	    for (unsigned int i = 0; i < homes.size(); i++) {
-		      if (Captures(homes[i]->x, homes[i]->y, curStack->x, curStack->y)) {			
+		      if (Captures(homes[i]->x, homes[i]->y, curStack->x, curStack->y)) {
 			      PuckTimer* newTimer = new PuckTimer(curStack->x, curStack->y, curStep);
             			homes[i]->puckTimers.push_back(newTimer);
             			//cout << "PUCK ENTERED QUEUE" << endl;
@@ -574,7 +574,7 @@ void AreaEngine::Step(bool generateImage){
       int minY = 0;
       render.clear_image();
       render.set_timestep(curStep);
-      
+
       //add homedata to the regionrender
       render.clear_score();
       for(vector<HomeObject*>::iterator homeIt = homes.begin(); homeIt != homes.end(); homeIt++)
@@ -583,7 +583,7 @@ void AreaEngine::Step(bool generateImage){
         newscore->set_team((*homeIt)->team);
         newscore->set_score((*homeIt)->points);
       }
-      
+
       int curY = 0;
 
       map<pair <int, int>, PuckStackObject*>::const_iterator puckIt;
@@ -740,7 +740,7 @@ void AreaEngine::Step(bool generateImage){
             //do robots IF we're in a border
             if(j == topLeft.x || j == botRight.x || k == topLeft.y || k == botRight.y)
             {
-            
+
             otherRobot = element->robots;
 
             while(otherRobot != NULL) {
@@ -763,7 +763,7 @@ void AreaEngine::Step(bool generateImage){
 
               otherRobot = otherRobot->nextRobot;
             }
-            
+
             }
 
             //do pucks
@@ -922,7 +922,7 @@ void AreaEngine::DropPuck(int robotId){
   newCommand->puckAction = 2;
 
   clientChangeQueue.push(newCommand);
-  
+
 }
 
 //set a puck stack in the system.
@@ -1327,7 +1327,7 @@ void AreaEngine::GotServerRobot(ServerRobot message){
 
       if(message.has_angle())
         newCommand->angle = message.angle();
-        
+
       //puck holding states "shouldn't" need to be timed. Process immediately.
       if(message.has_haspuck())
         robots[message.id()]->holdingPuck = message.haspuck();

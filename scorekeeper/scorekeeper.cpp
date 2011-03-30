@@ -74,7 +74,7 @@ void sortMergeLog(vector<Log> &inputLogsReader, MessageWriter logWriter) {
 	MessageType type;
 	int len;
 	const void *buffer;
-	uint64_t nextTimeFrame;
+	uint64_t nextTimeFrame=0;
 	int readingLogs = inputLogsReader.size();
 
 	//loop while we are still reading at least one input log file
@@ -170,7 +170,7 @@ void getInputLogs(string inputDir, vector<Log> &inputLogsReader) {
 	while ((dirp = readdir(dp)) != NULL) {
 		fileName = string(dirp->d_name);
 
-		if (fileName.find(helper::defaultLogName) != string::npos) {
+		if (fileName.find(helper::scoreKeeperLogName) != string::npos) {
 			tmp = inputDir + fileName;
 			fd = open(tmp.c_str(), O_RDONLY);
 
@@ -208,7 +208,7 @@ int main(int argc, char **argv) {
 			outputDir = "/tmp/output/";
 	}
 
-	string mergedLog = helper::getNewName(outputDir + helper::defaultLogName);
+	string mergedLog = helper::getNewName(outputDir + helper::scoreKeeperLogName);
 	int mergedLogFd = open(mergedLog.c_str(), O_WRONLY | O_CREAT, 0644);
 #ifdef DEBUG
 	debug << "Reading logs from: " << inputDir << endl << "Writing logs to: "

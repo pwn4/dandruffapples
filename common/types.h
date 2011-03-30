@@ -15,6 +15,7 @@ enum MessageType {
   MSG_CLAIM,
   MSG_BOUNCEDROBOT,
   MSG_REGIONUPDATE,
+  MSG_HOMESCORE,
   MSG_MAX
 };
 
