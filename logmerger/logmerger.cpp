@@ -46,6 +46,10 @@ struct Log {
 	}
 };
 
+#ifdef DEBUG
+	ofstream debug;
+	debug.open("/tmp/logmerger_debug.txt", ios::out);
+#endif
 
 
 //get the time frame of a log with the minimum time frame
@@ -63,8 +67,7 @@ uint64_t getNextTimeFrame(vector<Log> &inputLogsReader)
 }
 
 //read from input logs and sorting them into one log file by the time frame number
-void sortMergeLog(vector<Log> &inputLogsReader, MessageWriter logWriter,
-		ofstream &debug) {
+void sortMergeLog(vector<Log> &inputLogsReader, MessageWriter logWriter) {
 	TimestepUpdate timeframe;
 	PuckStack puckstack;
 	ServerRobot serverrobot;
@@ -145,12 +148,13 @@ void sortMergeLog(vector<Log> &inputLogsReader, MessageWriter logWriter,
 			complete = logWriter.doWrite();
 	}
 
+#ifdef DEBUG
 	debug.close();
+#endif
 }
 
 //get a list of files from a inputDir, open them and store them as a list of MessageReader vectors
-void getInputLogs(string inputDir, vector<Log> &inputLogsReader,
-		ofstream &debug) {
+void getInputLogs(string inputDir, vector<Log> &inputLogsReader) {
 	DIR *dp;
 	struct dirent *dirp;
 	string fileName, tmp;
@@ -191,13 +195,11 @@ void getInputLogs(string inputDir, vector<Log> &inputLogsReader,
 
 int main(int argc, char **argv) {
 	string inputDir = "/tmp/input/", outputDir = "/tmp/output/";
-	ofstream debug;
-	debug.open("/tmp/logmerger_debug.txt", ios::out);
 
 	if (argc > 1) {
-		helper::Config config(argc, argv);
-		inputDir = config.getArg("-in");
-		outputDir = config.getArg("-out");
+		helper::CmdLine cmdline(argc, argv);
+		inputDir = cmdline.getArg("-in");
+		outputDir = cmdline.getArg("-out");
 
 		if (inputDir.length() == 0)
 			inputDir = "/tmp/input/";
@@ -223,9 +225,9 @@ int main(int argc, char **argv) {
 	vector<Log> inputLogsReader = vector<Log> ();
 	MessageWriter logWriter(mergedLogFd);
 
-	getInputLogs(inputDir, inputLogsReader, debug);
+	getInputLogs(inputDir, inputLogsReader);
 
-	sortMergeLog(inputLogsReader, logWriter, debug);
+	sortMergeLog(inputLogsReader, logWriter);
 
 	return 0;
 }

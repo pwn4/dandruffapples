@@ -11,9 +11,6 @@
 #define WVMAXZOOMED 10
 #define MINDIAMETER 1.0
 
-//enable regionserver logging to file
-//#define ENABLE_LOGGING
-
 //printing of debug logs ( logmerger, clientviewer, worldivewer only )
 //#define DEBUG
 #define DEBUG_COUT

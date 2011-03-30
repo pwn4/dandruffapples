@@ -236,7 +236,6 @@ gboolean drawingAreaExpose(GtkWidget *widgetDrawingArea, GdkEventExpose *event, 
 		}
 
 		//if the robot has a puck then actually draw the puck in its center
-		//WARNING: if a robot has a puck, does it still see the puck?
 		if (ownRobotDraw->hasPuck) {
 			cairo_set_source_rgb(cr, 0, 0, 0);
 
@@ -256,8 +255,8 @@ gboolean drawingAreaExpose(GtkWidget *widgetDrawingArea, GdkEventExpose *event, 
 		  cairo_move_to(cr, origin[0], origin[1]);
 		  cairo_arc_negative(cr, origin[0], origin[1], imageWidth/2, (VIEWANGLE / 2.0) - ownRobotDraw->angle, (2 * M_PI) - (VIEWANGLE/2.0) - ownRobotDraw->angle);
 		  cairo_line_to(cr, origin[0], origin[1]);
-    }
-    cairo_stroke(cr);
+		}
+		cairo_stroke(cr);
 
 		cairo_destroy(cr);
 		*draw = false;

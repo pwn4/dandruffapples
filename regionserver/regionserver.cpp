@@ -176,7 +176,6 @@ void run() {
 	int worldviewerfd = net::do_listen(worldviewerPort);
 	net::set_blocking(worldviewerfd, false);
 
-#ifdef ENABLE_LOGGING
 	//create a new file for logging
 	string logName = helper::getNewName("/tmp/" + helper::defaultLogName);
 	int logfd = open(logName.c_str(), O_WRONLY | O_CREAT, 0644);
@@ -185,7 +184,6 @@ void run() {
 		perror("Failed to create log file");
 		exit(1);
 	}
-#endif
 
 	//create epoll
 	int epoll = epoll_create(16); //9 adjacents, log file, the clock, and a few controllers
@@ -211,9 +209,7 @@ void run() {
 	ClientRobot clientrobot;
 
 	//server variables
-#ifdef ENABLE_LOGGING
 	MessageWriter logWriter(logfd);
-#endif
 	TimestepUpdate timestep;
 	tsdone.set_done(true);
 	WorldInfo worldinfo;
@@ -297,7 +293,7 @@ void run() {
 
 							int lastRegionIndex = worldinfo.region_size() - 1;
 							myId = worldinfo.region(lastRegionIndex).id();
-							cout << "My id: " << myId << endl;				
+							cout << "My id: " << myId << endl;
 
 							//handle the homes
 							HomeInfo *homeinfo;
@@ -306,7 +302,7 @@ void run() {
 								homeinfo=worldinfo.mutable_home(i);
 								if (homeinfo->region_id() == myId )
 								{
-									myHomes.push_back(homeinfo); 
+									myHomes.push_back(homeinfo);
 									regionarea->AddHome(homeinfo->home_x(), homeinfo->home_y(), homeinfo->team());
 									cout<<"Tracking home at ("+helper::toString(worldinfo.mutable_home(i)->home_x())+", "+helper::toString(worldinfo.mutable_home(i)->home_y())+")"<<endl;
 								}
@@ -536,29 +532,9 @@ void run() {
 
 							}
 
-#ifdef ENABLE_LOGGING
-							logWriter.init(MSG_TIMESTEPUPDATE, timestep);
-							logWriter.doWrite();
 
-							for (int i = 0; i < 50; i++) {
-								serverrobot.set_id(rand() % 1000 + 1);
-								logWriter.init(MSG_SERVERROBOT, serverrobot);
-								for (bool complete = false; !complete;) {
-									complete = logWriter.doWrite();
-									;
-								}
-							}
 
-							for (int i = 0; i < 25; i++) {
-								puckstack.set_stacksize(rand() % 1000 + 1);
-								logWriter.init(MSG_PUCKSTACK, puckstack);
-								for (bool complete = false; !complete;) {
-									complete = logWriter.doWrite();
-									;
-								}
-							}
-#endif
-							bool ready = true;
+					bool ready = true;
 			        for(unsigned i = 0; i < uniqueRegions.size(); i++)
 			          if(uniqueRegions.at(i).second != regionarea->curStep)
 			          {
@@ -570,9 +546,9 @@ void run() {
                 //Respond with done message
                 for(vector<net::EpollConnection*>::iterator i = controllers.begin(); i != controllers.end(); i++)
 							    transmitTsdone(*i);
-                
+
                 transmitTsdone(&clockconn);
-                
+
                 sendTsdone = false;
               }
 
@@ -686,9 +662,9 @@ void run() {
                   //Respond with done message
 	                for(vector<net::EpollConnection*>::iterator i = controllers.begin(); i != controllers.end(); i++)
 							      transmitTsdone(*i);
-							  
+
 	                transmitTsdone(&clockconn);
-	                
+
 	                sendTsdone = false;
                 }
 
