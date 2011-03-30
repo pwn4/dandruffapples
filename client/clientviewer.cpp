@@ -323,6 +323,8 @@ void onZoomOutClicked(GtkWidget *widgetDrawingArea, gpointer data) {
 //initializations and simple modifications for the things that will be drawn
 void ClientViewer::initClientViewer(int numberOfRobots, int myTeam, int _drawFactor) {
 #ifdef DEBUG
+	string tmp=helper::logDirectory + helper::clientViewerDebugLogName;
+	debug.open(tmp.c_str(), ios::out);
 	debug << "Starting the Client Viewer!" << endl;
 #endif
 	g_type_init();
@@ -400,10 +402,6 @@ ClientViewer::ClientViewer(string pathToExe) :
 	//assume that the clientviewer.builder is in the same directory as the executable that we are running
 	builderPath = pathToExe + "clientviewer.glade";
 	builder = gtk_builder_new();
-
-#ifdef DEBUG
-	debug.open(helper::clientViewerDebugLogName.c_str(), ios::out);
-#endif
 }
 
 ClientViewer::~ClientViewer() {

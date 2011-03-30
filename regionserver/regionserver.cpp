@@ -56,6 +56,7 @@ int worldviewerPort = WORLD_VIEWER_PORT;
 int regionPort = REGIONS_PORT;
 
 AreaEngine* regionarea;
+unsigned myId;
 ////////////////////////////////////////////////////////////
 
 //need to tell whether a bool has been initialized or not
@@ -206,7 +207,7 @@ void run() {
 	tsdone.set_done(true);
 	WorldInfo worldinfo;
 	RegionInfo regioninfo;
-	unsigned myId = 0; //region id
+	myId = 0; //region id
 
 	//for synchronization
 	int round = 0;
@@ -880,15 +881,13 @@ void run() {
 }
 
 //log the home scores for the scorekeeper to read
-void logTheScore(int param)
-{
-
+void logTheScore(int param) {
 	//create a new file for logging
-	string logName = helper::getNewName(helper::scoreKeeperLogName);
+	string logName = helper::logDirectory + helper::scoreKeeperLog + helper::toString(myId);
 	int logfd = open(logName.c_str(), O_WRONLY | O_CREAT, 0644);
 
 	if (logfd < 0) {
-		cerr<<"Failed to create log file"<<endl;
+		cerr << "Failed to create log file" << endl;
 		exit(1);
 	}
 
@@ -896,8 +895,12 @@ void logTheScore(int param)
 	MessageWriter scoreWriter(logfd);
 	HomeScore homescore;
 
-	for (int i = 0; i < regionarea->render.score_size(); i++) {
-		homescore=regionarea->render.score(i);
+	for (vector<HomeObject*>::const_iterator homeIt = regionarea->homes.begin();
+	homeIt != regionarea->homes.end();
+			homeIt++) {
+		homescore.set_team((*homeIt)->team);
+		homescore.set_score((*homeIt)->points);
+
 		scoreWriter.init(MSG_HOMESCORE, homescore);
 
 		for (bool complete = false; !complete;) {

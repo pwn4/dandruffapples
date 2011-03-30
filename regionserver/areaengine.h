@@ -137,13 +137,13 @@ map< pair<int, int>, PuckStackObject*, ComparePuckStackObject> puckq;
 //for collision
 double sightSquare, collisionSquare;
 int homeRadiusSquare;
-//for scoring @@@@@
-vector<HomeObject*> homes; //@@@@@
 
   void BroadcastRobot(RobotObject *curRobot, Index oldIndices, Index newIndices, int step, RegionUpdate * regionHandle);
   void BroadcastPuckStack(PuckStackObject *curStack, RegionUpdate * regionHandle);
 
 public:
+  //for scoring @@@@@
+  vector<HomeObject*> homes; //@@@@@
   RegionRender render;
   int curStep;
   Index getRobotIndices(double x, double y, bool clip);
@@ -193,10 +193,10 @@ public:
   void flushControllers();
 
   void forceUpdates();
-  
+
   //new async methods
   void clearBuffers();
-  
+
   void flushBuffers();
 
 };

@@ -18,7 +18,6 @@ inline string toString (const T& t){
 
 	return ss.str();;
 }
-string getNewName(string);
 float distanceBetween(float x1, float x2, float y1, float y2);
 
 class CmdLine {
@@ -32,9 +31,12 @@ private:
 
 };
 
-const string scoreKeeperLogName = "/tmp/scorekeeperlog";
-const string worldViewerDebugLogName="/tmp/worldviewer_debug.txt";
-const string clientViewerDebugLogName="/tmp/clientviewer_debug.txt";
+const string scoreKeeperFinalScore = "finalscore.txt";
+
+const string logDirectory="/tmp/";
+const string scoreKeeperLog = "scorekeeperlog";
+const string worldViewerDebugLogName="worldviewer_debug.txt";
+const string clientViewerDebugLogName="clientviewer_debug.txt";
 }
 
 struct TwoInt{

@@ -11,7 +11,7 @@
 #define WVMAXZOOMED 10
 #define MINDIAMETER 1.0
 
-//printing of debug logs ( logmerger, clientviewer, worldivewer only )
+//printing of debug logs ( scorekeeper, clientviewer, worldivewer only )
 //#define DEBUG
 #define DEBUG_COUT
 

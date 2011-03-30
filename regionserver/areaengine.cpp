@@ -577,7 +577,7 @@ void AreaEngine::Step(bool generateImage){
 
       //add homedata to the regionrender
       render.clear_score();
-      for(vector<HomeObject*>::iterator homeIt = homes.begin(); homeIt != homes.end(); homeIt++)
+      for(vector<HomeObject*>::const_iterator homeIt = homes.begin(); homeIt != homes.end(); homeIt++)
       {
         HomeScore * newscore = render.add_score();
         newscore->set_team((*homeIt)->team);

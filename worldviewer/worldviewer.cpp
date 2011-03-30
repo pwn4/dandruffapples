@@ -835,7 +835,8 @@ int main(int argc, char* argv[]) {
 	//for triggering an ssh tunnel
 	tunnelPort = atoi(cmdline.getArg("-t", "-1").c_str());
 #ifdef DEBUG
-	debug.open(helper::worldViewerDebugLogName.c_str(), ios::out);
+	string tmp=helper::logDirectory + helper::worldViewerDebugLogName;
+	debug.open(tmp.c_str(), ios::out);
 #endif
 	loadConfigFile(configFileName.c_str(), clockip);
 
