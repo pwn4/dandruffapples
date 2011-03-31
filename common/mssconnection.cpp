@@ -1,6 +1,6 @@
 #include "mssconnection.h"
 
-#define MSS_RATIO 0.9
+#define MSS_RATIO 0.75
 
 namespace net {
   MSSConnection::MSSConnection(int epoll, int flags_, int fd_) : EpollConnection(epoll, flags_, fd_) {

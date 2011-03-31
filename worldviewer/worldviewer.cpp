@@ -433,11 +433,26 @@ gboolean clockMessage(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 }
 
 //call when we change the draw factor. Sends the new draw factor to all the currently viewed regions and resizes the drawing areas.
-void updateDrawFactor() {
+void updateDrawFactor(bool zoomIn) {
+	GtkViewport *viewport=GTK_VIEWPORT(gtk_builder_get_object( builder, "viewport" ));
+	GtkAdjustment *hAdjustment=gtk_viewport_get_hadjustment(viewport), *vAdjustment=gtk_viewport_get_vadjustment(viewport);
+	double percentH=gtk_adjustment_get_value(hAdjustment)/gtk_adjustment_get_upper(hAdjustment), percentV=gtk_adjustment_get_value(vAdjustment)/gtk_adjustment_get_upper(vAdjustment);
+
 	for (int i = TOP_LEFT; i <= BOTTOM_RIGHT; i++) {
 		gtk_widget_set_size_request(GTK_WIDGET(worldDrawingArea.at(i)), IMAGEWIDTH * drawFactor,
 				IMAGEHEIGHT * drawFactor);
+	}
 
+	//change the position of the viewport to correspond to the zoom in/zoom out
+	if( zoomIn )
+	{
+		gtk_adjustment_set_value(hAdjustment, ( gtk_adjustment_get_upper(hAdjustment) + ((double)IMAGEWIDTH)*(WVZOOMSPEED)*2.0 ) * (percentH));
+		gtk_adjustment_set_value(vAdjustment, ( gtk_adjustment_get_upper(vAdjustment) + ((double)IMAGEHEIGHT)*(WVZOOMSPEED)*2.0 ) * (percentV));
+	}
+	else
+	{
+		gtk_adjustment_set_value(hAdjustment, ( gtk_adjustment_get_upper(hAdjustment) - ((double)IMAGEWIDTH)*(WVZOOMSPEED)*2.0 ) * (percentH));
+		gtk_adjustment_set_value(vAdjustment, ( gtk_adjustment_get_upper(vAdjustment) - ((double)IMAGEHEIGHT)*(WVZOOMSPEED)*2.0 ) * (percentV));
 	}
 
 #ifdef DEBUG
@@ -679,7 +694,7 @@ void onZoomInClicked(GtkWidget *widgetDrawingArea, gpointer data) {
 		if (!gtk_widget_get_sensitive(GTK_WIDGET(gtk_builder_get_object( builder, "ZoomOut" ))))
 			gtk_widget_set_sensitive(GTK_WIDGET(gtk_builder_get_object( builder, "ZoomOut" )), true);
 
-		updateDrawFactor();
+		updateDrawFactor(true);
 
 #ifdef DEBUG
 		debug<<"Zoomed In"<<endl;
@@ -700,7 +715,7 @@ void onZoomOutClicked(GtkWidget *widgetDrawingArea, gpointer data) {
 		if (!gtk_widget_get_sensitive(GTK_WIDGET(gtk_builder_get_object( builder, "ZoomIn" ))))
 			gtk_widget_set_sensitive(GTK_WIDGET(gtk_builder_get_object( builder, "ZoomIn" )), true);
 
-		updateDrawFactor();
+		updateDrawFactor(false);
 #ifdef DEBUG
 		debug<<"Zoomed Out"<<endl;
 #endif
@@ -793,7 +808,7 @@ int main(int argc, char* argv[]) {
 	char clockip[40];
 	helper::CmdLine cmdline(argc, argv);
 
-	//assume that the worldviewer.builder is in the same directory as the executable that we are running
+	//assume that the worldviewer.glade is in the same directory as the executable that we are running
 	string builderPath(argv[0]);
 	builderPath = builderPath.substr(0, builderPath.find_last_of("//") + 1) + "worldviewer.glade";
 	builder = gtk_builder_new();
@@ -820,7 +835,8 @@ int main(int argc, char* argv[]) {
 	//for triggering an ssh tunnel
 	tunnelPort = atoi(cmdline.getArg("-t", "-1").c_str());
 #ifdef DEBUG
-	debug.open(helper::worldViewerDebugLogName.c_str(), ios::out);
+	string tmp=helper::logDirectory + helper::worldViewerDebugLogName;
+	debug.open(tmp.c_str(), ios::out);
 #endif
 	loadConfigFile(configFileName.c_str(), clockip);
 

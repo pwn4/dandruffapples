@@ -95,7 +95,7 @@ struct ArrayObject{
 
 class ComparePuckStackObject {
     public:
-    bool operator()(PuckStackObject* const &r1, PuckStackObject* const &r2); // Returns true if t1 is earlier than t2
+    bool operator()(pair<int, int> const &r1, pair<int, int> const &r2); // Returns true if t1 is earlier than t2
 };
 
 struct Command {
@@ -132,17 +132,18 @@ vector<EpollConnection*> controllers;
 priority_queue<Command*, vector<Command*>, CompareCommand> serverChangeQueue;
 priority_queue<Command*, vector<Command*>, CompareCommand> clientChangeQueue;
 //for rendering
-map<PuckStackObject*, bool, ComparePuckStackObject> puckq;
+//map<PuckStackObject*, bool, ComparePuckStackObject> puckq;
+map< pair<int, int>, PuckStackObject*, ComparePuckStackObject> puckq;
 //for collision
 double sightSquare, collisionSquare;
 int homeRadiusSquare;
-//for scoring @@@@@
-vector<HomeObject*> homes; //@@@@@
 
   void BroadcastRobot(RobotObject *curRobot, Index oldIndices, Index newIndices, int step, RegionUpdate * regionHandle);
   void BroadcastPuckStack(PuckStackObject *curStack, RegionUpdate * regionHandle);
 
 public:
+  //for scoring @@@@@
+  vector<HomeObject*> homes; //@@@@@
   RegionRender render;
   int curStep;
   Index getRobotIndices(double x, double y, bool clip);
@@ -192,10 +193,10 @@ public:
   void flushControllers();
 
   void forceUpdates();
-  
+
   //new async methods
   void clearBuffers();
-  
+
   void flushBuffers();
 
 };

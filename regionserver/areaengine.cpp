@@ -97,9 +97,11 @@ class CompareRobotObject {
 
 //comparator for puck rendering
 //its weird. > sorts ascending for robots, but descending for pucks... it's very weird.
-bool ComparePuckStackObject::operator()(PuckStackObject* const &r1, PuckStackObject* const &r2) // Returns true if t1 is later than t2
+//I'm pretty sure its 'cause robots use a priority queue, and pucks a map
+//bool ComparePuckStackObject::operator()(PuckStackObject* const &r1, PuckStackObject* const &r2) // Returns true if t1 is later than t2
+bool ComparePuckStackObject::operator()(pair<int, int> const &r1, pair<int, int> const &r2) // Returns true if t1 is later than t2
 {
-   if (r1->y < r2->y) return true;
+   if (r1.second < r2.second) return true;
 
    return false;
 }
@@ -148,13 +150,13 @@ void AreaEngine::Step(bool generateImage){
   //Earn some Points Here
   //I dunno if this is the right place
   for (unsigned int h = 0; h < homes.size(); h++) {
-    while (homes[h]->puckTimers.size() > 0 && (homes[h]->puckTimers.front()->startTime + 200) < curStep) { 
+    while (homes[h]->puckTimers.size() > 0 && (homes[h]->puckTimers.front()->startTime + 200) < curStep) {
       PuckTimer *puckstack = *(homes[h]->puckTimers.begin());
       RemovePuck(puckstack->x, puckstack->y, -1);
       double newx = rand() % regionRatio;
       double newy = rand() % regionRatio;
       bool captures = true;
-      while (captures) {			
+      while (captures) {
         captures = false;
         for (unsigned int i = 0; i < homes.size(); i++) {
           if(Captures(homes[i]->x, homes[i]->y, newx, newy))
@@ -169,7 +171,7 @@ void AreaEngine::Step(bool generateImage){
       AddPuck(newx, newy);
       homes[h]->puckTimers.erase(homes[h]->puckTimers.begin());
       homes[h]->points++;
-      cout << "TEAM " << homes[h]->team << " JUST GOT A POINT!! TOTAL: " << homes[h]->points << endl;
+      //cout << "TEAM " << homes[h]->team << " JUST GOT A POINT!! TOTAL: " << homes[h]->points << endl;
     }
   }
 
@@ -217,7 +219,7 @@ void AreaEngine::Step(bool generateImage){
           {
             curRobot->holdingPuck = true;
             serverrobot.set_haspuck(true);
-            
+
 	    ////cout << "SOMEBODY IS PICKING UP A PUCK" << endl;
             //check for home to cancel scoring @@@@@ Untested TODO
             for (unsigned int l = 0; l < homes.size(); l++) {
@@ -239,11 +241,11 @@ void AreaEngine::Step(bool generateImage){
             PuckStackObject * curStack = AddPuck(curRobot->x, curRobot->y, curRobot->id);
             curRobot->holdingPuck = false;
             serverrobot.set_haspuck(false);
-	    
+
 	    ////cout << "SOMEBODY IS DROPPING A PUCK" << endl;
             //check for home to start scoring @@@@@ should have this as its own function?
   	    for (unsigned int i = 0; i < homes.size(); i++) {
-		      if (Captures(homes[i]->x, homes[i]->y, curStack->x, curStack->y)) {			
+		      if (Captures(homes[i]->x, homes[i]->y, curStack->x, curStack->y)) {
 			      PuckTimer* newTimer = new PuckTimer(curStack->x, curStack->y, curStep);
             			homes[i]->puckTimers.push_back(newTimer);
             			//cout << "PUCK ENTERED QUEUE" << endl;
@@ -572,20 +574,20 @@ void AreaEngine::Step(bool generateImage){
       int minY = 0;
       render.clear_image();
       render.set_timestep(curStep);
-      
+
       //add homedata to the regionrender
       render.clear_score();
-      for(vector<HomeObject*>::iterator homeIt = homes.begin(); homeIt != homes.end(); homeIt++)
+      for(vector<HomeObject*>::const_iterator homeIt = homes.begin(); homeIt != homes.end(); homeIt++)
       {
         HomeScore * newscore = render.add_score();
         newscore->set_team((*homeIt)->team);
         newscore->set_score((*homeIt)->points);
       }
-      
+
       int curY = 0;
 
-      map<PuckStackObject*, bool>::const_iterator puckIt;
-      map<PuckStackObject*, bool>::const_iterator puckEnd = puckq.end();
+      map<pair <int, int>, PuckStackObject*>::const_iterator puckIt;
+      map<pair <int, int>, PuckStackObject*>::const_iterator puckEnd = puckq.end();
 
       puckIt=puckq.begin();
       RobotObject* paintRobot = NULL;
@@ -593,7 +595,7 @@ void AreaEngine::Step(bool generateImage){
         paintRobot = pq.top();
       PuckStackObject* paintPuck = NULL;
       if(puckIt != puckEnd)
-        paintPuck = (*puckIt).first;
+        paintPuck = (*puckIt).second;
 
       //we have to iterate through robots and pucks at the same time... it's TRICKAY! TRICKY TRICKY TRICKY TRICKY
       while(true)
@@ -659,7 +661,7 @@ void AreaEngine::Step(bool generateImage){
             render.add_image(BytePack(pdrawX, 65534));  //let 65534 be reserved for pucks
           }
           puckIt++;
-          paintPuck = (*puckIt).first;
+          paintPuck = (*puckIt).second;
         }
       }
     }
@@ -735,7 +737,10 @@ void AreaEngine::Step(bool generateImage){
             //we have an a[][] element again.
             ArrayObject * element = &robotArray[j][k];
 
-            //do robots
+            //do robots IF we're in a border
+            if(j == topLeft.x || j == botRight.x || k == topLeft.y || k == botRight.y)
+            {
+
             otherRobot = element->robots;
 
             while(otherRobot != NULL) {
@@ -757,6 +762,8 @@ void AreaEngine::Step(bool generateImage){
               }
 
               otherRobot = otherRobot->nextRobot;
+            }
+
             }
 
             //do pucks
@@ -865,66 +872,6 @@ void AreaEngine::flushBuffers(){
     }
 }
 
-void AreaEngine::flushNeighbours(){
-  //FORCE all updates to neighbors to occur before we finish the step (necessary for synchronization)
-  for(int i = 0; i < 8; i++)
-  {
-    if(neighbours[i] != NULL){
-      neighbours[i]->set_writing(true);
-      while(neighbours[i]->queue.remaining() != 0)
-        neighbours[i]->queue.doWrite();
-
-      neighbours[i]->set_writing(false);
-    }
-  }
-}
-
-void AreaEngine::flushControllers(){
-  //Force all Claim messages to controllers in this step!
-  for (vector<EpollConnection*>::const_iterator it =
-       controllers.begin(); it != controllers.end(); it++) {
-    while((*it)->queue.remaining() != 0)
-      (*it)->queue.doWrite();
-  }
-}
-
-void AreaEngine::forceUpdates(){
-  MessageType type;
-	int len;
-	const void *buffer;
-
-  //FORCE all updates FROM neighbors to be entered before we start the step (necessary for synchronization)
-  for(int i = 0; i < 8; i++)
-  {
-    if(neighbours[i] != NULL){
-      neighbours[i]->set_reading(true);
-      while(neighbours[i]->reader.doRead(&type, &len, &buffer))
-      {
-        switch (type) {
-			    case MSG_SERVERROBOT: {
-			      ServerRobot serverrobot;
-			      serverrobot.ParseFromArray(buffer, len);
-			      GotServerRobot(serverrobot);
-			      break;
-			    }
-			    case MSG_PUCKSTACK: {
-			      PuckStack puckstack;
-			      puckstack.ParseFromArray(buffer, len);
-			      GotPuckStack(puckstack);
-			      break;
-			    }
-
-		      default:
-				  cerr << "Unexpected readable message from Region\n";
-				  break;
-			  }
-      }
-
-      neighbours[i]->set_reading(false);
-    }
-  }
-}
-
 //these are the robot puck handling methods - if the action is not possible they will
 //gracefully fail. Since puck updates don't require sync precision, we can notify best effort
 //Also, this method is blunt right now. Just pick up any pick beneath you.
@@ -975,7 +922,7 @@ void AreaEngine::DropPuck(int robotId){
   newCommand->puckAction = 2;
 
   clientChangeQueue.push(newCommand);
-  
+
 }
 
 //set a puck stack in the system.
@@ -1007,7 +954,7 @@ void AreaEngine::SetPuckStack(double newx, double newy, int newc){
       lastStack->nextStack = curStack->nextStack;
     }
 
-    puckq.erase(curStack);
+    puckq.erase(make_pair(curStack->x, curStack->y));
     delete curStack;
 
   }else if(newc != 0){
@@ -1018,7 +965,8 @@ void AreaEngine::SetPuckStack(double newx, double newy, int newc){
       curStack = new PuckStackObject(x, y);
       curStack->nextStack = element->pucks;
       element->pucks = curStack;
-      puckq[curStack] = true;
+
+      puckq[make_pair(curStack->x, curStack->y)] = curStack;
     }
 
     curStack->count = newc;
@@ -1049,7 +997,8 @@ PuckStackObject* AreaEngine::AddPuck(double newx, double newy, int robotId){
     curStack = new PuckStackObject(x, y);
     curStack->nextStack = element->pucks;
     element->pucks = curStack;
-    puckq[curStack] = true;
+
+    puckq[make_pair(curStack->x, curStack->y)] = curStack;
   }else{
     //increment
     curStack->count++;
@@ -1154,7 +1103,7 @@ bool AreaEngine::RemovePuck(double x, double y, int robotId){
         else{
           lastStack->nextStack = curStack->nextStack;
         }
-        puckq.erase(curStack);
+        puckq.erase(make_pair(curStack->x, curStack->y));
         delete curStack;
       }
 
@@ -1378,7 +1327,7 @@ void AreaEngine::GotServerRobot(ServerRobot message){
 
       if(message.has_angle())
         newCommand->angle = message.angle();
-        
+
       //puck holding states "shouldn't" need to be timed. Process immediately.
       if(message.has_haspuck())
         robots[message.id()]->holdingPuck = message.haspuck();

@@ -1,23 +1,6 @@
 #include "helper.h"
 
 namespace helper {
-string getNewName(string base) {
-	string name = base;
-	struct stat stFileInfo;
-	int i = 0;
-	int intStat = stat(name.c_str(), &stFileInfo);
-
-	//make sure that the file doesn't exist before we create it
-	//if it exists, choose another name
-	while (!intStat) {
-		name = base + helper::toString(i);
-		intStat = stat(name.c_str(), &stFileInfo);
-		i++;
-	}
-
-	return name;
-}
-
 //distance between two points
 float distanceBetween(float x1, float x2, float y1, float y2) {
 	return sqrt((x1 - x2)*(x1 - x2) + (y1 - y2)*(y1 - y2));
@@ -98,13 +81,13 @@ float hack_angleFromVelocity(double x, double y){
         #   #
          ###
   */
-  
+
   if(x == 0 && y == 0)
     return -1;
-    
+
   float rtn = atan2(y, x);
   if(rtn < 0)
     rtn += 2 * M_PI;
-    
+
   return rtn;
 }

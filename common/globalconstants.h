@@ -11,10 +11,7 @@
 #define WVMAXZOOMED 10
 #define MINDIAMETER 1.0
 
-//enable regionserver logging to file
-//#define ENABLE_LOGGING
-
-//printing of debug logs ( logmerger, clientviewer, worldivewer only )
+//printing of debug logs ( scorekeeper, clientviewer, worldivewer only )
 //#define DEBUG
 #define DEBUG_COUT
 
@@ -22,7 +19,7 @@
 #define REGIONSIDELEN 2500
 #define ROBOTDIAMETER 4
 #define PUCKDIAMETER 1
-#define MINELEMENTSIZE 25
+#define MINELEMENTSIZE 10
 #define VIEWDISTANCE 20
 #define VIEWANGLE M_PI/2.0
 #define MAXSPEED 4

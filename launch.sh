@@ -88,13 +88,12 @@ then
 fi
 
 
-if [ ! -e "$HOSTFILE" ]
+if [ -e "$LOGDIR" ]
 then
     # Clobber logs
-    rm "$LOGDIR/*"
-else
-    mkdir -p "$LOGDIR"
+    rm -rf "$LOGDIR"
 fi
+mkdir -p "$LOGDIR"
 
 echo "Starting clock server locally."
 CLOCKSERVER=`host \`hostname\`|cut -d ' ' -f 4`
@@ -124,27 +123,24 @@ CONTROLHOSTS=""
 echo "Launching $CONTROLLERS_LEFT controllers and $REGIONS_LEFT regions"
 for HOST in `grep -hv \`hostname\` "$HOSTFILE"`
 do
+    if [ ! -e /proc/$CLOCKID ]
+    then
+        echo "Clock server died!  Halting."
+        cleanup
+        exit 1
+    fi
     echo "- Trying $HOST"
     #check for host being up
     INUSE=""
-    if ! INUSE=`$SSHCOMMAND $HOST "w | awk ' {if(NR>2 && \$1!=wai && !(\$5 ~ /.*m/ || \$5 ~ /.*days/)) print \$1} ' wai=\`whoami\`"`
+    if ! $SSHCOMMAND $HOST "true"
     then
 	echo "- Skipping unresponsive host $HOST"
         continue
     fi
 
-    #check for host being used
-    INUSE=${INUSE//[[:space:]]}
-    OTHERS=$INUSE #old artifact left in for the time being
-    OTHERS=${OTHERS//[[:space:]]}
-    if [ "$OTHERS" != "" ]
-    then
-        echo "- Skipping in-use host $HOST, active users $OTHERS"
-        continue
-    fi
-    
     if [ $CONTROLLERS_LEFT -gt 0 ]
     then
+        sleep 0.1
         CONTROLLERS_LEFT=$[$CONTROLLERS_LEFT - 1]
         echo "Launching controller on $HOST ($CONTROLLERS_LEFT remaining)"
         wrap $SSHCOMMAND $HOST "bash -c \"cd '$PROJDIR/controller' && LD_LIBRARY_PATH='$PROJDIR/sharedlibs' $DEBUGGER ./controller -l $CLOCKSERVER\"" > "$LOGDIR/controller.out.$HOST.log" 2> "$LOGDIR/controller.err.$HOST.log" &
@@ -152,6 +148,7 @@ do
         CONTROLHOSTS="$CONTROLHOSTS $HOST"
     elif [ $REGIONS_LEFT -gt 0 ]
     then
+        sleep 0.1
         REGIONCOUNT=$REGIONS_PER_HOST
         if [ $REGIONS_LEFT -lt $REGIONS_PER_HOST ]
         then
@@ -159,8 +156,11 @@ do
         fi
         REGIONS_LEFT=$[$REGIONS_LEFT - $REGIONCOUNT]
         echo "Launching $REGIONCOUNT regions on $HOST ($REGIONS_LEFT remaining)"
-        wrap $SSHCOMMAND $HOST "bash -c \"cd '$PROJDIR' && ./start-n-regions.sh $COUNT $CLOCKSERVER\"" > "$LOGDIR/regiongroup.out.$HOST.log" 2> "$LOGDIR/regiongroup.err.$HOST.log" &
-    else
+        wrap $SSHCOMMAND $HOST "bash -c \"cd '$PROJDIR' && ./start-n-regions.sh $REGIONCOUNT $CLOCKSERVER\"" > "$LOGDIR/regiongroup.out.$HOST.log" 2> "$LOGDIR/regiongroup.err.$HOST.log" &
+    fi
+
+    if [ $CONTROLLERS_LEFT -eq 0 ] && [ $REGIONS_LEFT -eq 0 ]
+    then
         echo "All regions and controllers launched!"
         break
     fi
@@ -173,7 +173,7 @@ then
     exit 1
 fi
 
-sleep 3
+sleep 10
 if [ $CONTROLLERS ]
 then
    echo "Launching $TEAMS clients across $CONTROLLERS machines"
@@ -184,6 +184,12 @@ then
    HOSTIDX=1
    while [ $CLIENTS_LEFT -gt 0 ]
    do
+       if [ ! -e /proc/$CLOCKID ]
+       then
+           echo "Clock server died!  Halting."
+           cleanup
+           exit 1
+       fi
        CLIENTS_LEFT=$[$CLIENTS_LEFT - $QUOTIENT]
        EXTRA=0
        if [ $REMAINDER -gt 0 ]
@@ -194,7 +200,7 @@ then
        fi
        
        HOST=`echo $CONTROLHOSTS |cut -d ' ' -f $HOSTIDX`
-       echo "Launching $[$QUOTIENT + $EXTRA] clients on controller $HOST"
+       echo "Launching $[$QUOTIENT + $EXTRA] clients on controller $HOST ($CLIENTS_LEFT remaining)"
        wrap $SSHCOMMAND $HOST "bash -c \"cd '$PROJDIR' && ./start-n-clients.sh $[$QUOTIENT + $EXTRA] $CLIENTS_LEFT\"" > "$LOGDIR/clientgroup.out.$HOST.log" 2> "$LOGDIR/clientgroup.err.$HOST.log" &
        SSHPROCS="$SSHPROCS $!"
        HOSTIDX=$[$HOSTIDX+1]

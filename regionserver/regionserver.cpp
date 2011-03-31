@@ -54,6 +54,9 @@ char clockip[40] = "127.0.0.1";
 int controllerPort = CONTROLLERS_PORT;
 int worldviewerPort = WORLD_VIEWER_PORT;
 int regionPort = REGIONS_PORT;
+
+AreaEngine* regionarea;
+unsigned myId;
 ////////////////////////////////////////////////////////////
 
 //need to tell whether a bool has been initialized or not
@@ -176,17 +179,6 @@ void run() {
 	int worldviewerfd = net::do_listen(worldviewerPort);
 	net::set_blocking(worldviewerfd, false);
 
-#ifdef ENABLE_LOGGING
-	//create a new file for logging
-	string logName = helper::getNewName("/tmp/" + helper::defaultLogName);
-	int logfd = open(logName.c_str(), O_WRONLY | O_CREAT, 0644);
-
-	if (logfd < 0) {
-		perror("Failed to create log file");
-		exit(1);
-	}
-#endif
-
 	//create epoll
 	int epoll = epoll_create(16); //9 adjacents, log file, the clock, and a few controllers
 	if (epoll < 0) {
@@ -211,20 +203,17 @@ void run() {
 	ClientRobot clientrobot;
 
 	//server variables
-#ifdef ENABLE_LOGGING
-	MessageWriter logWriter(logfd);
-#endif
 	TimestepUpdate timestep;
 	tsdone.set_done(true);
 	WorldInfo worldinfo;
 	RegionInfo regioninfo;
-	unsigned myId = 0; //region id
+	myId = 0; //region id
 
 	//for synchronization
 	int round = 0;
 	bool sendTsdone = false;
 
-	AreaEngine* regionarea = new AreaEngine(ROBOTDIAMETER,REGIONSIDELEN, MINELEMENTSIZE, VIEWDISTANCE, VIEWANGLE,
+	regionarea = new AreaEngine(ROBOTDIAMETER,REGIONSIDELEN, MINELEMENTSIZE, VIEWDISTANCE, VIEWANGLE,
 			MAXSPEED, MAXROTATE);
 	//create robots for benchmarking!
 	int numRobots = 0;
@@ -297,7 +286,7 @@ void run() {
 
 							int lastRegionIndex = worldinfo.region_size() - 1;
 							myId = worldinfo.region(lastRegionIndex).id();
-							cout << "My id: " << myId << endl;				
+							cout << "My id: " << myId << endl;
 
 							//handle the homes
 							HomeInfo *homeinfo;
@@ -306,7 +295,7 @@ void run() {
 								homeinfo=worldinfo.mutable_home(i);
 								if (homeinfo->region_id() == myId )
 								{
-									myHomes.push_back(homeinfo); 
+									myHomes.push_back(homeinfo);
 									regionarea->AddHome(homeinfo->home_x(), homeinfo->home_y(), homeinfo->team());
 									cout<<"Tracking home at ("+helper::toString(worldinfo.mutable_home(i)->home_x())+", "+helper::toString(worldinfo.mutable_home(i)->home_y())+")"<<endl;
 								}
@@ -317,8 +306,8 @@ void run() {
               					int a=0, b=0;
               					while(pucks < worldinfo.numpucks() ){
           							// populate the world with numpucks which are randomly distributed over the region
-          							a = (2 * ROBOTDIAMETER)+MINELEMENTSIZE + rand() % (REGIONSIDELEN-2*((2 * ROBOTDIAMETER)+MINELEMENTSIZE));
-									b = (2 * ROBOTDIAMETER)+MINELEMENTSIZE + rand() % (REGIONSIDELEN-2*((2 * ROBOTDIAMETER)+MINELEMENTSIZE));
+          							a = (2 * ROBOTDIAMETER)+MINELEMENTSIZE + (rand() % (REGIONSIDELEN-((2 * ROBOTDIAMETER)+MINELEMENTSIZE)));
+									b = (2 * ROBOTDIAMETER)+MINELEMENTSIZE + (rand() % (REGIONSIDELEN-((2 * ROBOTDIAMETER)+MINELEMENTSIZE)));
 
               						//make sure that the newly generated puck is at least PUCK_MINDISTANCEFROMHOME units away from the home
               						for(unsigned i=0; i<myHomes.size(); i++ )
@@ -327,8 +316,8 @@ void run() {
 										{
 											cout<<"Failed creating puck at ("+helper::toString(a)+", "+helper::toString(b)+"). Retrying."<<endl;
 
-											a = (2 * ROBOTDIAMETER)+MINELEMENTSIZE + rand() % (REGIONSIDELEN-2*((2 * ROBOTDIAMETER)+MINELEMENTSIZE));
-											b = (2 * ROBOTDIAMETER)+MINELEMENTSIZE + rand() % (REGIONSIDELEN-2*((2 * ROBOTDIAMETER)+MINELEMENTSIZE));
+											a = (2 * ROBOTDIAMETER)+MINELEMENTSIZE + (rand() % (REGIONSIDELEN-((2 * ROBOTDIAMETER)+MINELEMENTSIZE)));
+											b = (2 * ROBOTDIAMETER)+MINELEMENTSIZE + (rand() % (REGIONSIDELEN-((2 * ROBOTDIAMETER)+MINELEMENTSIZE)));
 
 											i=-1;
 											continue;
@@ -468,8 +457,8 @@ void run() {
 							//do our initializations here in the init step
 							if(!initialized)
 							{
-                //ready the engine buffers
-                regionarea->clearBuffers();
+								//ready the engine buffers
+								regionarea->clearBuffers();
 
 								// Find our robots, and add to the simulation
 							  vector<int> myRobotIds;
@@ -487,8 +476,8 @@ void run() {
 								  }
 							  }
 
-                //tell the engine to send its buffer contents
-                regionarea->flushBuffers();
+							  //tell the engine to send its buffer contents
+							  regionarea->flushBuffers();
 
 							  cout << numRobots << " robots created." << endl;
 
@@ -518,9 +507,9 @@ void run() {
 
 							regionarea->Step(generateImage);
 
-              //async 'flush'
-              round++;  //we need to ensure we get all neighbour data before continuing
-              sendTsdone = true;
+							//async 'flush'
+							round++;  //we need to ensure we get all neighbour data before continuing
+							sendTsdone = true;
 
 							timeSteps++; //Note: only use this for this temp stat taking. use regionarea->curStep for syncing
 
@@ -536,29 +525,9 @@ void run() {
 
 							}
 
-#ifdef ENABLE_LOGGING
-							logWriter.init(MSG_TIMESTEPUPDATE, timestep);
-							logWriter.doWrite();
 
-							for (int i = 0; i < 50; i++) {
-								serverrobot.set_id(rand() % 1000 + 1);
-								logWriter.init(MSG_SERVERROBOT, serverrobot);
-								for (bool complete = false; !complete;) {
-									complete = logWriter.doWrite();
-									;
-								}
-							}
 
-							for (int i = 0; i < 25; i++) {
-								puckstack.set_stacksize(rand() % 1000 + 1);
-								logWriter.init(MSG_PUCKSTACK, puckstack);
-								for (bool complete = false; !complete;) {
-									complete = logWriter.doWrite();
-									;
-								}
-							}
-#endif
-							bool ready = true;
+					bool ready = true;
 			        for(unsigned i = 0; i < uniqueRegions.size(); i++)
 			          if(uniqueRegions.at(i).second != regionarea->curStep)
 			          {
@@ -570,9 +539,9 @@ void run() {
                 //Respond with done message
                 for(vector<net::EpollConnection*>::iterator i = controllers.begin(); i != controllers.end(); i++)
 							    transmitTsdone(*i);
-                
+
                 transmitTsdone(&clockconn);
-                
+
                 sendTsdone = false;
               }
 
@@ -686,9 +655,9 @@ void run() {
                   //Respond with done message
 	                for(vector<net::EpollConnection*>::iterator i = controllers.begin(); i != controllers.end(); i++)
 							      transmitTsdone(*i);
-							  
+
 	                transmitTsdone(&clockconn);
-	                
+
 	                sendTsdone = false;
                 }
 
@@ -911,8 +880,60 @@ void run() {
 	close(worldviewerfd);
 }
 
+//log the home scores for the scorekeeper to read
+void logTheScore(int param) {
+	//create a new file for logging
+	string logName = helper::logDirectory + helper::scoreKeeperLog + helper::toString(myId);
+	int logfd = open(logName.c_str(), O_WRONLY | O_CREAT, 0644);
+
+	if (logfd < 0) {
+		cerr << "Failed to create log file" << endl;
+		exit(1);
+	}
+
+	//server variables
+	MessageWriter scoreWriter(logfd);
+	HomeScore homescore;
+
+	for (vector<HomeObject*>::const_iterator homeIt = regionarea->homes.begin();
+	homeIt != regionarea->homes.end();
+			homeIt++) {
+		homescore.set_team((*homeIt)->team);
+		homescore.set_score((*homeIt)->points);
+
+		scoreWriter.init(MSG_HOMESCORE, homescore);
+
+		for (bool complete = false; !complete;) {
+			complete = scoreWriter.doWrite();
+		}
+	}
+
+	exit(1);
+}
+
 //this is the main loop for the server
 int main(int argc, char* argv[]) {
+	//ctrl+c
+	if(	signal(SIGINT, logTheScore) == SIG_ERR )
+	{
+		cerr<<"Fatal Error: unable to set a handler for SIGINT"<<endl;
+		return 1;
+	}
+
+	//ctrl+\							_
+	if(	signal(SIGQUIT, logTheScore) == SIG_ERR )
+	{
+		cerr<<"Fatal Error: unable to set a handler for SIGQUIT"<<endl;
+		return 1;
+	}
+
+	//kill and killall
+	if(	signal(SIGTERM, logTheScore) == SIG_ERR )
+	{
+		cerr<<"Fatal Error: unable to set a handler for SIGTERM"<<endl;
+		return 1;
+	}
+
 	//Print a starting message
 	printf("--== Region Server Software ==-\n");
 
@@ -932,7 +953,14 @@ int main(int argc, char* argv[]) {
 
 	printf("Server Running!\n");
 
-	run();
+	try{
+		run();
+	}
+	catch(exception e)
+	{
+		logTheScore(NULL);
+	}
+
 
 	printf("Server Shutting Down ...\n");
 

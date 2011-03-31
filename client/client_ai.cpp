@@ -283,14 +283,14 @@ int ClientAi::numRobotsDirection(OwnRobot* ownRobot, int direction){
 			}
 			case TOPMOST:
 			{
-				if((*it)->rely - ROBOTDIAMETER >=0){ //this is where the strictness comes in
+				if((*it)->rely + ROBOTDIAMETER <=0){ //this is where the strictness comes in
 						numRobots++;
 				}
 				break;
 			}
 			case BOTTOMMOST:
 			{
-				if((*it)->rely + ROBOTDIAMETER <=0){ //this is where the strictness comes in
+				if((*it)->rely - ROBOTDIAMETER >=0){ //this is where the strictness comes in
 						numRobots++;
 				}
 				break;
@@ -344,7 +344,7 @@ SeenRobot* ClientAi::closestRobotDirection(OwnRobot* ownRobot, int direction){
 			}
 			case TOPMOST:
 			{
-				if((*it)->rely - ROBOTDIAMETER >=0){ //this is where the strictness comes in
+				if((*it)->rely + ROBOTDIAMETER <=0){ //this is where the strictness comes in
 					tempDistance = relDistance((*it)->relx, (*it)->rely);
 					if (tempDistance < minDistance) {
 						minDistance = tempDistance;
@@ -356,7 +356,7 @@ SeenRobot* ClientAi::closestRobotDirection(OwnRobot* ownRobot, int direction){
 			}
 			case BOTTOMMOST:
 			{
-				if((*it)->rely + ROBOTDIAMETER <=0){ //this is where the strictness comes in
+				if((*it)->rely - ROBOTDIAMETER >=0){ //this is where the strictness comes in
 					tempDistance = relDistance((*it)->relx, (*it)->rely);
 					if (tempDistance < minDistance) {
 						minDistance = tempDistance;
