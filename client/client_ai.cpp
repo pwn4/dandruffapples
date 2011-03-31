@@ -400,6 +400,10 @@ double ClientAi::relDistance(double x1, double y1) {
 	return (sqrt(x1 * x1 + y1 * y1));
 }
 
+double ClientAi::distance(double x1, double y1, double x2, double y2) {
+	return sqrt((x1-x2)*(x1-x2) + (y1-y2)*(y1-y2));
+}
+
 // Check if the two coordinates are the same, compensating for doubleing-point errors.
 bool ClientAi::sameCoordinates(double x1, double y1, double x2, double y2) {
 	// From testing, it looks like doubleing point errors either add or subtract

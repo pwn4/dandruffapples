@@ -96,6 +96,9 @@ public:
 	double homeRelY;
 	double desiredAngle;
 
+	bool has_path_home;
+	bool focus; // when focus on the next destination, won't change destination
+
 	int index; // this is for AI memory
 	ClientAi* ai; // user-defined ai code
 
@@ -105,10 +108,12 @@ public:
 	pair<double, double>& destFront(); // get the next destination
 	void destPopFront(); // remove the next destination
 	bool hasDestination(); // return true if has destination
+	void clearDestinations();
 
 	OwnRobot() :
 		Robot(), pendingCommand(false), whenLastSent(-1), closestRobotId(-1), homeRelX(0.0),
-				homeRelY(0.0), desiredAngle(0.0), ai(NULL) {
+				homeRelY(0.0), desiredAngle(0.0), has_path_home(false), focus(false), ai(NULL) {
+		destinations.clear();
 	}
 protected:
 	pair<double, double> temp_destination; // temporary destination, overrides destinations (used for resolving collision?)
@@ -343,6 +348,7 @@ public:
 	static pair<double, double> polar2cartesian(double rho, double theta);
 	static double degree2radian(double d);
 	static pair<double, double> normalize(pair<double, double> coords, double scale);
+	static double distance(double x1, double y1, double x2, double y2);
 };
 
 #endif

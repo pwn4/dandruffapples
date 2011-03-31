@@ -182,6 +182,14 @@
             <property name="position">4</property>
           </packing>
         </child>
+	<child>
+          <object class="GtkLabel" id="labDestination">
+            <property name="visible">True</property>
+          </object>
+          <packing>
+            <property name="position">5</property>
+          </packing>
+        </child>
       </object>
     </child>
   </object>

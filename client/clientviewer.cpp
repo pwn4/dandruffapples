@@ -133,6 +133,21 @@ void updateInfoWindow(OwnRobot* ownRobotDraw, GtkBuilder* builder) {
 		tmp = helper::toString(infoMessages) + " updates per second";
 		gtk_label_set_text(GTK_LABEL(gtk_builder_get_object( builder, "labFrames" )), tmp.c_str());
 
+
+		if (ownRobotDraw->hasDestination()) {
+			pair<double, double> c = ownRobotDraw->destFront();
+			tmp = "Destination: " + helper::toString(c.first) + ", " + helper::toString(c.second);
+		} else {
+			tmp = "Having no destination";
+		}
+		if (ownRobotDraw->focus) {
+			tmp += "; focus";
+		} else {
+			tmp += "; no focus";
+		}
+		gtk_label_set_text(GTK_LABEL(gtk_builder_get_object(builder, "labDestination")), tmp.c_str());
+
+
 		infoMessages = 0;
 		infoLastSecond = infoTimeCache;
 	}
