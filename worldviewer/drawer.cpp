@@ -29,7 +29,7 @@ ColorObject colorFromTeam(int teamId) {
 	}
 
   //protection
-  if(teamId < 0 || teamId > 65535)
+  if(teamId < 0 || teamId >= 65535)
     return coloringMap[55555];
 
 	return coloringMap[teamId];
