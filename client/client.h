@@ -255,6 +255,7 @@ private:
 	bool sameCoordinates(double x1, double y1, double x2, double y2);
   void estimateRotation(OwnRobot* ownRobot);
 	vector< pair<ClientAi*, int> > clientAiList;
+	static int currentTimestep;
 protected:
 	// Stat variables
 	time_t lastSecond;
@@ -268,6 +269,7 @@ protected:
 	// Helper functions
 	unsigned int indexToRobotId(int index);
 	int robotIdToIndex(int robotId);
+	int getTimeStep() { return currentTimestep; }
 public:
 	Client() : writing(false),
 			   lastSecond(time(NULL)),

@@ -34,19 +34,23 @@ private:
 		// we don't have destinations
 		// TODO: maybe choose a puck that's closest to our home as the next destination?
 		// for now, randomly move
-		pair<double, double> v = randomMove(command);
+		pair<double, double> v = randomMove(command, defaultSpeed);
 
 		pair<double, double> newdest = make_pair(50 * v.first-ownRobot->homeRelX, 50 * v.second-ownRobot->homeRelY);
 		ownRobot->destPush(newdest);
 	}
 
-	pair<double, double> randomMove(ClientRobotCommand& command){
-		pair<double, double> v = polar2cartesian(defaultSpeed, degree2radian(rand()%360));
+	pair<double, double> randomMove(ClientRobotCommand& command, double speed){
+		pair<double, double> v = polar2cartesian(speed, degree2radian(rand()%360));
 		command.setVx(v.first);
 		command.setVy(v.second);
 		return v;
-
 	}
+
+	bool noSpeed(OwnRobot* ownRobot) {
+		return abs(ownRobot->vx) < 0.0001 && abs(ownRobot->vy) < 0.0001;
+	}
+
 public:
 	Vaughan() : defaultSpeed(5.0) {}
 	void path_home(OwnRobot* ownRobot, int zone) {
@@ -116,28 +120,37 @@ public:
 			dest = make_pair(ranx-5.5*HOMEDIAMETER, rany + 5.5*HOMEDIAMETER);
 			break;
 		case 2:
-			dest = make_pair(ranx-5.5*HOMEDIAMETER, rany - 5.5*HOMEDIAMETER);
+			dest = make_pair(ranx-3.5*HOMEDIAMETER, rany - 5.5*HOMEDIAMETER);
 			break;
 		case 3:
-			dest = make_pair(ranx + 5.5*HOMEDIAMETER, rany + 5.5*HOMEDIAMETER);
+			dest = make_pair(ranx + 3.5*HOMEDIAMETER, rany + 5.5*HOMEDIAMETER);
 			break;
 		case 4:
-			dest = make_pair(ranx + 0.5*HOMEDIAMETER, rany + 5.5*HOMEDIAMETER);
+			dest = make_pair(ranx + 0.5*HOMEDIAMETER, rany + 2.5*HOMEDIAMETER);
 			break;
 		}
 		return dest;
 	}
 
 	void make_command(ClientRobotCommand& command, OwnRobot* ownRobot) {
-		// Behaviour:
-		//   1. If we have no puck
-		//      -Try to pickup a puck, if it is not in our home
-		//      -Move towards the nearest puck .DOESNT SEEM TO RECALL MEMORY OF NEAREST PUCK
-		//      -Randomly change velocity every x timesteps until we see puck
-		//   2. If we have a puck
-		//      -If we are in our home, drop the puck
-		//      -Move towards our home
+		decide(command, ownRobot);
 
+		// adjust speed so that I won't collide with some robot ahead
+		SeenRobot* closestRobot = findClosestRobot(ownRobot);
+		if (closestRobot != NULL) {
+			double dist = relDistance(closestRobot->relx, closestRobot->rely);
+			double m = relDistance(command.vx, command.vy);
+			if (dist < 10 * m) {
+				m = dist / 10;
+				pair<double, double> v = make_pair(command.vx, command.vy);
+				normalize(v, m);
+				command.setVx(v.first);
+				command.setVy(v.second);
+			}
+		}
+	}
+
+	void decide(ClientRobotCommand& command, OwnRobot* ownRobot) {
 		// SMARTER AI
 		//
 		/*
@@ -156,9 +169,21 @@ public:
 		 */
 
 		if (!ownRobot->hasPuck) {
-			if (insideOurHome(ownRobot)) {
+			if (relDistance(ownRobot->vx, ownRobot->vy) < 4 * HOMEDIAMETER && ownRobot->vy < 0) {
 				// go up when robot is inside home and has dropped puck
-				nextDestination(command, ownRobot);
+				if (noSpeed(ownRobot)) {
+					randomMove(command, 0.2);
+				} else {
+					command.setVy(-1);
+					if (ownRobot->vy < -0.2 * HOMEDIAMETER) {
+						pair<double, double> v = make_pair((-1)*ownRobot->homeRelX, (-1)*ownRobot->homeRelY);
+						normalize(v, defaultSpeed);
+						command.setVx(v.first);
+						command.setVy(v.second);
+						ownRobot->clearDestinations();
+						ownRobot->focus = false;
+					}
+				}
 				return;
 			}
 			SeenPuck* pickup = findPickUpablePuck(ownRobot);
@@ -188,6 +213,7 @@ public:
 				nextDestination(command, ownRobot);
 			}
 		} else {
+		// has puck
 			if (relDistance(ownRobot->homeRelX, ownRobot->homeRelY)
 					< HOMEDIAMETER / 2.2) {
 				// Robot at home, drop puck
@@ -195,11 +221,10 @@ public:
 				ownRobot->has_path_home = false;
 				ownRobot->focus = false;
 				command.setVx(0.0);
-				command.setVy(0.0);
+				command.setVy(0.5);
 				ownRobot->destPopFront();
-				pair<double, double> v = make_pair((-1)*ownRobot->homeRelX, (-1)*ownRobot->homeRelY - 50*HOMEDIAMETER);
-				ownRobot->destPush(v);
 			} else {
+			// Robot outside home
 				if (!ownRobot->has_path_home) {
 					// calculate a path to go inside home from bottom
 					path_home(ownRobot, 0);
@@ -207,7 +232,7 @@ public:
 				}
 			}
 			if (!ownRobot->focus) {
-				if ((-1)*ownRobot->homeRelY > 0.5 * HOMEDIAMETER) {
+				if ((-1)*ownRobot->homeRelY > 0.2 * HOMEDIAMETER && (-1)*ownRobot->homeRelY < 4 * HOMEDIAMETER) {
 					ownRobot->clearDestinations();
 					pair<double, double> v = make_pair(0, 0);
 					ownRobot->destPush(v);
@@ -215,8 +240,39 @@ public:
 				}
 				nextDestination(command, ownRobot);
 			} else {
-				nextDestination(command, ownRobot);
+				// manually guide robot to home
 
+					if ((-1)*ownRobot->homeRelX < -0.3 * HOMEDIAMETER) {
+						// go right
+						command.setVy(0);
+						command.setVx(2);
+					} else if ((-1)* ownRobot->homeRelX > 0.3 * HOMEDIAMETER ) {
+						// go left
+						command.setVy(0);
+						command.setVx(-2);
+					} else {
+						// go up
+						command.setVy(-1);
+						command.setVx(0);
+					}
+
+					SeenRobot* closestRobot = findClosestRobot(ownRobot);
+					if (closestRobot) {
+						double dist = relDistance(closestRobot->relx, closestRobot->rely);
+						if (dist < 1.5*ROBOTDIAMETER) {
+							command.setVx(command.vx/50);
+							command.setVy(command.vy/50);
+							int d = rand() % 100;
+							if (d > 50) {
+								randomMove(command, 0.15);
+							}
+						}
+
+					}
+
+				return;
+				/*
+				nextDestination(command, ownRobot);
 				if (relDistance(ownRobot->homeRelX, ownRobot->homeRelY) < 5 * HOMEDIAMETER) {
 
 
@@ -224,18 +280,17 @@ public:
 					if (ownRobot->vx < 0.0001 && ownRobot->vy < 0.0001) {
 						// randomly wait
 						randomMove(command);
-						ownRobot->has_path_home = false;
-
-
+						//ownRobot->has_path_home = false;
 					}
 					return;
 				}
+				*/
 			}
 
 		}
 
 		// it's good except when we collides
-		if (ownRobot->vx < 0.0001 && ownRobot->vy < 0.0001) {
+		if (abs(ownRobot->vx) < 0.0001 && abs(ownRobot->vy) < 0.0001) {
 
 			if (ownRobot->hasDestination()) {
 				// it have target, turn to right for 60 degrees

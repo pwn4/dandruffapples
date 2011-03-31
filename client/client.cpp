@@ -11,7 +11,7 @@ typedef ClientAi* (*FUNCPTR_AI)();
 //Game world variables
 // TODO: organize/move variables out of client.cpp
 bool simulationStarted = false;
-int currentTimestep = 0;
+int Client::currentTimestep = 0;
 int lastTimestep = 0;
 int robotsPerTeam;
 
