@@ -582,20 +582,28 @@ int main(int argc, char** argv)
           	c->set_writing(false);
           }
           if(flushing) {
+            bool dataleft = false;
             // Check for remaining data to write
 						vector<ServerConnection*>::iterator serversEnd = servers.end();
 						vector<ClientConnection*>::iterator clientsEnd = clients.end();
             for(vector<ServerConnection*>::iterator i = servers.begin();
                 i != serversEnd; ++i) {
               if((*i)->queue.remaining()) {
+                dataleft = true;
                 break;
               }
             }
-            for(vector<ClientConnection*>::iterator i = clients.begin();
-                i != clientsEnd; ++i) {
-              if((*i)->queue.remaining()) {
-                break;
+            if(!dataleft) {
+              for(vector<ClientConnection*>::iterator i = clients.begin();
+                  i != clientsEnd; ++i) {
+                if((*i)->queue.remaining()) {
+                  dataleft = true;
+                  break;
+                }
               }
+            }
+            if(dataleft) {
+              break;
             }
 
             // Flush completed; Tell the clock we're done and resume reading
