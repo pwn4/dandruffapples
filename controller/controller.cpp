@@ -532,6 +532,7 @@ int main(int argc, char** argv)
                 } else {
                   // Continue!
                   clockconn.push(MSG_TIMESTEPDONE, tsdone);
+                  clockconn.force_writing();
                 }
               }
               break;
