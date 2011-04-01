@@ -32,7 +32,7 @@ public:
   void push(MessageType typeTag, const google::protobuf::MessageLite &message);
 
   // Write as much data as possible; return true if none remains.
-  bool doWrite();
+  bool doWrite(bool accumMSS = false);
   // Write out all buffered data.  MAY BLOCK INDEFINITELY!
   void flush();
 };
