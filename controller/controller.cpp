@@ -577,7 +577,8 @@ int main(int argc, char** argv)
           // Sending ClaimTeam messages
           // Fall through...
         case net::connection::REGION:
-          if(c->queue.doWrite()) {
+          if(c->queue.doWrite((true || !flushing) && timestep.timestep() > 5 && (c->type == net::connection::REGION || c->type == net::connection::CLIENT))) 
+          {
           	c->set_writing(false);
           }
           if(flushing) {
