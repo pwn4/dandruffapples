@@ -80,7 +80,7 @@ void MessageQueue::push(MessageType typeTag, const google::protobuf::MessageLite
 
 bool MessageQueue::doWrite(bool accumMSS) {
 
-  if(accumMSS == true && remaining() < 0.8*net::get_mss(_fd))
+  if(accumMSS == true && remaining() < 0.9*net::get_mss(_fd))
     return !(remaining() > 0);
 
   ssize_t bytes;
