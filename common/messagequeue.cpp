@@ -78,11 +78,7 @@ void MessageQueue::push(MessageType typeTag, const google::protobuf::MessageLite
   _appendpt += blocklen;
 }
 
-bool MessageQueue::doWrite(bool accumMSS) {
-
-  if(accumMSS == true && remaining() < 0.9*net::get_mss(_fd))
-    return !(remaining() > 0);
-
+bool MessageQueue::doWrite() {
   ssize_t bytes;
   do {
     bytes = write(_fd, _buffer + _writept, remaining());

@@ -831,7 +831,6 @@ void run() {
 
 				}
 			} else if (events[i].events & EPOLLOUT) {
-			  bool ready = true;
 				switch (c->type) {
 				case net::connection::WORLDVIEWER:
 					try {
@@ -858,14 +857,6 @@ void run() {
 				case net::connection::CONTROLLER:
 					// fall through...
 				case net::connection::CLOCK:
-				  
-	        for(unsigned i = 0; i < uniqueRegions.size(); i++)
-	          if(uniqueRegions.at(i).second != regionarea->curStep)
-	          {
-	            ready = false;
-	            break;
-            }
-				
 					if (c->queue.doWrite()) {
 						c->set_writing(false);
 					}
