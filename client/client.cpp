@@ -281,7 +281,8 @@ void Client::executeAi(OwnRobot* ownRobot, int index, net::connection &controlle
 			clientrobot.set_velocityx(command.vx);
 		if (command.changeVy)
 			clientrobot.set_velocityy(command.vy);
-		if (command.changeAngle) {
+		//angle changes should be done by changing velocity	
+		if (false && command.changeAngle) {
       command.angle = verifyAngle(command.angle); // 0 <= angle < 2PI 
 			clientrobot.set_angle(command.angle);
       ownRobot->desiredAngle = command.angle; 
