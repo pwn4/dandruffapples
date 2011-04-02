@@ -553,6 +553,7 @@ int main(int argc, char** argv)
 		                server->force_writing();
                     sentClientRobot++;
 							    }
+							    delete (*i);
 							    i = crQueue.erase(i);
                 }
                 
@@ -583,6 +584,7 @@ int main(int argc, char** argv)
 									    }
                     }
 							    }
+							    delete (*i);
 							    i = srQueue.erase(i);
                 }
                 
@@ -714,6 +716,7 @@ int main(int argc, char** argv)
 	                server->force_writing();
                   sentClientRobot++;
 						    }
+						    delete (*i);
 						    i = crQueue.erase(i);
               }
               
@@ -744,6 +747,7 @@ int main(int argc, char** argv)
 								    }
                   }
 						    }
+						    delete (*i);
 						    i = srQueue.erase(i);
               }
               
