@@ -26,6 +26,7 @@
 #define MAXROTATE 2
 #define HOMEDIAMETER 80
 #define MINDISTANCEFROMHOME 120
+#define MAXTEAMS 5000
 
 //client viewer constants
 #define CVDRAWFACTOR 10

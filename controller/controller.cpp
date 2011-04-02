@@ -277,6 +277,13 @@ int main(int argc, char** argv)
               if(claimteam.granted()) {
                 cout << "Client " << client << " granted team " << claimteam.id()
                      << "." << endl;
+                     
+                //inform all regionservers so they can filter serverrobots
+                for(vector<ServerConnection*>::iterator i = servers.begin();
+                    i != servers.end(); ++i) {
+                    (*i)->push(MSG_CLAIMTEAM, claimteam);
+                    (*i)->force_writing();
+                }
 
                 // Update lookup table.
                 for(vector<NoTeamRobot>::iterator i = unassignedRobots.begin();

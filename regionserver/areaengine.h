@@ -68,12 +68,11 @@ struct RobotObject{
   time_t lastCollision;
   map<int, bool> lastSeenBy;
   RobotObject * nextRobot;
-  int controllerfd;
   int team;
   bool holdingPuck;
 
-  RobotObject(int newid, double newx, double newy, double newa, Index aLoc, int curStep, int teamId, bool hasPuck) : id(newid), lastStep(curStep-1), x(newx), y(newy), angle(newa), vx(0), vy(0), arrayLocation(aLoc), lastCollision(time(NULL)), nextRobot(NULL), controllerfd(-1), team(teamId), holdingPuck(hasPuck) {}
-  RobotObject(int newid, double newx, double newy, double newa, double newvx, double newvy, Index aLoc, int curStep, int teamId, bool hasPuck) : id(newid), lastStep(curStep-1), x(newx), y(newy), angle(newa), vx(newvx), vy(newvy), arrayLocation(aLoc), lastCollision(time(NULL)), nextRobot(NULL), controllerfd(-1), team(teamId), holdingPuck(hasPuck) {}
+  RobotObject(int newid, double newx, double newy, double newa, Index aLoc, int curStep, int teamId, bool hasPuck) : id(newid), lastStep(curStep-1), x(newx), y(newy), angle(newa), vx(0), vy(0), arrayLocation(aLoc), lastCollision(time(NULL)), nextRobot(NULL), team(teamId), holdingPuck(hasPuck) {}
+  RobotObject(int newid, double newx, double newy, double newa, double newvx, double newvy, Index aLoc, int curStep, int teamId, bool hasPuck) : id(newid), lastStep(curStep-1), x(newx), y(newy), angle(newa), vx(newvx), vy(newvy), arrayLocation(aLoc), lastCollision(time(NULL)), nextRobot(NULL), team(teamId), holdingPuck(hasPuck) {}
 };
 
 struct PuckStackObject{
@@ -137,6 +136,10 @@ map< pair<int, int>, PuckStackObject*, ComparePuckStackObject> puckq;
 //for collision
 double sightSquare, collisionSquare;
 int homeRadiusSquare;
+//used for filtering destination controllers
+EpollConnection* controllerMap[MAXTEAMS];
+vector<EpollConnection*> toSend;
+vector<EpollConnection*>::const_iterator sit; //used for going through toSend
 
   void BroadcastRobot(RobotObject *curRobot, Index oldIndices, Index newIndices, int step, RegionUpdate * regionHandle);
   void BroadcastPuckStack(PuckStackObject *curStack, RegionUpdate * regionHandle);
@@ -155,6 +158,8 @@ public:
   bool Sees(double x1, double y1, double x2, double y2);
 
   bool Collides(double x1, double y1, double x2, double y2);
+  
+  void SetController(int teamId, EpollConnection* controllerfd);
 
   void PickUpPuck(int robotId);
   void DropPuck(int robotId);

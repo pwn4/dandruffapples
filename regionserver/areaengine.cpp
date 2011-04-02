@@ -74,6 +74,9 @@ AreaEngine::AreaEngine(int robotSize, int regionSize, int minElementSize, double
   robotArray = new ArrayObject*[regionBounds+2];
   for(int i = 0; i < regionBounds + 2; i++)
     robotArray[i] = new ArrayObject[regionBounds+2];
+    
+  for(int i = 0; i < MAXTEAMS; i++)
+    controllerMap[i] = NULL;
 
 }
 
@@ -269,17 +272,23 @@ void AreaEngine::Step(bool generateImage){
             seesPuckStack->set_rely(curStack->y - curRobot->y);
 
             map<PuckStackObject*, PuckStack*>::iterator puckIt;
-            for (vector<EpollConnection*>::const_iterator it =
-                 controllers.begin(); it != controllers.end(); it++) {
-              (*it)->queue.push(MSG_PUCKSTACK, puckUpdate);
-              (*it)->set_writing(true);
-            }
+            controllerMap[curRobot->team]->queue.push(MSG_PUCKSTACK, puckUpdate);
+            controllerMap[curRobot->team]->set_writing(true);
+            //for (vector<EpollConnection*>::const_iterator it =
+            //     controllers.begin(); it != controllers.end(); it++) {
+            //  (*it)->queue.push(MSG_PUCKSTACK, puckUpdate);
+            //  (*it)->set_writing(true);
+           // }
           }else
             cout << "Warning: puckAction command on empty robot" << endl;
         }
 
         serverrobot.set_laststep(curStep); //for stray packet detection
         //serverrobot.set_haspuck(robots[robotId]->holdingPuck);
+
+        vector<EpollConnection*>::const_iterator sit; //used for iterating through toSend
+        toSend.clear();
+        bool sending;
 
         // Inform robots that can see this one of state change.
         map<int, bool> *nowSeenBy = &(curRobot->lastSeenBy);
@@ -289,17 +298,32 @@ void AreaEngine::Step(bool generateImage){
           for(sightCheck = (*nowSeenBy).begin(); sightCheck != sightEnd;
               sightCheck++)
           {
+            sending = false;
             SeesServerRobot* seesServerRobot = serverrobot.add_seesserverrobot();
             seesServerRobot->set_viewlostid(false);
             seesServerRobot->set_seenbyid(sightCheck->first);
+            
+            EpollConnection* mycontroller = controllerMap[robots[sightCheck->first]->team];
+            
+            if(mycontroller == NULL)
+              throw runtime_error("Null Robot Controller Handle");
+            
+            for(sit = toSend.begin(); sit != toSend.end(); sit++)
+              if((*sit) == mycontroller)
+              {
+                sending = true;
+                break;
+              }
+            
+            if(!sending)
+              toSend.push_back(mycontroller);
           }
         }
 
         // Send updates to controllers.
-        for (vector<EpollConnection*>::const_iterator it = controllers.begin();
-             it != controllers.end(); it++) {
-          (*it)->queue.push(MSG_SERVERROBOT, serverrobot);
-          (*it)->set_writing(true);
+        for (sit = toSend.begin(); sit != toSend.end(); sit++) {
+          (*sit)->queue.push(MSG_SERVERROBOT, serverrobot);
+          (*sit)->set_writing(true);
         }
 
         // Broadcast velocity and other changes to other servers - BroadcastRobot checks if robot is in border cell
@@ -1282,6 +1306,11 @@ bool AreaEngine::ChangeAngle(int robotId, double newangle){
 //tell the areaengine that a socket handle is open to write updates to
 void AreaEngine::SetNeighbour(int placement, EpollConnection *socketHandle){
   neighbours[placement] = socketHandle;
+}
+
+void AreaEngine::SetController(int teamId, EpollConnection* controllerfd){
+  //iterate through the robots and set those team members' controller fds
+  controllerMap[teamId] = controllerfd;
 }
 
 void AreaEngine::GotPuckStack(PuckStack message){

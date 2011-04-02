@@ -31,6 +31,7 @@
 #include "../common/worldinfo.pb.h"
 #include "../common/regionrender.pb.h"
 #include "../common/timestep.pb.h"
+#include "../common/claimteam.pb.h"
 
 #include "../common/ports.h"
 #include "../common/messagewriter.h"
@@ -560,6 +561,15 @@ void run() {
 					const void *buffer;
 					if (c->reader.doRead(&type, &len, &buffer)) {
 						switch (type) {
+						case MSG_CLAIMTEAM:
+            {
+              ClaimTeam claimteam;
+              claimteam.ParseFromArray(buffer, len);
+              cout << "team " << claimteam.id() << " claimed." << endl;
+              regionarea->SetController(claimteam.id(), c);
+              
+              break; 
+            }
 						case MSG_CLIENTROBOT:
 						{
 							clientrobot.ParseFromArray(buffer, len);
@@ -953,13 +963,13 @@ int main(int argc, char* argv[]) {
 
 	printf("Server Running!\n");
 
-	try{
+	//try{
 		run();
-	}
+	/*}
 	catch(exception e)
 	{
 		logTheScore(NULL);
-	}
+	}*/
 
 
 	printf("Server Shutting Down ...\n");
