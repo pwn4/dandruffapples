@@ -528,7 +528,8 @@ gboolean Client::run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 
 				  //robot AIs SHOULD execute every timestep
 				  if(!ownRobots[i]->pendingCommand){
-					  if(currentTimestep - ownRobots[i]->whenLastSent > 10){
+					  //if(currentTimestep - ownRobots[i]->whenLastSent > 10){
+					  if(currentTimestep % 10 == myTeam % 10){
 					    executeAi(ownRobots[i], i, controller);
 					    //initializeRobots(controller); // Debug function call.
 					  }
