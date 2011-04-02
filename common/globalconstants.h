@@ -24,7 +24,7 @@
 #define VIEWANGLE M_PI/2.0
 #define MAXSPEED 4
 #define MAXROTATE 2
-#define HOMEDIAMETER 40
+#define HOMEDIAMETER 80
 #define MINDISTANCEFROMHOME 120
 
 //client viewer constants
