@@ -97,7 +97,7 @@ public:
 	}
 };
 
-int Vaughan::goLeft(ClientRobotCommand& command, OwnRobot* ownRobot){
+int Rises::goLeft(ClientRobotCommand& command, OwnRobot* ownRobot){
 	SeenRobot* leftmost = leftmostRobotToMe(ownRobot);
 	if(leftmost == NULL || (relDistance(leftmost->relx, leftmost->rely) > 2*ROBOTDIAMETER)){
 		for (vector<SeenRobot*>::iterator it = ownRobot->seenRobots.begin(); it != ownRobot->seenRobots.end(); it++) {
@@ -111,7 +111,7 @@ int Vaughan::goLeft(ClientRobotCommand& command, OwnRobot* ownRobot){
 	}
 	return 0;
 }
-int Vaughan::goRight(ClientRobotCommand& command, OwnRobot* ownRobot){
+int Rises::goRight(ClientRobotCommand& command, OwnRobot* ownRobot){
 	SeenRobot* rightmost = rightmostRobotToMe(ownRobot);
 	if(rightmost == NULL || (relDistance(rightmost->relx, rightmost->rely) > 2*ROBOTDIAMETER)){
 		for (vector<SeenRobot*>::iterator it = ownRobot->seenRobots.begin(); it != ownRobot->seenRobots.end(); it++) {
@@ -125,7 +125,7 @@ int Vaughan::goRight(ClientRobotCommand& command, OwnRobot* ownRobot){
 	}
 	return 0;
 }
-int Vaughan::goUp(ClientRobotCommand& command, OwnRobot* ownRobot){
+int Rises::goUp(ClientRobotCommand& command, OwnRobot* ownRobot){
 	SeenRobot* topmost = topmostRobotToMe(ownRobot);
 	if(topmost == NULL || (relDistance(topmost->relx, topmost->rely) > 2*ROBOTDIAMETER)){
 		for (vector<SeenRobot*>::iterator it = ownRobot->seenRobots.begin(); it != ownRobot->seenRobots.end(); it++) {
@@ -139,7 +139,7 @@ int Vaughan::goUp(ClientRobotCommand& command, OwnRobot* ownRobot){
 	}
 	return 0;
 }
-int Vaughan::goDown(ClientRobotCommand& command, OwnRobot* ownRobot){
+int Rises::goDown(ClientRobotCommand& command, OwnRobot* ownRobot){
 		SeenRobot* bottommost = bottommostRobotToMe(ownRobot);
 	if(bottommost == NULL || (relDistance(bottommost->relx, bottommost->rely) > 2*ROBOTDIAMETER)){
 		for (vector<SeenRobot*>::iterator it = ownRobot->seenRobots.begin(); it != ownRobot->seenRobots.end(); it++) {
@@ -154,7 +154,7 @@ int Vaughan::goDown(ClientRobotCommand& command, OwnRobot* ownRobot){
 	return 0;
 }
 
-void Vaughan::goHome(ClientRobotCommand& command, OwnRobot* ownRobot){
+void Rises::goHome(ClientRobotCommand& command, OwnRobot* ownRobot){
 		double velocity = 1;
 		double x = ownRobot->homeRelX;
 		double y = ownRobot->homeRelY;
@@ -355,7 +355,7 @@ void Vaughan::goHome(ClientRobotCommand& command, OwnRobot* ownRobot){
 
 }
 
-void Vaughan::leaveHome(ClientRobotCommand& command, OwnRobot* ownRobot){
+void Rises::leaveHome(ClientRobotCommand& command, OwnRobot* ownRobot){
 		double x = ownRobot->homeRelX;
 		double y = ownRobot->homeRelY;
 		if(y>0){//coming from the top
@@ -426,6 +426,6 @@ void Vaughan::leaveHome(ClientRobotCommand& command, OwnRobot* ownRobot){
 
 extern "C" {
 ClientAi* maker() {
-	return new Vaughan;
+	return new Rises;
 }
 }

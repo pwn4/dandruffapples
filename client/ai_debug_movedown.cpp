@@ -27,6 +27,6 @@ public:
 
 extern "C" {
 ClientAi* maker() {
-	return new Vaughan;
+	return new DebugMovedown;
 }
 }
