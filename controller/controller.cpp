@@ -113,7 +113,8 @@ int main(int argc, char** argv)
   printf("--== Controller Server Software ==-\n");
 
   clockfd = net::do_connect(clockip, CONTROLLERS_PORT);
-
+  net::set_blocking(clockfd, false);
+  
   if (clockfd < 0) {
     throw SystemError("Failed to connect to clock server");
 	} else if (clockfd == 0) {
@@ -199,6 +200,8 @@ int main(int argc, char** argv)
                 addr.s_addr = worldinfo.region(i).address();
                 int regionfd = net::do_connect(addr,
                     worldinfo.region(i).controllerport());
+                net::set_blocking(regionfd, false);
+                
                 if (regionfd < 0) {
                   throw SystemError("Failed to connect to a region server");
                 } else if (regionfd == 0) {
@@ -233,6 +236,8 @@ int main(int argc, char** argv)
               struct in_addr addr;
               addr.s_addr = regioninfo.address();
               int regionfd = net::do_connect(addr, regioninfo.controllerport());
+              net::set_blocking(regionfd, false);
+              
               if (regionfd < 0) {
                 throw SystemError("Failed to connect to a region server");
               } else if (regionfd == 0) {
