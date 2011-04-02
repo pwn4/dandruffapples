@@ -459,6 +459,10 @@ void AreaEngine::Step(bool generateImage){
       serverrobot.set_hascollided(true);
       //dont drop pucks on collision for now
       //serverrobot.set_haspuck(false);
+      
+      toSend.clear();
+      bool sending;
+      toSend.push_back(controllerMap[curRobot->team]);
 
       // Is this robot seen by others?
       nowSeenBy = &(curRobot->lastSeenBy);
@@ -468,20 +472,34 @@ void AreaEngine::Step(bool generateImage){
         for(sightCheck = (*nowSeenBy).begin(); sightCheck != sightEnd;
             sightCheck++)
         {
+          sending = false;
           SeesServerRobot* seesServerRobot = serverrobot.add_seesserverrobot();
           seesServerRobot->set_viewlostid(false);
           seesServerRobot->set_seenbyid(sightCheck->first);
-          // Omitting relx and rely data. Updates will come in the
-          // sight loop.
+          
+          EpollConnection* mycontroller = controllerMap[robots[sightCheck->first]->team];
+            
+          if(mycontroller == NULL)
+            throw runtime_error("Null Robot Controller Handle");
+          
+          for(sit = toSend.begin(); sit != toSend.end(); sit++)
+            if((*sit) == mycontroller)
+            {
+              sending = true;
+              break;
+            }
+          
+          if(!sending)
+            toSend.push_back(mycontroller); 
         }
       }else //if not, send nothing
         continue;
 
       // Send update.
-      for (vector<EpollConnection*>::const_iterator it =
-           controllers.begin(); it != controllers.end(); it++) {
-        (*it)->queue.push(MSG_SERVERROBOT, serverrobot);
-        (*it)->set_writing(true);
+      // Send updates to controllers.
+      for (sit = toSend.begin(); sit != toSend.end(); sit++) {
+        (*sit)->queue.push(MSG_SERVERROBOT, serverrobot);
+        (*sit)->set_writing(true);
       }
     }
 
@@ -754,6 +772,9 @@ void AreaEngine::Step(bool generateImage){
         sightCheck++;
       }
 
+      toSend.clear();
+      bool sending;
+
       //do puck and robot sight acquires
       for(int j = topLeft.x; j <= botRight.x; j++)
         for(int k = topLeft.y; k <= botRight.y; k++)
@@ -774,13 +795,28 @@ void AreaEngine::Step(bool generateImage){
                   if(AreaEngine::Sees(otherRobot->x, otherRobot->y, curRobot->x, curRobot->y)){
                   //instead of forming nowSeen and lastSeen, and then comparing. Do that shit on the FLY.
                   //first, that which we hadn't been seen by but now are
-
+                    sending = false;
                     nowSeenBy->insert(pair<int, bool>(otherRobot->id, true));
                     SeesServerRobot* seesServerRobot = serverrobot.add_seesserverrobot();
                     seesServerRobot->set_viewlostid(false);
                     seesServerRobot->set_seenbyid(otherRobot->id);
                     seesServerRobot->set_relx(curRobot->x - otherRobot->x);
                     seesServerRobot->set_rely(curRobot->y - otherRobot->y);
+                    
+                    EpollConnection* mycontroller = controllerMap[otherRobot->team];
+            
+                    if(mycontroller == NULL)
+                      throw runtime_error("Null Robot Controller Handle");
+                    
+                    for(sit = toSend.begin(); sit != toSend.end(); sit++)
+                      if((*sit) == mycontroller)
+                      {
+                        sending = true;
+                        break;
+                      }
+                    
+                    if(!sending)
+                      toSend.push_back(mycontroller); 
                   }
                 }
               }
@@ -846,10 +882,10 @@ void AreaEngine::Step(bool generateImage){
 
       // Send update if at least one seenById exists
       if (serverrobot.seesserverrobot_size() > 0) {
-        for (vector<EpollConnection*>::const_iterator it =
-             controllers.begin(); it != controllers.end(); it++) {
-          (*it)->queue.push(MSG_SERVERROBOT, serverrobot);
-          (*it)->set_writing(true);
+        // Send updates to controllers.
+        for (sit = toSend.begin(); sit != toSend.end(); sit++) {
+          (*sit)->queue.push(MSG_SERVERROBOT, serverrobot);
+          (*sit)->set_writing(true);
         }
       }
     }
