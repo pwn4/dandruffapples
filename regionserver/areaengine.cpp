@@ -455,7 +455,7 @@ void AreaEngine::Step(bool generateImage){
       serverrobot.set_laststep(curStep); //set this to curStep so that we can detect ill-timed messages
       serverrobot.set_velocityx(curRobot->vx);
       serverrobot.set_velocityy(curRobot->vy);
-      serverrobot.set_angle(curRobot->angle);
+      //serverrobot.set_angle(curRobot->angle);
       serverrobot.set_hascollided(true);
       //dont drop pucks on collision for now
       //serverrobot.set_haspuck(false);
@@ -735,7 +735,7 @@ void AreaEngine::Step(bool generateImage){
       serverrobot.set_laststep(curStep);   //allow stray msg detection
       serverrobot.set_velocityx(curRobot->vx);
       serverrobot.set_velocityy(curRobot->vy);
-      serverrobot.set_angle(curRobot->angle);
+      //serverrobot.set_angle(curRobot->angle);
 
       //first check sight losses
       //NOTICE: We should not need to send sight losses. We still need to CALCULATE them, but we don't need to send them.
@@ -1363,7 +1363,8 @@ void AreaEngine::GotServerRobot(ServerRobot message){
       return;
     }
 
-    AddRobot(message.id(), message.x(), message.y(), message.angle(), message.velocityx(), message.velocityy(), message.laststep(), message.team(), message.haspuck(), false);
+    //AddRobot(message.id(), message.x(), message.y(), message.angle(), message.velocityx(), message.velocityy(), message.laststep(), message.team(), message.haspuck(), false);
+    AddRobot(message.id(), message.x(), message.y(), 0, message.velocityx(), message.velocityy(), message.laststep(), message.team(), message.haspuck(), false);
   }else{
     //modify existing;
 
@@ -1414,7 +1415,7 @@ void AreaEngine::BroadcastRobot(RobotObject *curRobot, Index oldIndices, Index n
   int transx = curRobot->x;
   int transy = curRobot->y;
   //continue
-  infoTemplate.set_angle(curRobot->angle);
+  //infoTemplate.set_angle(curRobot->angle);
   infoTemplate.set_team(curRobot->team);
   infoTemplate.set_velocityx(curRobot->vx);
   infoTemplate.set_velocityy(curRobot->vy);
