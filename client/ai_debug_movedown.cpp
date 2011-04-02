@@ -1,6 +1,6 @@
 #include "client.h"
 
-class Vaughan : public ClientAi {
+class DebugMovedown : public ClientAi {
 public:
 	void make_command(ClientRobotCommand& command, OwnRobot* ownRobot) {
     // Behaviour: Move down. Makes robots move almost uniformly across all

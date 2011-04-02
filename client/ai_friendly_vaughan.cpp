@@ -1,6 +1,6 @@
 #include "client.h"
 
-class Vaughan: public ClientAi {
+class FriendlyVaughan: public ClientAi {
 private:
 	double defaultSpeed;
 

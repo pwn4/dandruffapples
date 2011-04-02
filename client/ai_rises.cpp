@@ -1,6 +1,6 @@
 #include "client.h"
 
-class Vaughan : public ClientAi {
+class Rises : public ClientAi {
 
 void goHome(ClientRobotCommand& command, OwnRobot* ownRobot);
 void leaveHome(ClientRobotCommand& command, OwnRobot* ownRobot);
