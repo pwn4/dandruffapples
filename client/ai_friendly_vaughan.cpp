@@ -1,6 +1,6 @@
 #include "client.h"
 
-class Vaughan: public ClientAi {
+class FriendlyVaughan: public ClientAi {
 private:
 	double defaultSpeed;
 
@@ -60,7 +60,7 @@ private:
 	}
 
 public:
-	Vaughan() : defaultSpeed(5.0) {}
+	FriendlyVaughan() : defaultSpeed(5.0) {}
 	void path_home(OwnRobot* ownRobot, int zone) {
 		if (zone == 0) {
 			// not zone information yet
@@ -320,6 +320,6 @@ public:
 
 extern "C" {
 ClientAi* maker() {
-	return new Vaughan;
+	return new FriendlyVaughan;
 }
 }
