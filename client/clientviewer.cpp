@@ -387,6 +387,7 @@ void ClientViewer::initClientViewer(int numberOfRobots, int myTeam, int _drawFac
 	gtk_widget_modify_fg(GTK_WIDGET(gtk_builder_get_object(builder, "labFrames")), GTK_STATE_NORMAL, &color);
 	gtk_widget_modify_fg(GTK_WIDGET(gtk_builder_get_object(builder, "labPuck")), GTK_STATE_NORMAL, &color);
 	gtk_widget_modify_fg(GTK_WIDGET(gtk_builder_get_object(builder, "labHome")), GTK_STATE_NORMAL, &color);
+	gtk_widget_modify_fg(GTK_WIDGET(gtk_builder_get_object(builder, "labDestination")), GTK_STATE_NORMAL, &color);
 	gtk_widget_modify_bg(GTK_WIDGET(drawingArea), GTK_STATE_NORMAL, &color);
 
 	g_signal_connect(robotId, "value-changed", G_CALLBACK(onRobotIdChanged), (gpointer) & viewedRobot);
