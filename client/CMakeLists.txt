@@ -22,6 +22,9 @@ add_library(ai_friendly_vaughan SHARED
 add_library(ai_rises SHARED
   ai_rises.cpp client_ai.cpp
   )
+add_library(ai_debug_movedown SHARED
+  ai_debug_movedown.cpp client_ai.cpp
+  )
 
 pkg_check_modules(GTK REQUIRED gtk+-2.0)
 
