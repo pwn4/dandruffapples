@@ -469,6 +469,9 @@ gboolean Client::run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
     // Simulation is now on a new timestep. Simulate all robot movements.
     // Allow the user AI code to execute. If we are just starting up, then
     // run initializeRobots().
+    if (!simulationStarted)
+      break;
+
 		TimestepUpdate timestep;
 		timestep.ParseFromArray(buffer, len);
 		currentTimestep = timestep.timestep();
@@ -530,7 +533,7 @@ gboolean Client::run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 				  //robot AIs SHOULD execute every timestep
 				  if(!ownRobots[i]->pendingCommand){
 					  //if(currentTimestep - ownRobots[i]->whenLastSent > 10){
-					  if(currentTimestep % 10 == myTeam % 10){
+					  if((currentTimestep / 2) % 10 == myTeam % 10){
 					    executeAi(ownRobots[i], i, controller);
 					    //initializeRobots(controller); // Debug function call.
 					  }
@@ -560,6 +563,9 @@ gboolean Client::run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
 	case MSG_SERVERROBOT: {
     // Received a ServerRobot message for either our robot, or an enemy
     // robot that we can see. Update our local data accordingly.
+    if (!simulationStarted)
+      break;
+
 		ServerRobot serverrobot;
 		serverrobot.ParseFromArray(buffer, len);
 
@@ -700,6 +706,9 @@ gboolean Client::run(GIOChannel *ioch, GIOCondition cond, gpointer data) {
     // Received a PuckStack message for a puck that has either
     // newly come into view, or had a stacksize change. Update
     // the puck lists for our robots.
+    if (!simulationStarted)
+      break;
+
 		PuckStack puckstack;
 		puckstack.ParseFromArray(buffer, len);
 
