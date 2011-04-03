@@ -272,8 +272,10 @@ void AreaEngine::Step(bool generateImage){
             seesPuckStack->set_rely(curStack->y - curRobot->y);
 
             map<PuckStackObject*, PuckStack*>::iterator puckIt;
-            controllerMap[curRobot->team]->queue.push(MSG_PUCKSTACK, puckUpdate);
-            controllerMap[curRobot->team]->set_writing(true);
+            if(controllerMap[curRobot->team] != NULL){
+              controllerMap[curRobot->team]->queue.push(MSG_PUCKSTACK, puckUpdate);
+              controllerMap[curRobot->team]->set_writing(true);
+            }
             //for (vector<EpollConnection*>::const_iterator it =
             //     controllers.begin(); it != controllers.end(); it++) {
             //  (*it)->queue.push(MSG_PUCKSTACK, puckUpdate);
@@ -305,18 +307,17 @@ void AreaEngine::Step(bool generateImage){
             
             EpollConnection* mycontroller = controllerMap[robots[sightCheck->first]->team];
             
-            if(mycontroller == NULL)
-              throw runtime_error("Null Robot Controller Handle");
-            
-            for(sit = toSend.begin(); sit != toSend.end(); sit++)
-              if((*sit) == mycontroller)
-              {
-                sending = true;
-                break;
-              }
-            
-            if(!sending)
-              toSend.push_back(mycontroller);
+            if(mycontroller != NULL){
+              for(sit = toSend.begin(); sit != toSend.end(); sit++)
+                if((*sit) == mycontroller)
+                {
+                  sending = true;
+                  break;
+                }
+              
+              if(!sending)
+                toSend.push_back(mycontroller);
+            }
           }
         }
 
@@ -462,7 +463,8 @@ void AreaEngine::Step(bool generateImage){
       
       toSend.clear();
       bool sending;
-      toSend.push_back(controllerMap[curRobot->team]);
+      if(controllerMap[curRobot->team] != NULL)
+        toSend.push_back(controllerMap[curRobot->team]);
 
       // Is this robot seen by others?
       nowSeenBy = &(curRobot->lastSeenBy);
@@ -479,18 +481,18 @@ void AreaEngine::Step(bool generateImage){
           
           EpollConnection* mycontroller = controllerMap[robots[sightCheck->first]->team];
             
-          if(mycontroller == NULL)
-            throw runtime_error("Null Robot Controller Handle");
+          if(mycontroller != NULL){
           
-          for(sit = toSend.begin(); sit != toSend.end(); sit++)
-            if((*sit) == mycontroller)
-            {
-              sending = true;
-              break;
-            }
-          
-          if(!sending)
-            toSend.push_back(mycontroller); 
+            for(sit = toSend.begin(); sit != toSend.end(); sit++)
+              if((*sit) == mycontroller)
+              {
+                sending = true;
+                break;
+              }
+            
+            if(!sending)
+              toSend.push_back(mycontroller); 
+          }
         }
       }else //if not, send nothing
         continue;
@@ -805,18 +807,18 @@ void AreaEngine::Step(bool generateImage){
                     
                     EpollConnection* mycontroller = controllerMap[otherRobot->team];
             
-                    if(mycontroller == NULL)
-                      throw runtime_error("Null Robot Controller Handle");
-                    
-                    for(sit = toSend.begin(); sit != toSend.end(); sit++)
-                      if((*sit) == mycontroller)
-                      {
-                        sending = true;
-                        break;
-                      }
-                    
-                    if(!sending)
-                      toSend.push_back(mycontroller); 
+                    if(mycontroller != NULL){
+
+                      for(sit = toSend.begin(); sit != toSend.end(); sit++)
+                        if((*sit) == mycontroller)
+                        {
+                          sending = true;
+                          break;
+                        }
+                      
+                      if(!sending)
+                        toSend.push_back(mycontroller); 
+                    }
                   }
                 }
               }
