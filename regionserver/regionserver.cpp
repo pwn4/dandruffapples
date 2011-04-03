@@ -317,7 +317,7 @@ void run() {
               						{
 										if( helper::distanceBetween(myHomes.at(i)->home_x(), a, myHomes.at(i)->home_y(), b) <= MINDISTANCEFROMHOME )
 										{
-											cout<<"Failed creating puck at ("+helper::toString(a)+", "+helper::toString(b)+"). Retrying."<<endl;
+											//cout<<"Failed creating puck at ("+helper::toString(a)+", "+helper::toString(b)+"). Retrying."<<endl;
 
 											a = (2 * ROBOTDIAMETER)+MINELEMENTSIZE + (rand() % (REGIONSIDELEN-((2 * ROBOTDIAMETER)+MINELEMENTSIZE)));
 											b = (2 * ROBOTDIAMETER)+MINELEMENTSIZE + (rand() % (REGIONSIDELEN-((2 * ROBOTDIAMETER)+MINELEMENTSIZE)));
