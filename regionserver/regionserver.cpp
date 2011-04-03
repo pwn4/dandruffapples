@@ -157,6 +157,8 @@ void run() {
 	//connect to the clock server
 	cout << "Connecting to clock server..." << flush;
 	int clockfd = net::do_connect(clockip, CLOCK_PORT);
+	net::set_blocking(clockfd, false);
+	
 	if (0 > clockfd) {
 		perror(" failed to connect to clock server");
 		exit(1);
