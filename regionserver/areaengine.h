@@ -130,6 +130,9 @@ RegionUpdate regionUpdate[8];
 vector<EpollConnection*> controllers;
 priority_queue<Command*, vector<Command*>, CompareCommand> serverChangeQueue;
 priority_queue<Command*, vector<Command*>, CompareCommand> clientChangeQueue;
+//for writing data to controllers DURING step. NON blocking, NON forcing
+void writeOut();
+void writeOut(EpollConnection* controllerHandle);
 //for rendering
 //map<PuckStackObject*, bool, ComparePuckStackObject> puckq;
 map< pair<int, int>, PuckStackObject*, ComparePuckStackObject> puckq;
