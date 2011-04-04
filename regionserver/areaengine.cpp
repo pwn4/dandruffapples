@@ -275,6 +275,7 @@ void AreaEngine::Step(bool generateImage){
             if(controllerMap[curRobot->team] != NULL){
               controllerMap[curRobot->team]->queue.push(MSG_PUCKSTACK, puckUpdate);
               controllerMap[curRobot->team]->set_writing(true);
+              writeOut(controllerMap[curRobot->team]);
             }
             //for (vector<EpollConnection*>::const_iterator it =
             //     controllers.begin(); it != controllers.end(); it++) {
@@ -326,6 +327,8 @@ void AreaEngine::Step(bool generateImage){
           (*sit)->queue.push(MSG_SERVERROBOT, serverrobot);
           (*sit)->set_writing(true);
         }
+        
+        writeOut();
 
         // Broadcast velocity and other changes to other servers - BroadcastRobot checks if robot is in border cell
         BroadcastRobot(curRobot, Index(regionBounds/2, regionBounds/2), curRobot->arrayLocation, curStep, regionUpdate);
@@ -503,6 +506,8 @@ void AreaEngine::Step(bool generateImage){
         (*sit)->queue.push(MSG_SERVERROBOT, serverrobot);
         (*sit)->set_writing(true);
       }
+      
+      writeOut();
     }
 
   }else{
@@ -588,6 +593,8 @@ void AreaEngine::Step(bool generateImage){
             (*it)->queue.push(MSG_CLAIM, claim);
             (*it)->set_writing(true);
           }
+          
+          writeOut();
         }
 
         //the robot moved, so...if we no longer track it
@@ -889,6 +896,8 @@ void AreaEngine::Step(bool generateImage){
           (*sit)->queue.push(MSG_SERVERROBOT, serverrobot);
           (*sit)->set_writing(true);
         }
+        
+        writeOut();
       }
     }
 
@@ -901,15 +910,12 @@ void AreaEngine::Step(bool generateImage){
         (*it)->queue.push(MSG_PUCKSTACK, *((*puckIt).second));
         (*it)->set_writing(true);
       }
+      
+      writeOut();
       delete puckIt->second;
     }
 
   }
-
-  //dont flush like this anymore
-  //flushNeighbours();
-
-  //flushControllers();
 
   //just send the regionUpdate messages
   flushBuffers(); //flush first, then clear for next time so that puck messages will get sent next time too
@@ -917,6 +923,19 @@ void AreaEngine::Step(bool generateImage){
 
   //ZOMFG we're done
 
+}
+
+void AreaEngine::writeOut(){
+  vector<EpollConnection*>::iterator cIt;
+  
+  //just try writing. If it fails, then the socket isn't ready and we'll write another time
+  //the next time we call writeOut
+  for(cIt = controllers.begin(); cIt != controllers.end(); cIt++)
+    (*cIt)->queue.doWrite();
+}
+
+void AreaEngine::writeOut(EpollConnection* controllerHandle){
+  controllerHandle->queue.doWrite();
 }
 
 void AreaEngine::clearBuffers(){
