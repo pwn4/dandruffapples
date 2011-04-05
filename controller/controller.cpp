@@ -142,6 +142,11 @@ int main(int argc, char** argv)
 	pair<set<net::MSSConnection*>::iterator,bool> ret; //return value of insertion
   bool flushing = false;
   unsigned regionsdone = 0;
+  
+  //controller work shift variables
+  vector<ClientRobot*> crQueue;
+  vector<ServerRobot*> srQueue;
+  //int lastSentDone = -1;
 
   #define MAX_EVENTS 128
   struct epoll_event events[MAX_EVENTS];
@@ -270,6 +275,7 @@ int main(int argc, char** argv)
               for(vector<ClientConnection*>::iterator i = clients.begin();
                   i != clientsEnd; ++i) {
                 (*i)->push(MSG_TIMESTEPUPDATE, timestep);
+                (*i)->force_writing();
               }
               break;
             }
@@ -332,10 +338,14 @@ int main(int argc, char** argv)
             {
               receivedClientRobot++;
               // Forward to the correct server
-              ClientRobot clientrobot;
-              clientrobot.ParseFromArray(buffer, len);
+              ClientRobot* clientrobot = new ClientRobot();
+              clientrobot->ParseFromArray(buffer, len);
+              
+              crQueue.push_back(clientrobot);
 
-              net::MSSConnection *server = (robots.find(clientrobot.id()))->second.server;
+              //MOVED
+
+              /*net::MSSConnection *server = (robots.find(clientrobot->id()))->second.server;
 							if(server == NULL){//this should not happen...
 								cout << "Ugh, robot#" << clientrobot.id() << "does not belong to a server?"
 										 << endl;
@@ -343,7 +353,7 @@ int main(int argc, char** argv)
 							else{
 		            server->push(MSG_CLIENTROBOT, clientrobot);
                 sentClientRobot++;
-							}
+							}*/
               break;
             }
 
@@ -381,14 +391,18 @@ int main(int argc, char** argv)
             switch(type) {
             case MSG_SERVERROBOT:
             {
-              ServerRobot serverrobot;
+              ServerRobot* serverrobot = new ServerRobot();
               receivedServerRobot++;
-              serverrobot.ParseFromArray(buffer, len);
+              serverrobot->ParseFromArray(buffer, len);
 
 							seenbyidset.clear();	//clear for next serverrobot msg
 
+              srQueue.push_back(serverrobot);
+
+              //MOVED
+            
 							// Forward to the client, and any clients in the seenbyid
-              net::MSSConnection *client = (robots.find(serverrobot.id()))->second.client;
+              /*net::MSSConnection *client = (robots.find(serverrobot->id()))->second.client;
               if (client != NULL) {
 								ret = seenbyidset.insert(client);
 								if(ret.second){
@@ -408,7 +422,7 @@ int main(int argc, char** argv)
 			              sentServerRobot++;
 									}
                 }
-							}
+							}*/
 
               break;
             }
@@ -427,7 +441,9 @@ int main(int argc, char** argv)
                 if (client != NULL) {
                   ret = seenbyidset.insert(client);
                   if(ret.second){
+                  //TODO: FIX!
                     client->push(MSG_PUCKSTACK, puckstack);
+                    client->force_writing();
                   }
                 }
               }
@@ -501,10 +517,79 @@ int main(int argc, char** argv)
 
             case MSG_TIMESTEPDONE: {
               ++regionsdone;
-              if(regionsdone == servers.size()) {
-                regionsdone = 0;
 
-                bool datawaiting = false;
+              bool datawaiting = false;
+                for(vector<ServerConnection*>::iterator i = servers.begin();
+                    i != servers.end(); ++i) {
+                  if((*i)->queue.remaining()) {
+                    datawaiting = true;
+                    break;
+                  }
+                }
+              if(!datawaiting) {
+                for(vector<ClientConnection*>::iterator i = clients.begin();
+                    i != clients.end(); ++i) {
+                  if((*i)->queue.remaining()) {
+                    datawaiting = true;
+                    break;
+                  }
+                }
+              }
+              
+              if(regionsdone == servers.size() && !datawaiting) {
+                //lastSentDone = timestep.timestep();
+                regionsdone = 0;
+                //push all data
+                //client robots
+                for(vector<ClientRobot*>::iterator i = crQueue.begin(); i != crQueue.end();) {
+                  ClientRobot* clientrobot = (*i);
+                  net::MSSConnection *server = (robots.find(clientrobot->id()))->second.server;
+							    if(server == NULL){//this should not happen...
+								    cout << "Ugh, robot#" << clientrobot->id() << "does not belong to a server?"
+										     << endl;
+							    }
+							    else{
+		                server->push(MSG_CLIENTROBOT, *clientrobot);
+		                server->force_writing();
+                    sentClientRobot++;
+							    }
+							    i = crQueue.erase(i);
+                }
+                
+                //serverrobots
+                for(vector<ServerRobot*>::iterator i = srQueue.begin(); i != srQueue.end();) {
+                  ServerRobot* serverrobot = (*i);
+                  
+                  net::MSSConnection *client = (robots.find(serverrobot->id()))->second.client;
+                  if (client != NULL) {
+								    ret = seenbyidset.insert(client);
+								    if(ret.second){
+		                  client->push(MSG_SERVERROBOT, *serverrobot);
+		                  client->force_writing();
+	                    sentServerRobot++;
+								    }
+                  }
+							    //lookup clients using seenbyid and store into set then send to all clients
+							    //this resolves sending multiple msgs to same client.
+							    int seenbyidsize = serverrobot->seesserverrobot_size();
+							    for(int j=0; j<seenbyidsize; j++){
+							      client = (robots.find(serverrobot->seesserverrobot(j).seenbyid()))->second.client;
+                    if (client != NULL) {
+                      ret = seenbyidset.insert(client);
+									    if(ret.second){
+										    client->push(MSG_SERVERROBOT, *serverrobot);
+										    client->force_writing();
+			                  sentServerRobot++;
+									    }
+                    }
+							    }
+							    i = srQueue.erase(i);
+                }
+                
+                clockconn.push(MSG_TIMESTEPDONE, tsdone);
+                clockconn.force_writing();
+
+                /*bool datawaiting = false;
                 for(vector<ServerConnection*>::iterator i = servers.begin();
                     i != servers.end(); ++i) {
                   if((*i)->queue.remaining()) {
@@ -545,7 +630,7 @@ int main(int argc, char** argv)
                   // Continue!
                   clockconn.push(MSG_TIMESTEPDONE, tsdone);
                   clockconn.force_writing();
-                }
+                }*/
               }
               break;
             }
@@ -573,7 +658,7 @@ int main(int argc, char** argv)
           // Pass WorldInfo to client so it can calculate how many robots
           // per team, and how many teams there are.
           newconn->push(MSG_WORLDINFO, worldinfo);
-
+          newconn->force_writing();
           break;
         }
         default:
@@ -581,6 +666,7 @@ int main(int argc, char** argv)
           break;
         }
       } else if(events[i].events & EPOLLOUT) {
+        bool datawaiting = false;
 				//ready to write
         switch(c->type) {
         case net::connection::CLIENT:
@@ -591,8 +677,82 @@ int main(int argc, char** argv)
         case net::connection::REGION:
           if(c->queue.doWrite()) {
           	c->set_writing(false);
+          
+            for(vector<ServerConnection*>::iterator i = servers.begin();
+                i != servers.end(); ++i) {
+              if((*i)->queue.remaining()) {
+                datawaiting = true;
+                break;
+              }
+            }
+            if(!datawaiting) {
+              for(vector<ClientConnection*>::iterator i = clients.begin();
+                  i != clients.end(); ++i) {
+                if((*i)->queue.remaining()) {
+                  datawaiting = true;
+                  break;
+                }
+              }
+            }
+            
+            //if(regionsdone == servers.size() && !datawaiting && lastSentDone < (int)(timestep.timestep())) {
+              //lastSentDone = timestep.timestep();
+              if(regionsdone == servers.size() && !datawaiting) {
+              regionsdone = 0;
+              
+              //push all data
+              //client robots
+              for(vector<ClientRobot*>::iterator i = crQueue.begin(); i != crQueue.end();) {
+                ClientRobot* clientrobot = (*i);
+                net::MSSConnection *server = (robots.find(clientrobot->id()))->second.server;
+						    if(server == NULL){//this should not happen...
+							    cout << "Ugh, robot#" << clientrobot->id() << "does not belong to a server?"
+									     << endl;
+						    }
+						    else{
+	                server->push(MSG_CLIENTROBOT, *clientrobot);
+	                server->force_writing();
+                  sentClientRobot++;
+						    }
+						    i = crQueue.erase(i);
+              }
+              
+              //serverrobots
+              for(vector<ServerRobot*>::iterator i = srQueue.begin(); i != srQueue.end();) {
+                ServerRobot* serverrobot = (*i);
+                
+                net::MSSConnection *client = (robots.find(serverrobot->id()))->second.client;
+                if (client != NULL) {
+							    ret = seenbyidset.insert(client);
+							    if(ret.second){
+	                  client->push(MSG_SERVERROBOT, *serverrobot);
+	                  client->force_writing();
+                    sentServerRobot++;
+							    }
+                }
+						    //lookup clients using seenbyid and store into set then send to all clients
+						    //this resolves sending multiple msgs to same client.
+						    int seenbyidsize = serverrobot->seesserverrobot_size();
+						    for(int j=0; j<seenbyidsize; j++){
+						      client = (robots.find(serverrobot->seesserverrobot(j).seenbyid()))->second.client;
+                  if (client != NULL) {
+                    ret = seenbyidset.insert(client);
+								    if(ret.second){
+									    client->push(MSG_SERVERROBOT, *serverrobot);
+									    client->force_writing();
+		                  sentServerRobot++;
+								    }
+                  }
+						    }
+						    i = srQueue.erase(i);
+              }
+              
+              clockconn.push(MSG_TIMESTEPDONE, tsdone);
+              clockconn.force_writing();
+            }
           }
-          if(flushing) {
+          
+          /*if(flushing) {
             // Check for remaining data to write
 						vector<ServerConnection*>::iterator serversEnd = servers.end();
 						vector<ClientConnection*>::iterator clientsEnd = clients.end();
@@ -621,7 +781,7 @@ int main(int argc, char** argv)
                 i != clientsEnd; ++i) {
               (*i)->set_reading(true);
             }
-          }
+          }*/
           break;
         default:
           cerr << "Unexpected writable socket of type " << c->type << "!"

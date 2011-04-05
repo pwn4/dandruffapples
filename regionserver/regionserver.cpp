@@ -441,8 +441,7 @@ void run() {
 							for (bool complete = false; !complete;) {
 								complete = writer.doWrite();
 							}*/
-							for(vector<net::EpollConnection*>::iterator i = controllers.begin(); i != controllers.end(); i++)
-							  transmitTsdone(*i);
+							
 							transmitTsdone(&clockconn);
 
 							//NOW you can start the clock
@@ -487,6 +486,9 @@ void run() {
 							  //regionarea->flushNeighbours();
 							  round++;  //this is the async replacement
 							  sendTsdone = true;
+							  
+							  for(vector<net::EpollConnection*>::iterator i = controllers.begin(); i != controllers.end(); i++)
+							    transmitTsdone(*i);
 
 							  initialized = true;
 
@@ -509,6 +511,9 @@ void run() {
 							}
 
 							regionarea->Step(generateImage);
+							
+							for(vector<net::EpollConnection*>::iterator i = controllers.begin(); i != controllers.end(); i++)
+							    transmitTsdone(*i);
 
 							//async 'flush'
 							round++;  //we need to ensure we get all neighbour data before continuing
@@ -540,8 +545,6 @@ void run() {
 
 	            if((ready && sendTsdone)){
                 //Respond with done message
-                for(vector<net::EpollConnection*>::iterator i = controllers.begin(); i != controllers.end(); i++)
-							    transmitTsdone(*i);
 
                 transmitTsdone(&clockconn);
 
@@ -665,8 +668,6 @@ void run() {
 
 		            if((ready && sendTsdone)){
                   //Respond with done message
-	                for(vector<net::EpollConnection*>::iterator i = controllers.begin(); i != controllers.end(); i++)
-							      transmitTsdone(*i);
 
 	                transmitTsdone(&clockconn);
 
