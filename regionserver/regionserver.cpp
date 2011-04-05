@@ -590,7 +590,7 @@ void run() {
                 }
 
 							  regionarea->ChangeVelocity(clientrobot.id(),
-                    clientrobot.velocityx(), clientrobot.velocityy());
+                    clientrobot.vel()[0]*ROBOTDIAMETER/127, clientrobot.vel()[1]*ROBOTDIAMETER/127);
 
 							}else{
 							  //bounced
@@ -619,8 +619,8 @@ void run() {
                 // Robot is ours. Process clientrobot message.
                 // TODO: Change angle/state too
                 regionarea->ChangeVelocity(bouncedrobot.clientrobot().id(),
-                    bouncedrobot.clientrobot().velocityx(),
-                    bouncedrobot.clientrobot().velocityy());
+                    bouncedrobot.clientrobot().vel()[0]*ROBOTDIAMETER/127,
+                    bouncedrobot.clientrobot().vel()[1]*ROBOTDIAMETER/127);
               } else {
                 // Not our robot. Tell the controller.
                 bouncedrobot.set_bounces(bouncedrobot.bounces() + 1);
