@@ -395,8 +395,6 @@ int main(int argc, char** argv)
               receivedServerRobot++;
               serverrobot->ParseFromArray(buffer, len);
 
-							seenbyidset.clear();	//clear for next serverrobot msg
-
               srQueue.push_back(serverrobot);
 
               //MOVED
@@ -560,6 +558,8 @@ int main(int argc, char** argv)
                 //serverrobots
                 for(vector<ServerRobot*>::iterator i = srQueue.begin(); i != srQueue.end();) {
                   ServerRobot* serverrobot = (*i);
+                  
+                  seenbyidset.clear();	//clear for next serverrobot msg
                   
                   net::MSSConnection *client = (robots.find(serverrobot->id()))->second.client;
                   if (client != NULL) {
