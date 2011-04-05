@@ -237,10 +237,8 @@ void Client::executeAi(OwnRobot* ownRobot, int index, net::connection &controlle
   // to current values.
 	ClientRobot clientrobot;
 	clientrobot.set_id(indexToRobotId(index));
-	char vel[2];
-	vel[0] = (ownRobot->vx/ROBOTDIAMETER)*127.0;
-	vel[1] = (ownRobot->vy/ROBOTDIAMETER)*127.0;
-	clientrobot.set_vel(vel);
+	clientrobot.set_velocityx(ownRobot->vx);
+	clientrobot.set_velocityy(ownRobot->vy);
  	//clientrobot.set_angle(ownRobot->angle);
 
   // Allow the user AI code to run.
@@ -279,21 +277,16 @@ void Client::executeAi(OwnRobot* ownRobot, int index, net::connection &controlle
   
 	ClientRobotCommand command = userAiCode(ownRobot);
 	if (command.sendCommand) {
-		char vel[2];
-	  vel[0] = (ownRobot->vx/ROBOTDIAMETER)*127;
-	  vel[1] = (ownRobot->vy/ROBOTDIAMETER)*127;
 		if (command.changeVx)
-			vel[0] = (command.vx/ROBOTDIAMETER)*127;
+			clientrobot.set_velocityx(command.vx);
 		if (command.changeVy)
-			vel[1] = (command.vy/ROBOTDIAMETER)*127;
-			
-	  clientrobot.set_vel(vel);
+			clientrobot.set_velocityy(command.vy);
 		//angle changes should be done by changing velocity	
-		/*if (false && command.changeAngle) {
+		if (false && command.changeAngle) {
       command.angle = verifyAngle(command.angle); // 0 <= angle < 2PI 
 			clientrobot.set_angle(command.angle);
       ownRobot->desiredAngle = command.angle; 
-    }*/
+    }
 		if (command.changePuckPickup) {
 			puckPickupMessages++; // debug message
 			clientrobot.set_puckpickup(command.puckPickup);
@@ -327,10 +320,9 @@ void Client::initializeRobots(net::connection &controller) {
 		clientRobot.set_id(indexToRobotId(i));
 		//clientRobot.set_velocityx(((rand() % 11) / 10.0) - 0.5);
 		//clientRobot.set_velocityy(((rand() % 11) / 10.0) - 0.5);
-		char vel[2];
-	  vel[0] = 0;
-	  vel[1] = 0;
-		clientRobot.set_vel(vel);
+		clientRobot.set_velocityx(0.0);
+		clientRobot.set_velocityy(0.0);
+		clientRobot.set_angle(0.0);
 		controller.queue.push(MSG_CLIENTROBOT, clientRobot);
 		ownRobots[i]->whenLastSent = currentTimestep;
 		sentMessages++;
